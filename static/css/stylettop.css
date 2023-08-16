@@ -1,3 +1,10 @@
+h1{
+  font-size:70px;
+  color: #ff0000;
+  background-color: #ffffff;
+}
+
+
 img{
     box-shadow: 8px 8px 8px gray;
 }
