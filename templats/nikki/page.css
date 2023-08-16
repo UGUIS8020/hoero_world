@@ -1,0 +1,16 @@
+h3{
+    margin:5px;
+}
+
+.box00 {
+display: flex;
+justify-content: center;
+background:#ffffff;
+margin:0 auto;
+}
+
+.box01 {
+text-align: center;
+background:#ffffff;
+padding: 10px;
+}
