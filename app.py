@@ -10,5 +10,21 @@ def home():
 def n001211():
     return render_template('n001211.html')
 
+@app.route('/n001217')
+def n001217():
+    return render_template('n001217.html')
+
+@app.route('/n001220')
+def n001220():
+    return render_template('n001220.html')
+
+@app.route('/n001221')
+def n001221():
+    return render_template('n001221.html')
+
+@app.route('/omake')
+def omake():
+    return render_template('omake.html')
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0")
