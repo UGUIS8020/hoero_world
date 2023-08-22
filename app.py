@@ -4,7 +4,7 @@ app = Flask(__name__, static_folder='./templates/images')
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('index.html', title = 'index.html')
 
 @app.route('/n001211')
 def n001211():
