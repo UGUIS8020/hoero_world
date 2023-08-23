@@ -31,7 +31,7 @@
     <link rel="icon"href="shibuya/favicon.ico">
 
 </head>
-<body>
+
   <center>
     <h1>TEST</h1>
     <h1>World of HOERO Dental Tecnician</h1>
@@ -39,12 +39,19 @@
      <img src="images/top.jpg">
      <h2>BE TOGETHER</h2>
      <p>diary</p>
-     <h2><a href="nikki/001211.html">11/12/2000</a></h2>
-     <h2><a href="nikki/001217.html">17/12/2000</a></h2>
-     <h2><a href="nikki/001220.html">20/12/2000</a></h2>
-     <h2><a href="nikki/001221.html">21/12/2000</a></h2> 
-     <h2><a href="nikki/omake.html">Bonus</a></h2> 
-   
+
+     <div class="my-3">
+      <ul class="nav nav-pills">
+          <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001211">11/12/2000</a></li>
+          <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001217">17/12/2000</a></li>
+          <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001220">20/12/2000</a></li>
+          <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001221">21/12/2000</a></li>
+          <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/omake">OMAKE</a></li>
+
+       </ul>
+     </div> 
+
+ 
   </center>  
 </body>
 </html>
