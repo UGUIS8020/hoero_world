@@ -31,56 +31,54 @@
     <link rel="icon"href="shibuya/favicon.ico">
 
 </head>
-<body>
-  <nav class="navbar navbar-expand-lg bg-body-tertiary">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">Navbar</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+<header>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="#">SHIBUYA Inc.</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
           <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="#">Home</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#">Link</a>
-          </li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Dropdown
-            </a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="#">Action</a></li>
-              <li><a class="dropdown-item" href="#">Another action</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="#">Something else here</a></li>
-            </ul>
+            <a class="nav-link" href="#">ホーム</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link disabled">Disabled</a>
+            <a class="nav-link" href="#">会社情報</a>
           </li>
-        </ul>
-        <form class="d-flex" role="search">
-          <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
-          <button class="btn btn-outline-success" type="submit">Search</button>
-        </form>
+          <li class="nav-item">
+            <a class="nav-link" href="#">お問い合わせ</a>
+          </li>
+       </ul>
+
+       <ul class="navbar-nav ms-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="#">ブログ</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">カテゴリー</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">お問い合わせ</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#">ユーザー</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">ログアウト</a>
+          </li>
+          <span class="navbar-text ms-3">
+            ログインユーザー
+          </span>
+     </ul>
       </div>
     </div>
   </nav>
-  
-  <center>
-    <h1>TEST</h1>
-    <h1>World of HOERO Dental Tecnician</h1>
-    <h2>I am Dental Tecnitian.Every day is fun.</h2>
-     <img src="images/top.jpg">
-     <p>diary</p>
-     <h2><a href="nikki/001211.html">11/12/2000</a></h2>
-     <h2><a href="nikki/001217.html">17/12/2000</a></h2>
-     <h2><a href="nikki/001220.html">20/12/2000</a></h2>
-     <h2><a href="nikki/001221.html">21/12/2000</a></h2> 
-     <h2><a href="nikki/omake.html">Bonus</a></h2> 
-   
-  </center>  
+
+</header>
+<body>
+  {% block content %}
+  {% endblock %}
+
 </body>
 </html>
