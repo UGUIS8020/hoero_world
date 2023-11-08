@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 <HTML lang="en">
-<HEAD>
+<head>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-JLCPNFKCHD"></script>
@@ -31,7 +31,10 @@
     <link rel="icon"href="shibuya/favicon.ico">
 
 </head>
-<header>
+
+<body>
+
+  <div><header>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
     <div class="container">
       <a class="navbar-brand" href="#">SHIBUYA Inc.</a>
@@ -76,9 +79,11 @@
   </nav>
 
 </header>
-<body>
+</div>
+
   {% block content %}
   {% endblock %}
 
+  {% include "footer.html" %}
 </body>
 </html>
