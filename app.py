@@ -26,5 +26,9 @@ def n001221():
 def omake():
     return render_template('omake.html')
 
+@app.route('/register')
+def register():
+    return render_template('register.html')
+
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,40 @@
+<!-- HOERO_en -->
+{% extends "base.html" %}
+{% block content %}
+    <section id="user_register">
+        <div class="container my-5">
+            <div class="row">
+                <div class="col-lg-4 mx-auto">
+                    <div class="card bg-primary text-center">
+                        <div class="card-body text-light">
+                            <h3>ユーザー登録</h3>
+                            <p>ユーザー情報入力してください</p>
+                            <form method="POST">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control form-control-lg" placeholder="ユーザー名">
+                                </div>
+
+                                <div class="mb-3">
+                                    <input type="email" class="form-control form-control-lg" placeholder="メールアドレス">
+                                </div>
+
+                                <div class="mb-3">
+                                    <input type="password" class="form-control form-control-lg" placeholder="パスワード">
+                                </div>
+
+                                <div class="mb-3">
+                                    <input type="password" class="form-control form-control-lg" placeholder="パスワード(確認)">
+                                </div> 
+                                
+                                <botton type="submit" class="btn btn-outline-light w-100">登録</botton>
+
+                            </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    {% endblock %}
