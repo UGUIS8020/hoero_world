@@ -1,0 +1,71 @@
+<!-- HOERO_en -->
+{% extends "base.html" %}
+{% block content %}
+
+<header id="page-header">
+    <div class="container my-3 py-3 bg-light">
+        <div class="row">
+            <div class="col-md-6 m-auto text center">
+                <h1>ユーザー管理</h1>
+            </div>
+        </div>
+    </div>
+</header>
+<section id="menu">
+    <div class="container my-3 py-3 bg-light">
+        <div class="row">
+            <div class="col-md-3">
+                <a href="#" class="btn btn-primary w-100">
+                    ユーザー登録
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+<section id="list">
+    <div class="container my-3">
+        <div class="row">
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>最新のユーザー</h4>
+                    </div>
+                    <table class="table table-straiped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>ユーザー名</th>
+                                <th>メールアドレス</th>
+                                <th>管理者</th>
+                                <th>ブログ投稿数</th>
+                                <th>変更</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ID</td>
+                                <td>ユーザー名</td>
+                                <td>メールアドレス</td>
+                                <td>管理者</td>
+                                <td><a href="#">ブログ投稿数</a></td>
+                                <td><a href="#" class="btn btn-secondary">変更</a></td>
+                            </tr>
+
+                        </tbody>                 
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<nav class="my-2" aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+      <li class="page-item"><a class="page-link" href="#">前へ</a></li>
+      <li class="page-item"><a class="page-link" href="#">ページNo.</a></li>
+      <li class="page-item"><a class="page-link" href="#">次へ</a></li>
+    </ul>
+  </nav>
+
+    
+    {% endblock %}

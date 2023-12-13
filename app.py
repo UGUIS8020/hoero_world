@@ -34,5 +34,13 @@ def register():
 def account():
     return render_template('account.html')
 
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/user_maintenance')
+def luser_maintenance():
+    return render_template('user_maintenance.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
