@@ -39,7 +39,7 @@ def login():
     return render_template('login.html')
 
 @app.route('/user_maintenance')
-def luser_maintenance():
+def user_maintenance():
     return render_template('user_maintenance.html')
 
 @app.route("/user")
