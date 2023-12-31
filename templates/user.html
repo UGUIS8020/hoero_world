@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>User List</h1>
+
+<table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">ID</th>
+        <th scope="col">User Name</th>
+        <th scope="col">Mail Address</th>
+        <th scope="col">administrator</th>
+      </tr>
+    </thead>
+    <tbody>
+
+        {% for user in users %}
+      <tr>
+        <th scope="row">{{user[0]}}</th>
+        <td>{{user[1]}}</td>
+        <td>{{user[2]}}</td>
+        {% if user[3] == "1" %}
+            <td>管理者</td>
+        {% else %}
+            <td>一般</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+   
+    </tbody>
+  </table>
+
+
+
+{% endblock %}

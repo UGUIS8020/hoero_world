@@ -42,5 +42,18 @@ def login():
 def luser_maintenance():
     return render_template('user_maintenance.html')
 
+@app.route("/user")
+def user():
+    user_list = [
+        ["1","渋谷 正彦", "taro@test.com", "1"],
+        ["2","佐藤 花子", "hanako@test.com", "0"],
+        ["3","鈴木 太郎", "yoshitaka@test.com", "0"]
+    ]
+    return render_template("user.html",users=user_list)
+
+@app.errorhandler(404)
+def error_404(error):
+    return render_template("error_pages/404.html"),404
+
 if __name__ == '__main__':
     app.run(debug=True)
