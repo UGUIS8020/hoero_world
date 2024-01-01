@@ -9,9 +9,10 @@ app.config['SECRET_KEY'] = 'mysecretkey'
 
 class RegistrationForm(FlaskForm):
     username = StringField('ユーザー名',validators=[DataRequired()])
-    email = StringField('メールアドレス',validators=[DataRequired(),Email()])
-    password = PasswordField('パスワード',validators=[DataRequired(),EqualTo('pass_confirm',message='パスワードが一致しません')])
-    pass_confirm = PasswordField('パスワード(確認)',validators=[DataRequired()])
+    email = StringField('メールアドレス', validators=[DataRequired(), Email()])
+    email_confirm = StringField('メールアドレス(確認)', validators=[DataRequired(), EqualTo('email', message='メールアドレスが一致しません')])
+    password = PasswordField('パスワード', validators=[DataRequired()])
+    pass_confirm = PasswordField('パスワード(確認)', validators=[DataRequired(), EqualTo('password', message='パスワードが一致しません')])
     submit = SubmitField('登録')
 
 @app.route('/')
