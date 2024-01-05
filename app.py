@@ -1,6 +1,19 @@
-from flask import Flask, render_template
+from flask import Flask, render_template,url_for,redirect,session,flash
+from flask_wtf import FlaskForm
+from wtforms import StringField,PasswordField,SubmitField
+from wtforms.validators import DataRequired,Email,EqualTo
 
 app = Flask(__name__, static_folder='./templates/images')
+
+app.config['SECRET_KEY'] = 'mysecretkey'
+
+class RegistrationForm(FlaskForm):
+    username = StringField('ユーザー名',validators=[DataRequired()])
+    email = StringField('メールアドレス', validators=[DataRequired(), Email()])
+    email_confirm = StringField('メールアドレス(確認)', validators=[DataRequired(), EqualTo('email', message='メールアドレスが一致しません')])
+    password = PasswordField('パスワード', validators=[DataRequired()])
+    pass_confirm = PasswordField('パスワード(確認)', validators=[DataRequired(), EqualTo('password', message='パスワードが一致しません')])
+    submit = SubmitField('登録')
 
 @app.route('/')
 def home():
@@ -26,9 +39,20 @@ def n001221():
 def omake():
     return render_template('omake.html')
 
-@app.route('/register')
+@app.route('/register',methods=['GET','POST'])
 def register():
-    return render_template('register.html')
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        session['email'] = form.email.data
+        session['username'] = form.username.data
+        session['password'] = form.password.data
+        flash(f'アカウントが作成されました！','success')
+        return redirect(url_for('user_maintenance'))
+    return render_template('register.html',form=form)
+
+@app.route('/user_maintenance')
+def user_maintenance():
+    return render_template('user_maintenance.html')
 
 @app.route('/account')
 def account():
@@ -37,10 +61,6 @@ def account():
 @app.route('/login')
 def login():
     return render_template('login.html')
-
-@app.route('/user_maintenance')
-def user_maintenance():
-    return render_template('user_maintenance.html')
 
 @app.route("/user")
 def user():
