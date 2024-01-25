@@ -2,6 +2,9 @@ from flask import Flask, render_template,url_for,redirect,session,flash
 from flask_wtf import FlaskForm
 from wtforms import StringField,PasswordField,SubmitField
 from wtforms.validators import DataRequired,Email,EqualTo
+from flask_migrate import Migrate
+from datetime import datetime
+from pytz import timezone
 
 import os
 from flask_sqlalchemy import SQLAlchemy
@@ -15,6 +18,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir,'dat
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+Migrate(app,db)
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -22,14 +26,39 @@ class User(db.Model):
     username = db.Column(db.String(64),unique=True,index=True)
     email = db.Column(db.String(64),unique=True,index=True)
     password_hash = db.Column(db.String(128))
+    adminisrator = db.Column(db.String(1))
 
-    def __init__(self,username,email,password_hash):
+    def __init__(self,username,email,password_hash,adminisrator):
         self.username = username
         self.email = email
         self.password_hash = password_hash
+        self.adminisrator = adminisrator
 
     def __repr__(self):
         return f"Username {self.username}"
+class BlogPost(db.Model):
+    __tablename__ = 'blogposts'
+    id = db.Column(db.Integer,primary_key=True)
+    user_id = db.Column(db.Integer,db.Foreignkey('users.id'))
+    date = db.Column(db.DateTime,default=datetime.now('Asia/Tokyo'))
+    title = db.Column(db.String(140))
+    text = db.Column(db.text)
+    summary = db.Column(db.String(140))
+    featured_image = db.Column(db.String(140))
+
+    def __init__(self,title,text,featured_image,user_id,summary):
+        self.title = title
+        self.text = text
+        self.featured_image = featured_image
+        self.user_id = user_id
+        self.summary = summary
+
+    def __repr__(self):
+        return f"PostID:{self.id},Title: {self.title}\n"
+
+
+    def __repr__(self):
+        return f"Title {self.title}"
 
 class RegistrationForm(FlaskForm):
     username = StringField('ユーザー名',validators=[DataRequired()])

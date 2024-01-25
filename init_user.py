@@ -1,13 +1,16 @@
 from app import db,User
+from app import app
 
-db.create_all()
+with app.app_context():
 
-user01 = User('test_user01','test_user01@test.com','1111')
-user02 = User('test_user02','test_user02@test.com','2222')
+    db.create_all()
 
-db.session.add([user01,user02])
+    user01 = User('test_user01','test_user01@test.com','1111')
+    user02 = User('test_user02','test_user02@test.com','2222')
 
-db.session.commit()
+    db.session.add_all([user01,user02])
 
-print(user01.id)
-print(user02.id)
+    db.session.commit()
+
+    print(user01.id)
+    print(user02.id)
