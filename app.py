@@ -2,11 +2,11 @@ from flask import Flask, render_template,url_for,redirect,session,flash
 from flask_wtf import FlaskForm
 from wtforms import StringField,PasswordField,SubmitField
 from wtforms.validators import DataRequired,Email,EqualTo
+
+import os
 from flask_migrate import Migrate
 from datetime import datetime
 from pytz import timezone
-
-import os
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__, static_folder='./templates/images')
@@ -46,6 +46,7 @@ class User(db.Model):
 
     def __repr__(self):
         return f"Username {self.username}"
+    
 class BlogPost(db.Model):
     __tablename__ = 'blog_post'
     id = db.Column(db.Integer,primary_key=True)
@@ -67,8 +68,8 @@ class BlogPost(db.Model):
         return f"PostID:{self.id},Title: {self.title}, Author: {self.author}\n"
 
 
-    def __repr__(self):
-        return f"Title {self.title}"
+    # def __repr__(self):
+    #     return f"Title {self.title}"
 
 class RegistrationForm(FlaskForm):
     username = StringField('ユーザー名',validators=[DataRequired()])
@@ -82,9 +83,14 @@ class RegistrationForm(FlaskForm):
 def register():
     form = RegistrationForm()
     if form.validate_on_submit():
-        session['email'] = form.email.data
-        session['username'] = form.username.data
-        session['password'] = form.password.data
+        # session['email'] = form.email.data
+        # session['username'] = form.username.data
+        # session['password'] = form.password.data
+        user = User(email=form.email.data, username=form.username.data,password_hash=form.password.data,administrator="0")
+        db.session.add(user)
+        db.session.commit()
+
+
         flash(f'アカウントが作成されました！','success')
         return redirect(url_for('user_maintenance'))
     return render_template('register.html',form=form)
