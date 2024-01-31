@@ -86,6 +86,18 @@ class RegistrationForm(FlaskForm):
     def validate_email(self,field):
         if User.query.filter_by(email=field.data).first():
             raise ValidationError('入力されたメールアドレスは既に使用されています')
+        
+class UpdateUserForm(FlaskForm):
+    username = StringField('ユーザー名',validators=[DataRequired()])
+    email = StringField('メールアドレス', validators=[DataRequired(), Email(massage='正しいメールアドレスを入力してください')])
+    password = PasswordField('パスワード', validators=[EqualTo('pass_confirm', message='パスワードが一致しません')]) 
+    pass_confirm = PasswordField('パスワード(確認)')
+    submit = SubmitField('更新')
+
+    def __init__(self,user_id,*args,**kwargs):
+        super(UpdateUserForm,self).__init__(*args,**kwargs)
+        self.user_id = user_id
+
 
 @app.route('/register',methods=['GET','POST'])
 def register():
