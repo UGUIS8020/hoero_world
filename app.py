@@ -121,6 +121,28 @@ def user_maintenance():
     users = User.query.order_by(User.id).paginate(page=page,per_page=10)
     return render_template('user_maintenance.html',users=users)
 
+@app.route('/<int:user_id/account>')
+def account(user_id):
+    user = User.query.get_or_404(user_id, methods=['GET','POST'])
+    form = UpdateUserForm(user_id)
+    if form.validate_on_submit():
+        user.username = form.username.data
+        user.email = form.email.data
+        if form.password.data:
+            user.password_hash = form.password.data
+        db.session.commit()
+        flash(f'アカウントが更新されました！','success')
+      
+        return redirect(url_for('user_maintenance'))
+    
+    elif request.method == 'GET':
+        form.username.data = user.username
+        form.email.data = user.email
+
+    return render_template('account.html',form=form)
+
+
+
 @app.route('/account')
 def account():
     return render_template('account.html')
