@@ -1,6 +1,6 @@
-from flask import Flask, render_template,url_for,redirect,session,flash
+from flask import Flask, render_template,url_for,redirect,session,flash,request
 from flask_wtf import FlaskForm
-from wtforms import StringField,PasswordField,SubmitField
+from wtforms import ValidationError,StringField,PasswordField,SubmitField
 from wtforms.validators import DataRequired,Email,EqualTo
 
 import os
@@ -79,6 +79,14 @@ class RegistrationForm(FlaskForm):
     pass_confirm = PasswordField('パスワード(確認)', validators=[DataRequired()])
     submit = SubmitField('登録')
 
+    def validate_username(self,field):
+        if User.query.filter_by(username=field.data).first():
+            raise ValidationError('入力されたユーザー名は既に使用されています')
+    
+    def validate_email(self,field):
+        if User.query.filter_by(email=field.data).first():
+            raise ValidationError('入力されたメールアドレスは既に使用されています')
+
 @app.route('/register',methods=['GET','POST'])
 def register():
     form = RegistrationForm()
@@ -97,7 +105,9 @@ def register():
 
 @app.route('/user_maintenance')
 def user_maintenance():
-    return render_template('user_maintenance.html')
+    page = request.args.get('page',1,type=int)
+    users = User.query.order_by(User.id).paginate(page=page,per_page=10)
+    return render_template('user_maintenance.html',users=users)
 
 @app.route('/account')
 def account():
