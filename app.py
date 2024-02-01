@@ -89,7 +89,7 @@ class RegistrationForm(FlaskForm):
         
 class UpdateUserForm(FlaskForm):
     username = StringField('ユーザー名',validators=[DataRequired()])
-    email = StringField('メールアドレス', validators=[DataRequired(), Email(massage='正しいメールアドレスを入力してください')])
+    email = StringField('メールアドレス', validators=[DataRequired(), Email(message='正しいメールアドレスを入力してください')])
     password = PasswordField('パスワード', validators=[EqualTo('pass_confirm', message='パスワードが一致しません')]) 
     pass_confirm = PasswordField('パスワード(確認)')
     submit = SubmitField('更新')
@@ -121,9 +121,9 @@ def user_maintenance():
     users = User.query.order_by(User.id).paginate(page=page,per_page=10)
     return render_template('user_maintenance.html',users=users)
 
-@app.route('/<int:user_id/account>')
+@app.route('/<int:user_id>/account',methods=['GET','POST'])
 def account(user_id):
-    user = User.query.get_or_404(user_id, methods=['GET','POST'])
+    user = User.query.get_or_404(user_id)
     form = UpdateUserForm(user_id)
     if form.validate_on_submit():
         user.username = form.username.data
@@ -143,9 +143,9 @@ def account(user_id):
 
 
 
-@app.route('/account')
-def account():
-    return render_template('account.html')
+# @app.route('/account')
+# def account():
+#     return render_template('account.html')
 
 @app.route('/login')
 def login():
