@@ -52,7 +52,7 @@
                         <td>{{ user.email }}</td>
                         <td>{{ user.administrator }}</td>
                         <td><a href="#">ブログ投稿数</a></td>
-                        <td><a href="#" class="btn btn-secondary">変更</a></td>
+                        <td><a href="{{ url_for('account', user_id=user.id) }}" class="btn btn-secondary">変更</a></td>
                     </tr>
                     {% endfor %}
 

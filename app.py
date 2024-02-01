@@ -96,7 +96,15 @@ class UpdateUserForm(FlaskForm):
 
     def __init__(self,user_id,*args,**kwargs):
         super(UpdateUserForm,self).__init__(*args,**kwargs)
-        self.user_id = user_id
+        self.id = user_id
+
+    def validate_email(self,field):
+        if User.query.filter(User.id != self.id).filter_by(email=field.data).first():
+            raise ValidationError('入力されたメールアドレスは既に使用されています')
+        
+    def validate_username(self,field):
+        if User.query.filter(User.id != self.id).filter_by(username=field.data).first():
+            raise ValidationError('入力されたユーザー名は既に使用されています')
 
 
 @app.route('/register',methods=['GET','POST'])
@@ -115,13 +123,15 @@ def register():
         return redirect(url_for('user_maintenance'))
     return render_template('register.html',form=form)
 
+
 @app.route('/user_maintenance')
 def user_maintenance():
     page = request.args.get('page',1,type=int)
     users = User.query.order_by(User.id).paginate(page=page,per_page=10)
     return render_template('user_maintenance.html',users=users)
 
-@app.route('/<int:user_id>/account',methods=['GET','POST'])
+
+@app.route('/<int:user_id>/account', methods=['GET','POST'])
 def account(user_id):
     user = User.query.get_or_404(user_id)
     form = UpdateUserForm(user_id)
@@ -139,13 +149,16 @@ def account(user_id):
         form.username.data = user.username
         form.email.data = user.email
 
-    return render_template('account.html',form=form)
+    return render_template('account.html', form=form)
 
+@app.route('/<int:user_id>/delete', methods=['GET','POST'])
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'ユーザーアカウントが削除されました！','success')
+    return redirect(url_for('user_maintenance'))
 
-
-# @app.route('/account')
-# def account():
-#     return render_template('account.html')
 
 @app.route('/login')
 def login():

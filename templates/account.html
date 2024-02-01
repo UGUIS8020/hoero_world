@@ -29,24 +29,26 @@
                             <h3>ユーザー更新</h3>
                             <p>ユーザー情報を変更してください</p>
                             <form method="POST">
+                                {{ form.hidden_tag() }}
                                 <div class="mb-3">
-                                    <input type="text" class="form-control form-control-lg" placeholder="ユーザー名">
+                                    {{ render_field(form.username, class="form-control form-control-lg", placeholder="ユーザー名") }}
                                 </div>
 
                                 <div class="mb-3">
-                                    <input type="email" class="form-control form-control-lg" placeholder="メールアドレス">
+                                    {{ render_field(form.email, class="form-control form-control-lg", placeholder="メールアドレス") }}
                                 </div>
                                 <hr>
 
                                 <div class="mb-3">
-                                    <input type="password" class="form-control form-control-lg" placeholder="新パスワード">
+                                    {{ render_field(form.password, class="form-control form-control-lg", placeholder="新パスワード") }}
                                 </div>
 
                                 <div class="mb-3">
-                                    <input type="password" class="form-control form-control-lg" placeholder="新パスワード(確認)">
+                                    {{ render_field(form.pass_confirm, class="form-control form-control-lg", placeholder="新パスワード（確認）") }}
                                 </div> 
-                                
-                                <button type="submit" class="btn btn-outline-light w-100">登録</botton>
+                                    {{ form.submit(class="btn btn-outline-light w-100", value="更新") }}
+
+                               
 
                             </div>
                             </form>
@@ -72,7 +74,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-          <form action="#" method="POST"></form>
+          <form action="{{ url_for('delete_user', user_id=form.id) }}" method="POST"></form>
           <input type="submit" class="btn btn-danger" value="削除">
         
         </div>
