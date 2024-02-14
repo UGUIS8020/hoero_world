@@ -156,7 +156,7 @@ def delete_user(user_id):
     user = User.query.get_or_404(user_id)
     db.session.delete(user)
     db.session.commit()
-    flash(f'ユーザーアカウントが削除されました！','success')
+    flash('ユーザーアカウントが削除されました！')
     return redirect(url_for('user_maintenance'))
 
 
