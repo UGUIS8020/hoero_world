@@ -1,0 +1,22 @@
+name: Deploy to EC2
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  deployment:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Save private key
+      run: echo "${{ secrets.PRIVATE_KEY }}" > deploy_key.pem && chmod 600 deploy_key.pem
+    
+    - name: SSH into EC2 and execute commands
+      run: ssh -o StrictHostKeyChecking=no -i deploy_key.pem ec2-user@ec2-18-177-233-71.ap-northeast-1.compute.amazonaws.com "cd /var/www/FLASK_TEST && sudo git fetch --prune && sudo git checkout main && sudo git pull origin main"
