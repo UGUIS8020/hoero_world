@@ -19,4 +19,4 @@ jobs:
       run: echo "${{ secrets.PRIVATE_KEY }}" > deploy_key.pem && chmod 600 deploy_key.pem
     
     - name: SSH into EC2 and execute commands
-      run: ssh -o StrictHostKeyChecking=no -i deploy_key.pem ec2-user@ec2-18-177-233-71.ap-northeast-1.compute.amazonaws.com "cd /var/www/FLASK_TEST && sudo git fetch --prune && sudo git checkout main && sudo git pull origin main"
+      run: ssh -o StrictHostKeyChecking=no -i deploy_key.pem ec2-user@ec2-18-177-233-71.ap-northeast-1.compute.amazonaws.com "cd /var/www/myflaskapp/hoero_world && sudo git fetch --prune && sudo git checkout main && sudo git pull origin main"
