@@ -172,6 +172,10 @@ def error_404(error):
 def home():
     return render_template('index.html', title = 'index.html')
 
+@app.route('/upload')
+def upload():
+    return render_template('upload.html')
+
 @app.route('/n001211')
 def n001211():
     return render_template('n001211.html')
