@@ -1,0 +1,19 @@
+<!-- HOERO_en -->
+{% extends "base.html" %}
+{% block content %}
+
+<form action="#"method="post">
+    <h2>Form1</h2>
+    <lavel for="">UserName</lavel>
+    <input type="text" name="username" id="username" placeholder="ユーザー名">
+    <br>
+    <label for="email">Email</label>
+    <input type="email" name="email" id="email" placeholder="メールアドレス">
+    <br>
+    <lavel for="inquary">メッセージ本文</lavel>
+    <textarea name="inquary" id="inquary" cols="30" rows="10" placeholder="お問い合わせ内容"></textarea>
+    <br>
+    <input type="submit" value="送信">
+
+
+{% endblock %}

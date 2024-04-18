@@ -272,5 +272,9 @@ def n001221():
 def omake():
     return render_template('omake.html')
 
+@app.route('/form_test')
+def form_test():
+    return render_template('form_test.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
