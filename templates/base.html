@@ -44,14 +44,18 @@
                 <li class="nav-item">
                   <a class="nav-link" href="{{url_for('register')}}">ユーザー登録</a>
                 </li>
-
+                
                 <li class="nav-item">
                   <a class="nav-link" href="{{url_for('login')}}">ログイン</a>
                 </li>
-                  
+                {% if current_user.is_authenticated %}
                 <li class="nav-item">
-                <a class="nav-link" href="#">ログアウト</a>
+                <a class="nav-link" href="{{ url_for('logout') }}">ログアウト</a>
                 </li>
+                <span class="navbar-text ms-3">
+                {{ current_user.username }}
+                </span>
+                {% endif %}
              
                 </span>
               </ul>

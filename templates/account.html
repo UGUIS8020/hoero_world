@@ -2,23 +2,19 @@
 {% extends "base.html" %}
 {% block title %}account{{ super() }}{% endblock %}
 {% block content %}
+    {% if current_user.is_administrator() %}
     <section id="menu">
         <div class="container my-3 py-4 bg-light">
             <div class="row">
                 <div class="col-md-3">
                     <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#del_modal">
                         削除
-
                     </button>
-
-
                 </div>
-
-
             </div>
-
         </div>
     </section>
+    {% endif %}
 
 
     <section id="user_update">

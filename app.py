@@ -24,7 +24,6 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-
 def localize_callback(*args, **kwargs):
     return 'このページにアクセスするには、ログインが必要です。'    
 
@@ -40,10 +39,10 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(user_id)
-
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -68,10 +67,10 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
     
     @property
-    def pasword(self):
+    def password(self):
         raise AttributeError('パスワードは読み取り専用です')
     
-    @pasword.setter
+    @password.setter
     def password(self,password):
         self.password_hash = generate_password_hash(password)
 
@@ -103,14 +102,16 @@ class BlogPost(db.Model):
     def __repr__(self):
         return f"PostID: {self.id},Title: {self.title},Author: {self.author} \n"
     
+
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email(message='正しいメールアドレスを入力してください')])
     password = PasswordField('password', validators=[DataRequired()])
     submit = SubmitField('ログイン')
 
+
 class RegistrationForm(FlaskForm):
-    email = StringField('メールアドレス', validators=[DataRequired(), Email(message='正しいメールアドレスを入力してください')])
     username = StringField('ユーザー名', validators=[DataRequired()])
+    email = StringField('メールアドレス', validators=[DataRequired(), Email(message='正しいメールアドレスを入力してください')])
     password = PasswordField('パスワード', validators=[DataRequired(), EqualTo('pass_confirm', message='パスワードが一致していません')])
     pass_confirm = PasswordField('パスワード(確認)', validators=[DataRequired()])
     submit = SubmitField('登録')
@@ -181,13 +182,12 @@ def register():
     form = RegistrationForm()
     if not current_user.is_administrator():
         abort(403)
-
     if form.validate_on_submit():
         # session['email'] = form.email.data
         # session['username'] = form.username.data
         # session['password'] = form.password.data
 
-        user = User(email=form.email.data, username=form.username.data, password=form.password.data, administrator="0")
+        user = User(username=form.username.data,email=form.email.data, password=form.password.data, administrator="0")
         db.session.add(user)
         db.session.commit()
 
@@ -208,7 +208,6 @@ def account(user_id):
     user = User.query.get_or_404(user_id)
 
     if user.id != current_user.id and not current_user.is_administrator():
-
         abort(403)
     form = UpdateUserForm(user_id)
     if form.validate_on_submit():
@@ -275,6 +274,10 @@ def omake():
 @app.route('/form_test')
 def form_test():
     return render_template('form_test.html')
+
+@app.route('/form_test2')
+def form_test2():
+    return render_template('form_test2.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
