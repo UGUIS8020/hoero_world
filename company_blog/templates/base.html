@@ -34,23 +34,23 @@
                   <a class="nav-link" href="#">ブログ</a>
                 </li>
                 <li class="nav-item">
-                  <a class="nav-link" href="#">カテゴリ</a>
+                  <a class="nav-link" href="{{ url_for('main.category_maintenance') }}">カテゴリ</a>
                 </li>
 
                 <li class="nav-item">
-                  <a class="nav-link" href="{{url_for('user_maintenance')}}">ユーザー</a>
+                  <a class="nav-link" href="{{ url_for('users.user_maintenance') }}">ユーザー</a>
                 </li>
 
                 <li class="nav-item">
-                  <a class="nav-link" href="{{url_for('register')}}">ユーザー登録</a>
+                  <a class="nav-link" href="{{url_for('users.register')}}">ユーザー登録</a>
                 </li>
                 
                 <li class="nav-item">
-                  <a class="nav-link" href="{{url_for('login')}}">ログイン</a>
+                  <a class="nav-link" href="{{url_for('users.login')}}">ログイン</a>
                 </li>
                 {% if current_user.is_authenticated %}
                 <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('logout') }}">ログアウト</a>
+                <a class="nav-link" href="{{ url_for('users.logout') }}">ログアウト</a>
                 </li>
                 <span class="navbar-text ms-3">
                 {{ current_user.username }}
