@@ -1,6 +1,17 @@
 <!-- HOERO_en -->
 {% extends "base.html" %}
+{% block title %}TOP{{ super() }}{% endblock %}
 {% block content %}
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-5W3ZVQCLJ3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-5W3ZVQCLJ3');
+</script>
 
 <section id="top">
 <div class="container">
