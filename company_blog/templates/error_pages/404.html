@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section id="manu">
+    <div class="container my-3 py-4 bg-light">
+        <div class="row">
+            <div class="col-md-3">
+                <a href="{{url_for('users.user_maintenance')}}" class="btn btn-secondary w-100">メインページへ戻る</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<header id="page-header">
+    <div class="container my-3 py-3 bg-light">
+        <h1>ページが見つかりません</h1>
+        <p>アクセスしたページが見つかりませんでした
+        <br>ページが削除されたか、URLが変更された可能性があります。</p>
+    </div>
+    
+</header>
+
+{% endblock %}

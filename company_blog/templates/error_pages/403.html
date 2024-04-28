@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section id="menu">
+    <div class="container my-3 py-4 bg-light">
+        <div class="row">
+            <div class="col-md-3">
+                <a href="{{url_for('users.user_maintenance')}}" class="btn btn-secondary w-100">メインページへ戻る</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<header id="page-header">
+    <div class="container my-3 py-3 bg-light">
+
+        <h1>403 Access Forbidden</h1>
+        <p>誠に恐れ入りますが、お客様がアクセスしたページにはアクセスできませんでした<br>
+       指定されたページへのアクセスが許可されておりません。</p>
+
+    </div>
+</header>
+
+{% endblock %}

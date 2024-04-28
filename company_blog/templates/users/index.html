@@ -1,0 +1,46 @@
+<!-- HOERO_en -->
+{% extends "base.html" %}
+{% block title %}TOP{{ super() }}{% endblock %}
+{% block content %}
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-5W3ZVQCLJ3"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-5W3ZVQCLJ3');
+</script>
+
+<section id="top">
+<div class="container">
+  <div class="row">
+    <div class="col mx-auto">
+   <h1>TEST_00 4月26日</h1>
+      <h1>World of HOERO Dental Tecnician!!</h1>
+      <h2>I am Dental Tecnitian.Every day is fun.</h2>
+      <img src="{{ url_for('static', filename='top02.jpg') }}">
+      <h2>BE TOGETHER</h2>
+      <h2>TEST!!</h2>
+      <p>diary</p>
+
+    </div>
+  </div>
+</div>
+
+</section>
+
+
+   <div class="my-3">
+    <ul class="nav nav-pills">
+        <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001211">11/12/2000</a></li>
+        <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001217">17/12/2000</a></li>
+        <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001220">20/12/2000</a></li>
+        <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/n001221">21/12/2000</a></li>
+        <li class="nav-item"><a class="nav-link{% if prev %} active{% endif %}" href="/omake">OMAKE</a></li>
+
+     </ul>
+   </div> 
+  
+{% endblock %}
