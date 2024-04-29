@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>UGUIS 4月29日</h1>
+
+    <div>
+        
+        <div class="col-md-6 m-auto text-center">
+            <h1>UGUIS TEST4/29</h1>
+       
+            <img src="{{ url_for('static', filename='top/top02.jpg') }}">
+        </div>
+        
+    </div>
+
     <header id="page-header">
         <div class="container my-3 bg-light">
             <div class="row">
@@ -15,7 +25,7 @@
                         <h1 class="fst-italic">"{{ searchtext }}"の検索結果</h1>
                         <br>
                     {% else %}
-                        <h1 class="fst-italic">Yossy Inc. Blog</h1>
+                        <h1 class="fst-italic">UGUIS. Blog</h1>
                         <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
                     {% endif %}
                 </div>
