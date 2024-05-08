@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}UpLoad{{ super() }}{% endblock %}
+{% block content %}
+
+
+<form method="POST" enctype="multipart/form-data">
+    <label>文字列の入力<input type="text" name="text"></label>
+    <label>
+     画像 <input type="file" name="img_name" accept="image/*" multiple>
+    </label></br>
+    <input type="submit" name="confirm" value="実行"></br></br>
+   </form>
+
+
+
+{% endblock %}
