@@ -35,11 +35,12 @@ from main.views import bp as main_bp
 from users.views import bp as users_bp
 from error_pages.handlers import bp as error_bp
 
-flask_app.register_blueprint(main_bp)
-flask_app.register_blueprint(users_bp)
-flask_app.register_blueprint(error_bp)
+flask_app.register_blueprint(main_bp, url_prefix='/main')
+flask_app.register_blueprint(users_bp, url_prefix='/users')
+flask_app.register_blueprint(error_bp, url_prefix='/error')
 
 
 if __name__ == '__main__':
     flask_app.run(debug=True)
+
 

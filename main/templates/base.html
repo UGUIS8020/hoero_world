@@ -53,9 +53,12 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.inquiry_maintenance' %}active{% endif %}" href="{{ url_for('main.inquiry_maintenance') }}">お問い合わせ</a>
               </li>
+
+               {% if current_user.administrator=="1" %}
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'users.user_maintenance' %}active{% endif %}" href="{{url_for('users.user_maintenance')}}">ユーザー</a>
               </li>
+              {% endif %}
               
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('users.logout') }}">ログアウト</a>

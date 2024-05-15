@@ -6,7 +6,7 @@
         <div class="col-md-6 m-auto text-center">
             <h1>UGUIS TEST4/29</h1>
        
-            <img src="{{ url_for('static', filename='top/top02.jpg') }}">
+            <img src="{{ url_for('main.static', filename='top/top02.jpg') }}">
         </div>
         
     </div>
@@ -47,7 +47,7 @@
                                 <div class="card-body" style="max-height: 26rem;">
                                     {% if post.featured_image %}
                                     <div class="mb-3" style="text-align: center;">
-                                        <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid card-img-top" style="max-height: 10rem;">
+                                        <img src="{{ url_for('main.static', filename='featured_image/' + post.featured_image) }}" class="img-fluid card-img-top" style="max-height: 10rem;">
                                     </div>
                                     {% endif %}
                                     <h3>
@@ -90,7 +90,7 @@
                             <li>
                                 <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.id) }}" class="text-decoration-none">
                                     {% if recent_post.featured_image %}
-                                    <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}" class="img-fluid" width="90" height="50">
+                                    <img src="{{ url_for('main.static', filename='featured_image/' + recent_post.featured_image) }}" class="img-fluid" width="90" height="50">
                                     {% endif %}
                                     <span class="ms-2">{{ recent_post.title | truncate(14) }}</span>
                                 </a>

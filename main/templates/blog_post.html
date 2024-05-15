@@ -23,7 +23,7 @@
                     <div class="container py-2 bg-light">
                         {% if post.featured_image %}
                         <div class="mb-3" style="text-align: center;">
-                            <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid">
+                            <img src="{{ url_for('main.static', filename='featured_image/' + post.featured_image) }}" class="img-fluid">
                         </div>
                         {% endif %}
                         <p class="mb-3">{{ post.text|safe }}</p>
@@ -79,7 +79,7 @@
                             <li>
                                 <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.id) }}" class="text-decoration-none">
                                     {% if recent_post.featured_image %}
-                                    <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}" class="img-fluid" width="90" height="50">
+                                    <img src="{{ url_for('main.static', filename='featured_image/' + recent_post.featured_image) }}" class="img-fluid" width="90" height="50">
                                     {% endif %}
                                     <span class="ms-2">{{ recent_post.title | truncate(14) }}</span>
                                 </a>

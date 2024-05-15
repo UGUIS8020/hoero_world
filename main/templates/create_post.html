@@ -36,7 +36,7 @@
                                     <br>
                                     {% if form.picture.data %}
                                     <div style="text-align: left;">
-                                        <img src="{{ url_for('static', filename='featured_image/' + form.picture.data) }}">
+                                        <img src="{{ url_for('main.static', filename='featured_image/' + form.picture.data) }}">
                                     </div>
                                     {% endif %}
                                     <br>
