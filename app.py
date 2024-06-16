@@ -31,13 +31,13 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
-from main.views import bp as main_bp
-from users.views import bp as users_bp
-from error_pages.handlers import bp as error_bp
+from views.main import bp as main_bp
+from views.users import bp as users_bp
+from views.error_pages import bp as error_bp
 
-flask_app.register_blueprint(main_bp, url_prefix='/main')
-flask_app.register_blueprint(users_bp, url_prefix='/users')
-flask_app.register_blueprint(error_bp, url_prefix='/error')
+flask_app.register_blueprint(main_bp)
+flask_app.register_blueprint(users_bp)
+flask_app.register_blueprint(error_bp)
 
 
 if __name__ == '__main__':
