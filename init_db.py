@@ -1,5 +1,5 @@
-from company_blog import db
-from company_blog.models import User
+from app import db
+from models.common import User
 
 # db.drop_all()
 db.create_all()
