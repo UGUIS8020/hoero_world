@@ -8,7 +8,7 @@ import os
 from PIL import Image
 from flask import current_app
 
-bp = Blueprint('main', __name__, url_prefix='/main', template_folder='templates', static_folder='static')
+bp = Blueprint('main', __name__, url_prefix='/main', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 
 @bp.route('/category_maintenance', methods=['GET', 'POST'])
 @login_required
