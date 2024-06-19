@@ -6,7 +6,7 @@ from models.users import RegistrationForm, LoginForm, UpdateUserForm
 from models.main import BlogSearchForm
 from flask import Blueprint
 
-bp = Blueprint('users', __name__, url_prefix='/users', template_folder='templates', static_folder='static')
+bp = Blueprint('users', __name__, url_prefix='/users', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():

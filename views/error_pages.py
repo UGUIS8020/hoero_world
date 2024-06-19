@@ -1,6 +1,6 @@
 from flask import render_template, Blueprint
 
-bp = Blueprint('error_pages', __name__, url_prefix='/error_pages', template_folder='templates', static_folder='static')
+bp = Blueprint('error_pages', __name__, url_prefix='/error_pages', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 
 @bp.app_errorhandler(403)
 def error_403(error):
