@@ -4,8 +4,8 @@
         <div class="container my-5">
             <div class="row">
                 <div class="col-lg-4 mx-auto">
-                    <div class="card bg-primary text-center">
-                        <div class="card-body text-light">
+                    <div class="card bg-light border border-primary text-center">
+                        <div class="card-body">
                             <h3>ログイン</h3>
                             <form method="POST">
                                 {{ form.hidden_tag() }}
@@ -15,8 +15,12 @@
                                 <div class="mb-3">
                                     {{ render_field(form.password, class="form-control form-control-lg", placeholder="パスワード") }}
                                 </div>
-                                {{ form.submit(class="btn btn-outline-light w-100", value="ログイン") }}                 
+                                {{ form.submit(class="btn btn-primary w-100", value="ログイン") }}   
+                                
+                                                               
                             </form>
+                            
+                            <a href="{{ url_for('users.register') }}" class="btn btn-outline-primary w-100 mt-2">新規登録</a>
                         </div>
                     </div>
                 </div>

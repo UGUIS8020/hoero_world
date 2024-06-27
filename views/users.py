@@ -34,11 +34,12 @@ def logout():
     return redirect(url_for('users.login'))
 
 @bp.route('/register', methods=['GET','POST'])
-@login_required
 def register():
+    print(current_user)
     form = RegistrationForm()
-    if not current_user.is_administrator():
-        abort(403)
+    if current_user.is_authenticated and not current_user.is_administrator():
+        abort(403) 
+
     if form.validate_on_submit():
         # session['email'] = form.email.data
         # session['username'] = form.username.data
