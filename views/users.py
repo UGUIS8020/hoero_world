@@ -18,7 +18,7 @@ def login():
                 login_user(user)
                 next = request.args.get('next')
                 if next == None or not next[0] == '/':
-                    next = url_for('main.blog_maintenance')
+                    next = url_for('main.index')
                 return redirect(next)
             else:
                 flash('パスワードが一致しません')
@@ -48,12 +48,14 @@ def register():
         db.session.add(user)
         db.session.commit()
         flash('ユーザーが登録されました')
-        return redirect(url_for('users.user_maintenance'))
+        return redirect(url_for('users.login'))
     return render_template('users/register.html', form=form)
 
 @bp.route('/user_maintenance')
 @login_required
 def user_maintenance():
+    if not current_user.is_administrator():
+        abort(403)
     page = request.args.get('page', 1, type=int)
     users = User.query.order_by(User.id).paginate(page=page, per_page=10)
     return render_template('users/user_maintenance.html', users=users)
