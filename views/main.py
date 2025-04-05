@@ -6,6 +6,10 @@ from extensions import db
 from utils.zip_handler import ZipHandler
 from werkzeug.utils import secure_filename
 import boto3
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import os
 from PIL import Image
