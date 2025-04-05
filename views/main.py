@@ -1,14 +1,33 @@
-from flask import Blueprint, render_template, request, url_for, redirect, flash, abort
+from flask import Blueprint, render_template, request, url_for, redirect, flash, abort,jsonify,send_from_directory
 from flask_login import login_required, current_user
 from models.common import BlogCategory, BlogPost, Inquiry
 from models.main import BlogCategoryForm, UpdateCategoryForm, BlogPostForm, BlogSearchForm, InquiryForm
-from app import db
+from extensions import db
+from utils.zip_handler import ZipHandler
+from werkzeug.utils import secure_filename
+import boto3
 
 import os
 from PIL import Image
 from flask import current_app
+import re
+from urllib.parse import quote, unquote
+import shutil
 
 bp = Blueprint('main', __name__, url_prefix='/main', template_folder='hoero_world/templates', static_folder='hoero_world/static')
+
+# AWSクライアントの初期化
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name=os.getenv("AWS_REGION")
+)
+
+BUCKET_NAME = os.getenv("S3_BUCKET")
+
+# ZIPハンドラーのインスタンス作成
+zip_handler_instance = ZipHandler()  # インスタンスを作成
 
 @bp.route('/category_maintenance', methods=['GET', 'POST'])
 @login_required
@@ -76,6 +95,44 @@ def blog_maintenance():
     page = request.args.get('page', 1, type=int)
     blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
     return render_template('main/blog_maintenance.html', blog_posts=blog_posts)
+
+@bp.route('/ugu_box')
+@login_required
+def ugu_box():
+    page = request.args.get('page', 1, type=int)
+    blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
+
+    s3_files = []
+    try:
+        response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix='uploads/')
+        # LastModifiedでソートするためにリストに変換
+        contents = response.get('Contents', [])
+        # LastModifiedの降順（新しい順）でソート
+        contents.sort(key=lambda x: x['LastModified'], reverse=True)
+        
+        for obj in contents:
+            key = obj['Key']
+            filename = os.path.basename(key)
+            if filename:  # フォルダ名を除外
+                # 署名付きURLを生成（有効期限1時間）
+                file_url = s3.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': BUCKET_NAME, 'Key': key},
+                    ExpiresIn=3600
+                )
+                s3_files.append({
+                    'filename': filename, 
+                    'url': file_url,
+                    'last_modified': obj['LastModified'].strftime('%Y-%m-%d %H:%M:%S')  # 日時情報も追加
+                })
+    except Exception as e:
+        flash(f"S3ファイル一覧取得中にエラー: {str(e)}", "error")
+
+    return render_template(
+        'main/ugu_box.html',
+        blog_posts=blog_posts,
+        s3_files=s3_files
+    )
 
 @bp.route('/<int:blog_post_id>/blog_post')
 def blog_post(blog_post_id):
@@ -225,6 +282,196 @@ def delete_inquiry(inquiry_id):
 @bp.route('/info')
 def info():
     return render_template('main/info.html')
+
+import traceback  # ← 追加（ファイルの先頭でもOK）
+
+def sanitize_filename(filename):
+    """
+    ファイル名をサニタイズする関数
+    - 危険な文字を除去
+    - 日本語などのマルチバイト文字を保持
+    - パス区切り文字を除去
+    """
+    # パス区切り文字を除去
+    filename = os.path.basename(filename)
+    
+    # 危険な文字を除去（ただし日本語などのマルチバイト文字は保持）
+    # 英数字、日本語、一部の記号のみを許可
+    filename = re.sub(r'[^\w\s\-\.\u3000-\u9fff\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f]', '', filename)
+    
+    # 先頭と末尾の空白を除去
+    filename = filename.strip()
+    
+    # 空のファイル名の場合はデフォルト名を使用
+    if not filename:
+        filename = "unnamed_file"
+    
+    return filename
+
+def get_unique_filename(bucket, key):
+    """
+    重複しないファイル名を生成する関数
+    """
+    base, ext = os.path.splitext(key)
+    counter = 1
+    new_key = key
+    
+    # 同じ名前のファイルが存在する場合は番号を付加
+    while True:
+        try:
+            s3.head_object(Bucket=bucket, Key=new_key)
+            new_key = f"{base}_{counter}{ext}"
+            counter += 1
+        except:
+            break
+    
+    return new_key
+
+@bp.route('/upload', methods=['POST'])
+def upload_file():
+    if 'files[]' not in request.files:
+        return jsonify({'error': 'ファイルが選択されていません'}), 400
+
+    files = request.files.getlist('files[]')
+    if not files or files[0].filename == '':
+        return jsonify({'error': 'ファイルが選択されていません'}), 400
+
+    temp_dir = None
+    try:
+        result, temp_dir = zip_handler_instance.process_files(files)
+
+        # 圧縮されてない場合はリスト、されてる場合は文字列
+        if isinstance(result, list):
+            uploaded_keys = []
+            for file_path in result:
+                original_filename = os.path.basename(file_path)
+                # ファイル名をサニタイズ
+                safe_filename = sanitize_filename(original_filename)
+                s3_key = f"uploads/{safe_filename}"
+                
+                # 重複チェックと一意のファイル名生成
+                s3_key = get_unique_filename(BUCKET_NAME, s3_key)
+                
+                with open(file_path, 'rb') as f:
+                    s3.upload_fileobj(
+                        f, 
+                        BUCKET_NAME, 
+                        s3_key,
+                        ExtraArgs={
+                            'ACL': 'private',
+                            'ContentType': 'application/octet-stream',
+                            'ServerSideEncryption': 'AES256',
+                            'Metadata': {
+                                'original-filename': quote(original_filename)  # 元のファイル名をメタデータとして保存
+                            }
+                        }
+                    )
+                uploaded_keys.append(s3_key)
+            
+            # すべてのファイルのアップロードが完了したら一時ディレクトリを削除
+            if temp_dir and os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                
+            return jsonify({
+                'message': 'ファイルは正常にS3にアップロードされました',
+                'files': uploaded_keys
+            }), 200
+        else:
+            zip_path = result
+            original_filename = os.path.basename(zip_path)
+            # ZIPファイル名をサニタイズ
+            safe_filename = sanitize_filename(original_filename)
+            s3_key = f"uploads/{safe_filename}"
+            
+            # 重複チェックと一意のファイル名生成
+            s3_key = get_unique_filename(BUCKET_NAME, s3_key)
+            
+            with open(zip_path, 'rb') as f:
+                s3.upload_fileobj(
+                    f, 
+                    BUCKET_NAME, 
+                    s3_key,
+                    ExtraArgs={
+                        'ACL': 'private',
+                        'ContentType': 'application/zip',
+                        'ServerSideEncryption': 'AES256',
+                        'Metadata': {
+                            'original-filename': quote(original_filename)  # 元のファイル名をメタデータとして保存
+                        }
+                    }
+                )
+            
+            # ZIPファイルを削除
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+                
+            return jsonify({
+                'message': 'ZIPファイルは正常にS3にアップロードされました',
+                'file': s3_key
+            }), 200
+
+    except Exception as e:
+        print("🔥 アップロード処理中にエラーが発生しました！")
+        traceback.print_exc()  # 詳細なエラー情報をターミナルに出力
+        
+        # エラー発生時も一時ディレクトリを削除
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/uploaded-files')
+def file_list():
+    response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix='uploads/')
+    zip_files = [
+        os.path.basename(obj['Key'])
+        for obj in response.get('Contents', [])
+        if obj['Key'].endswith('.zip')
+    ]
+    return render_template('ugu_box.html', zip_files=zip_files)
+
+@bp.route('/delete-file', methods=['POST'])
+def delete_file():
+    filename = request.form.get('filename')
+    s3_key = f"uploads/{filename}"
+
+    try:
+        s3.delete_object(Bucket=BUCKET_NAME, Key=s3_key)
+        flash(f"{filename} をS3から削除しました。", "success")
+    except Exception as e:
+        flash(f"{filename} の削除中にエラーが発生しました: {str(e)}", "error")
+
+    return redirect(url_for('main.ugu_box')) 
+    
+@bp.route('/download/<filename>')
+@login_required
+def download_file(filename):
+    try:
+        # S3からファイルをダウンロード
+        s3_key = f"uploads/{filename}"
+        
+        # 一時ファイルを作成
+        temp_dir = os.path.join(current_app.root_path, 'temp_downloads')
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_file_path = os.path.join(temp_dir, filename)
+        
+        # S3からファイルをダウンロード
+        s3.download_file(BUCKET_NAME, s3_key, temp_file_path)
+        
+        # ファイルを送信
+        return send_from_directory(
+            temp_dir,
+            filename,
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        flash(f"ファイルのダウンロード中にエラーが発生しました: {str(e)}", "error")
+        return redirect(url_for('main.ugu_box'))
+    finally:
+        # 一時ファイルを削除
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
 
 def add_featured_image(upload_image):
     image_filename = upload_image.filename

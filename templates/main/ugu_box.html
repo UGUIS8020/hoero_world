@@ -1,0 +1,592 @@
+{% extends "common/base.html" %} {% block title %}ファイル送信{% endblock %} {%
+block content %}
+
+<title>データ送信</title>
+<style>
+    .drop-zone {
+        border: 2px dashed #ccc;
+        padding: 20px;
+        text-align: center;
+        margin: 20px auto;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        max-width: 800px;
+    }
+    .drop-zone.active {
+        border-color: #007bff;
+        background-color: #e8f4ff;
+    }
+    .file-list {
+        margin-top: 20px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background-color: #f8f9fa;
+        margin-bottom: 5px;
+        border-radius: 4px;
+    }
+    .folder-item {
+        background-color: #e8f4ff;
+        font-weight: bold;
+    }
+    .file-path {
+        color: #666;
+        font-size: 0.8em;
+        display: block;
+        word-break: break-all;
+    }
+    .file-remove {
+        color: red;
+        cursor: pointer;
+        padding: 0 10px;
+    }
+    #status {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .processing {
+        background-color: #e2e3e5;
+        color: #383d41;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 4px;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% {
+            opacity: 0.6;
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0.6;
+        }
+    }
+    .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .success {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .progress-container {
+        width: 100%;
+        background-color: #f1f1f1;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .progress-bar {
+        height: 20px;
+        background-color: #4caf50;
+        border-radius: 4px;
+        width: 0%;
+        transition: width 0.3s;
+        text-align: center;
+        line-height: 20px;
+        color: white;
+    }
+    .button-group {
+        margin-top: 15px;
+    }
+    button {
+        padding: 8px 16px;
+        margin: 0 5px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: #0069d9;
+    }
+    button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+    }
+</style>
+
+<h1>データ送信</h1>
+<div class="drop-zone" id="dropZone">
+    <p>
+        ここにファイル・フォルダをドラッグ＆ドロップするか、クリックして選択してください
+    </p>
+    <p style="font-size: 0.9em; color: #666">
+        最大ファイルサイズ: 2GB<br />
+        対応ファイル: すべて<br />
+        処理: ZIP圧縮後、S3へ自動アップロード
+    </p>
+    <div class="button-group">
+        <input
+            type="file"
+            id="fileInput"
+            name="files[]"
+            multiple
+            style="display: none"
+        />
+        <input
+            type="file"
+            id="folderInput"
+            name="folders[]"
+            multiple
+            webkitdirectory
+            directory
+            style="display: none"
+        />
+        <button onclick="document.getElementById('fileInput').click()">
+            ファイルを選択
+        </button>
+        <button onclick="document.getElementById('folderInput').click()">
+            フォルダを選択
+        </button>
+        <button id="uploadButton" disabled>アップロード</button>
+        <button id="clearButton" disabled>クリア</button>
+    </div>
+</div>
+
+<div id="status"></div>
+<div id="progressContainer" class="progress-container" style="display: none">
+    <div id="progressBar" class="progress-bar">0%</div>
+</div>
+<div id="fileList" class="file-list"></div>
+
+<hr style="margin: 40px auto; max-width: 800px" />
+
+<h2 style="text-align: center">アップロード済みファイル一覧</h2>
+
+<div style="max-width: 500px; margin: 0 auto">
+    {% if s3_files %}
+    <ul style="list-style: none; padding: 0">
+        {% for file in s3_files %}
+        <li
+            style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin: 10px 0;
+                padding: 10px;
+                border-bottom: 1px solid #ccc;
+            "
+        >
+            <div>
+                <a
+                    href="{{ file.url }}"
+                    target="_blank"
+                    style="text-decoration: none; color: #007bff"
+                    >{{ file.filename }}</a
+                >
+                <div style="font-size: 0.8em; color: #666">
+                    {{ file.last_modified }}
+                </div>
+            </div>
+            <form
+                action="{{ url_for('main.delete_file') }}"
+                method="POST"
+                style="margin: 0"
+            >
+                <input
+                    type="hidden"
+                    name="filename"
+                    value="{{ file.filename }}"
+                />
+                <button
+                    type="submit"
+                    style="
+                        background-color: #007bff;
+                        border: none;
+                        color: white;
+                        padding: 6px 12px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                    "
+                >
+                    削除
+                </button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p style="text-align: center">
+        アップロードされたファイルはまだありません。
+    </p>
+    {% endif %}
+</div>
+<script>
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const folderInput = document.getElementById("folderInput");
+    const fileList = document.getElementById("fileList");
+    const status = document.getElementById("status");
+    const uploadButton = document.getElementById("uploadButton");
+    const clearButton = document.getElementById("clearButton");
+    const progressContainer = document.getElementById("progressContainer");
+    const progressBar = document.getElementById("progressBar");
+
+    let selectedFiles = []; // 選択されたファイルを保持
+    let totalSize = 0;
+
+    // 100件以上のファイルを取得するために必要な関数
+    async function readAllEntries(reader) {
+        const entries = [];
+
+        async function readBatch() {
+            return new Promise((resolve, reject) => {
+                reader.readEntries((batch) => {
+                    if (batch.length === 0) {
+                        resolve(null); // 終了条件
+                    } else {
+                        resolve(batch);
+                    }
+                }, reject);
+            });
+        }
+
+        let batch;
+        while ((batch = await readBatch()) !== null) {
+            entries.push(...batch);
+        }
+
+        return entries;
+    }
+
+    function showStatus(message, type) {
+        status.innerHTML = `<div class="${type}">${message}</div>`;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        if (bytes < 1024 * 1024 * 1024)
+            return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+    }
+
+    function updateButtonState() {
+        uploadButton.disabled = selectedFiles.length === 0;
+        clearButton.disabled = selectedFiles.length === 0;
+    }
+
+    function getRelativePath(file) {
+        // webkitRelativePath がある場合はそれを使用
+        if (file.webkitRelativePath) return file.webkitRelativePath;
+
+        // DataTransferItemでのフォルダアップロードの場合
+        if (file.relativePath) return file.relativePath;
+
+        // 通常のファイル
+        return file.name;
+    }
+
+    function isFolderEntry(entry) {
+        return entry && entry.isDirectory;
+    }
+
+    function displayFiles() {
+        fileList.innerHTML = "";
+        totalSize = 0;
+
+        // ファイルパスでグループ化
+        const filesByFolder = {};
+
+        selectedFiles.forEach((file) => {
+            totalSize += file.size;
+            const path = getRelativePath(file);
+            const folderPath = path.includes("/")
+                ? path.substring(0, path.lastIndexOf("/"))
+                : "";
+
+            if (!filesByFolder[folderPath]) {
+                filesByFolder[folderPath] = [];
+            }
+            filesByFolder[folderPath].push(file);
+        });
+
+        // フォルダごとに表示
+        Object.keys(filesByFolder)
+            .sort()
+            .forEach((folder) => {
+                if (folder !== "") {
+                    // フォルダ見出し
+                    const folderItem = document.createElement("div");
+                    folderItem.className = "file-item folder-item";
+                    folderItem.innerHTML = `<span>📁 ${folder}/</span>`;
+                    fileList.appendChild(folderItem);
+                }
+
+                // そのフォルダ内のファイル
+                filesByFolder[folder].forEach((file) => {
+                    const path = getRelativePath(file);
+                    const fileName = path.includes("/")
+                        ? path.substring(path.lastIndexOf("/") + 1)
+                        : path;
+
+                    const item = document.createElement("div");
+                    item.className = "file-item";
+                    item.innerHTML = `
+                    <div>
+                        <span>${fileName}</span>
+                        <span class="file-size">(${formatFileSize(
+                            file.size
+                        )})</span>
+                    </div>
+                    <span class="file-remove" data-path="${path}">❌</span>
+                `;
+                    fileList.appendChild(item);
+
+                    // 削除ボタンのイベントリスナー
+                    item.querySelector(".file-remove").addEventListener(
+                        "click",
+                        function () {
+                            const pathToRemove = this.getAttribute("data-path");
+                            selectedFiles = selectedFiles.filter(
+                                (f) => getRelativePath(f) !== pathToRemove
+                            );
+                            displayFiles();
+                            updateButtonState();
+
+                            if (selectedFiles.length === 0) {
+                                showStatus(
+                                    "ファイルが選択されていません。",
+                                    "info"
+                                );
+                            }
+                        }
+                    );
+                });
+            });
+
+        if (selectedFiles.length > 0) {
+            showStatus(
+                `${
+                    selectedFiles.length
+                }ファイル選択済み (合計: ${formatFileSize(totalSize)})`,
+                "info"
+            );
+        }
+    }
+
+    // ファイル追加処理
+    function addFiles(files) {
+        // サイズチェック
+        const oversizedFiles = Array.from(files).filter(
+            (f) => f.size > 2 * 1024 * 1024 * 1024
+        );
+        if (oversizedFiles.length > 0) {
+            showStatus(
+                `警告: 次のファイルは2GBを超えるため無視されました: ${oversizedFiles
+                    .map((f) => f.name)
+                    .join(", ")}`,
+                "error"
+            );
+        }
+
+        // 有効なファイルだけを追加
+        const validFiles = Array.from(files).filter(
+            (f) => f.size <= 2 * 1024 * 1024 * 1024
+        );
+
+        // 重複チェック
+        for (const file of validFiles) {
+            const path = getRelativePath(file);
+            const duplicate = selectedFiles.find(
+                (f) => getRelativePath(f) === path
+            );
+
+            if (!duplicate) {
+                selectedFiles.push(file);
+            }
+        }
+
+        displayFiles();
+        updateButtonState();
+    }
+
+    // フォルダからファイルを再帰的に読み込む
+    async function readEntryRecursively(entry) {
+        if (isFolderEntry(entry)) {
+            const reader = entry.createReader();
+            const entries = await readAllEntries(reader); // ✅ ここを変更
+
+            for (const childEntry of entries) {
+                await readEntryRecursively(childEntry);
+            }
+        } else if (entry.isFile) {
+            const file = await new Promise((resolve) => {
+                entry.file(resolve);
+            });
+
+            file.relativePath = entry.fullPath.substring(1); // 先頭の '/' を除く
+            const isDuplicate = selectedFiles.some(
+                (f) => f.relativePath === file.relativePath
+            );
+            if (!isDuplicate && file.size <= 2 * 1024 * 1024 * 1024) {
+                selectedFiles.push(file);
+            }
+        }
+    }
+
+    // ドラッグ＆ドロップされたアイテムを処理
+    async function handleDroppedItems(items) {
+        for (const item of items) {
+            if (item.kind === "file") {
+                const entry = item.webkitGetAsEntry();
+                if (entry) {
+                    await readEntryRecursively(entry);
+                }
+            }
+        }
+        displayFiles();
+        updateButtonState();
+    }
+
+    async function uploadFiles(files) {
+        if (files.length === 0) return;
+
+        const formData = new FormData();
+        let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+        let uploadedBytes = 0;
+
+        // ファイルパスを保持するためのディレクトリ構造
+        const paths = {};
+
+        for (const file of files) {
+            const path = getRelativePath(file);
+            formData.append("files[]", file);
+            // パス情報を別途送信
+            paths[file.name] = path;
+        }
+
+        // パス情報をJSONとして追加
+        formData.append("paths", JSON.stringify(paths));
+
+        progressContainer.style.display = "block";
+        showStatus("ファイルをアップロード中...", "processing");
+        uploadButton.disabled = true;
+        clearButton.disabled = true;
+
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "/main/upload", true);
+
+            // プログレス処理
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    uploadedBytes = event.loaded;
+                    const percentage = Math.round(
+                        (uploadedBytes / totalBytes) * 100
+                    );
+                    progressBar.style.width = percentage + "%";
+                    progressBar.textContent = percentage + "%";
+                }
+            };
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    const result = JSON.parse(xhr.responseText);
+                    showStatus(result.message || "アップロード成功", "success");
+                    fileList.innerHTML = "";
+                    selectedFiles = [];
+                    updateButtonState();
+                    progressContainer.style.display = "none";
+                } else {
+                    throw new Error(
+                        xhr.statusText || "アップロードに失敗しました"
+                    );
+                }
+            };
+
+            xhr.onerror = function () {
+                throw new Error("ネットワークエラーが発生しました");
+            };
+
+            xhr.send(formData);
+        } catch (error) {
+            console.error("アップロードエラー:", error);
+            showStatus("エラーが発生しました: " + error.message, "error");
+            progressContainer.style.display = "none";
+            updateButtonState();
+        }
+    }
+
+    // ドラッグ＆ドロップ処理
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("active");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("active");
+    });
+
+    dropZone.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("active");
+
+        if (e.dataTransfer.items) {
+            // DataTransferItemListを使用（フォルダをサポート）
+            await handleDroppedItems(e.dataTransfer.items);
+        } else {
+            // 従来のファイルリストを使用（フォルダ非サポート）
+            addFiles(e.dataTransfer.files);
+        }
+    });
+
+    // ファイル選択処理
+    fileInput.addEventListener("change", (e) => {
+        addFiles(e.target.files);
+    });
+
+    // フォルダ選択処理
+    folderInput.addEventListener("change", (e) => {
+        addFiles(e.target.files);
+    });
+
+    // アップロードボタンクリック時
+    uploadButton.addEventListener("click", () => {
+        if (selectedFiles.length > 0) {
+            uploadFiles(selectedFiles);
+        }
+    });
+
+    // クリアボタンクリック時
+    clearButton.addEventListener("click", () => {
+        selectedFiles = [];
+        fileList.innerHTML = "";
+        showStatus("ファイル選択をクリアしました。", "info");
+        updateButtonState();
+    });
+
+    // 初期状態のメッセージ
+    showStatus(
+        "ファイルまたはフォルダをドラッグ＆ドロップするか、選択ボタンを使用してください。",
+        "info"
+    );
+</script>
+{% endblock %}

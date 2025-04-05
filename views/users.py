@@ -1,10 +1,10 @@
 from flask import render_template, url_for, redirect, session, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db
 from models.common import User, BlogPost, BlogCategory
 from models.users import RegistrationForm, LoginForm, UpdateUserForm
 from models.main import BlogSearchForm
 from flask import Blueprint
+from extensions import db
 
 bp = Blueprint('users', __name__, url_prefix='/users', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 

@@ -3,7 +3,7 @@ from pytz import timezone
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
 
-from app import db, login_manager
+from extensions import db, login_manager
 
 @login_manager.user_loader
 def load_user(user_id):
