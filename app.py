@@ -5,7 +5,6 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from extensions import db, login_manager
 from dotenv import load_dotenv
-
 load_dotenv()
 
 flask_app = Flask(__name__)
