@@ -170,7 +170,6 @@ block content %}
     </div>
 </div>
 
-{% if current_user.is_authenticated and current_user.is_administrator %}
 <div id="status"></div>
 <div id="progressContainer" class="progress-container" style="display: none">
     <div id="progressBar" class="progress-bar">0%</div>
@@ -240,10 +239,6 @@ block content %}
     </p>
     {% endif %}
 </div>
-
-{% endif %}
-
-
 <script>
     const dropZone = document.getElementById("dropZone");
     const fileInput = document.getElementById("fileInput");
