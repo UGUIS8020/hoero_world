@@ -9,9 +9,6 @@ import boto3
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
-import os
 from PIL import Image
 from flask import current_app
 import re
@@ -20,6 +17,7 @@ import shutil
 
 bp = Blueprint('main', __name__, url_prefix='/main', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 
+load_dotenv()
 # AWSクライアントの初期化
 s3 = boto3.client(
     "s3",

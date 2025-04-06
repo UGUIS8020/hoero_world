@@ -5,7 +5,12 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from extensions import db, login_manager
 from dotenv import load_dotenv
+
 load_dotenv()
+
+print("DEBUG: AWS_REGION =", os.getenv("AWS_REGION"))
+print("DEBUG: S3_BUCKET =", os.getenv("S3_BUCKET"))
+
 
 flask_app = Flask(__name__)
 
