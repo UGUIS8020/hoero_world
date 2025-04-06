@@ -169,6 +169,7 @@ block content %}
     </div>
 </div>
 
+{% if current_user.is_authenticated and current_user.is_administrator %}
 <div id="status"></div>
 <div id="progressContainer" class="progress-container" style="display: none">
     <div id="progressBar" class="progress-bar">0%</div>
@@ -238,6 +239,10 @@ block content %}
     </p>
     {% endif %}
 </div>
+
+{% endif %}
+
+
 <script>
     const dropZone = document.getElementById("dropZone");
     const fileInput = document.getElementById("fileInput");
@@ -536,57 +541,153 @@ block content %}
     }
 
     // ドラッグ＆ドロップ処理
-    dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropZone.classList.add("active");
-    });
+dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("active");
+});
 
-    dropZone.addEventListener("dragleave", () => {
-        dropZone.classList.remove("active");
-    });
+dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("active");
+});
 
-    dropZone.addEventListener("drop", async (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("active");
+dropZone.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("active");
 
-        if (e.dataTransfer.items) {
-            // DataTransferItemListを使用（フォルダをサポート）
-            await handleDroppedItems(e.dataTransfer.items);
-        } else {
-            // 従来のファイルリストを使用（フォルダ非サポート）
-            addFiles(e.dataTransfer.files);
+    if (e.dataTransfer.items) {
+        // DataTransferItemListを使用（フォルダとファイルの両方をサポート）
+        await handleDroppedItems(e.dataTransfer.items);
+    } else {
+        // 従来のファイルリストを使用（フォルダ非サポート）
+        handleFiles(Array.from(e.dataTransfer.files));
+    }
+});
+
+// DataTransferItemListからファイルとフォルダを処理する関数
+async function handleDroppedItems(items) {
+    const filePromises = [];
+    
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        if (item.kind === "file") {
+            // webkitGetAsEntryがサポートされている場合はそれを使用
+            if (item.webkitGetAsEntry) {
+                const entry = item.webkitGetAsEntry();
+                if (entry) {
+                    if (entry.isDirectory) {
+                        // フォルダの場合、再帰的に処理
+                        filePromises.push(readDirectory(entry));
+                    } else {
+                        // ファイルの場合、そのまま追加
+                        filePromises.push(Promise.resolve([item.getAsFile()]));
+                    }
+                }
+            } else {
+                // webkitGetAsEntryがサポートされていない場合は直接ファイルを取得
+                filePromises.push(Promise.resolve([item.getAsFile()]));
+            }
         }
-    });
+    }
+    
+    // すべてのファイル取得が完了するのを待つ
+    const fileArrays = await Promise.all(filePromises);
+    // 平坦化して単一のファイル配列にする
+    const allFiles = fileArrays.flat();
+    
+    // 取得したファイルをaddFilesに渡す
+    handleFiles(allFiles);
+}
 
-    // ファイル選択処理
-    fileInput.addEventListener("change", (e) => {
-        addFiles(e.target.files);
-    });
-
-    // フォルダ選択処理
-    folderInput.addEventListener("change", (e) => {
-        addFiles(e.target.files);
-    });
-
-    // アップロードボタンクリック時
-    uploadButton.addEventListener("click", () => {
-        if (selectedFiles.length > 0) {
-            uploadFiles(selectedFiles);
+// ディレクトリを再帰的に読み込む関数
+function readDirectory(directoryEntry) {
+    return new Promise((resolve) => {
+        const dirReader = directoryEntry.createReader();
+        const files = [];
+        
+        // ディレクトリ内のエントリを読み込む
+        function readEntries() {
+            dirReader.readEntries(async (entries) => {
+                if (entries.length === 0) {
+                    // すべてのエントリを読み込んだらresolveする
+                    resolve(files);
+                    return;
+                }
+                
+                // 各エントリを処理
+                for (let i = 0; i < entries.length; i++) {
+                    const entry = entries[i];
+                    
+                    if (entry.isDirectory) {
+                        // サブディレクトリの場合、再帰的に読み込む
+                        const subFiles = await readDirectory(entry);
+                        files.push(...subFiles);
+                    } else {
+                        // ファイルの場合、Fileオブジェクトに変換して追加
+                        files.push(await getFileFromEntry(entry));
+                    }
+                }
+                
+                // まだエントリが残っている可能性があるので再度読み込み
+                readEntries();
+            }, (error) => {
+                console.error("ディレクトリの読み込みエラー:", error);
+                resolve(files);
+            });
         }
+        
+        readEntries();
     });
+}
 
-    // クリアボタンクリック時
-    clearButton.addEventListener("click", () => {
-        selectedFiles = [];
-        fileList.innerHTML = "";
-        showStatus("ファイル選択をクリアしました。", "info");
-        updateButtonState();
+// FileEntryからFileオブジェクトを取得する関数
+function getFileFromEntry(fileEntry) {
+    return new Promise((resolve) => {
+        fileEntry.file(
+            (file) => resolve(file),
+            (error) => {
+                console.error("ファイルの取得エラー:", error);
+                resolve(null);
+            }
+        );
     });
+}
 
-    // 初期状態のメッセージ
-    showStatus(
-        "ファイルまたはフォルダをドラッグ＆ドロップするか、選択ボタンを使用してください。",
-        "info"
-    );
+// 複数ファイルを処理する関数
+function handleFiles(files) {
+    // nullを除外
+    const validFiles = files.filter(file => file !== null);
+    
+    if (validFiles.length > 0) {
+        addFiles(validFiles);
+        showStatus(`${validFiles.length}個のファイルが選択されました。`, "success");
+    }
+}
+
+// ファイル選択処理
+fileInput.addEventListener("change", (e) => {
+    handleFiles(Array.from(e.target.files));
+});
+
+// フォルダ選択処理
+folderInput.addEventListener("change", (e) => {
+    handleFiles(Array.from(e.target.files));
+});
+
+// アップロードボタンクリック時
+uploadButton.addEventListener("click", () => {
+    if (selectedFiles.length > 0) {
+        uploadFiles(selectedFiles);
+    }
+});
+
+// クリアボタンクリック時
+clearButton.addEventListener("click", () => {
+    selectedFiles = [];
+    fileList.innerHTML = "";
+    showStatus("ファイル選択をクリアしました。", "info");
+    updateButtonState();
+});
+
 </script>
 {% endblock %}

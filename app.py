@@ -11,6 +11,7 @@ load_dotenv()
 
 flask_app = Flask(__name__)
 
+flask_app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024
 flask_app.config['SECRET_KEY'] = 'mysecretkey'
 basedir = os.path.abspath(os.path.dirname(__file__))
 flask_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')

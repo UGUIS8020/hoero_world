@@ -99,7 +99,6 @@ def blog_maintenance():
     return render_template('main/blog_maintenance.html', blog_posts=blog_posts)
 
 @bp.route('/ugu_box')
-@login_required
 def ugu_box():
     page = request.args.get('page', 1, type=int)
     blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
