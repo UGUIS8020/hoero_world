@@ -5,12 +5,9 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from extensions import db, login_manager
 from dotenv import load_dotenv
+import sys
 
 load_dotenv()
-
-print("DEBUG: AWS_REGION =", os.getenv("AWS_REGION"))
-print("DEBUG: S3_BUCKET =", os.getenv("S3_BUCKET"))
-
 
 flask_app = Flask(__name__)
 
@@ -37,6 +34,11 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+
+# ✅ ここで stdout に明示的に出力！
+sys.stdout.write(f"DEBUG: AWS_REGION = {os.getenv('AWS_REGION')}\n")
+sys.stdout.write(f"DEBUG: S3_BUCKET = {os.getenv('S3_BUCKET')}\n")
+sys.stdout.flush()
 
 from views.main import bp as main_bp
 from views.users import bp as users_bp
