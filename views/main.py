@@ -107,37 +107,50 @@ def colors():
         return colors_image_upload()
     return render_template('main/colors.html')
 
+def save_resized_upload(file, save_path, max_width=1000):
+    """
+    アップロードされた画像を最大幅でリサイズして保存。
+    """
+    img = Image.open(file)
+    if img.width > max_width:
+        scale = max_width / img.width
+        new_height = int(img.height * scale)
+        img = img.resize((max_width, new_height), Image.LANCZOS)
+    img.save(save_path)
+
+
 @bp.route('/colors_image_upload', methods=['GET', 'POST'])
 def colors_image_upload():
     if 'file' not in request.files:
         return 'ファイルがありません', 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return 'ファイルが選択されていません', 400
 
     try:
-        # ファイルを一時保存
+        # ファイルの保存先パス
         filename = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(filename)
-        
-        # 画像を処理
+
+        # ✅ ファイル保存と同時にリサイズ
+        save_resized_upload(file, filename)
+
+        # 画像を処理（リサイズ済み画像）
         result_img = process_image(filename)
-        
+
         # 結果画像をBase64エンコード
         buffered = io.BytesIO()
         result_img.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
-        
+
         # 一時ファイルを削除
         if os.path.exists(filename):
             os.remove(filename)
-            
+
         return render_template('main/result.html', image_data=img_str)
-            
+
     except Exception as e:
         print(f"Error occurred: {str(e)}")
-        # エラーが発生した場合も一時ファイルを削除
         if os.path.exists(filename):
             os.remove(filename)
         return str(e), 500
