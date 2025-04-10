@@ -1,0 +1,22 @@
+{% extends "common/base.html" %} 
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white text-center">
+                <h2>画像カラー分析</h2>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <form action="/main/colors_image_upload" method="post" enctype="multipart/form-data" class="mb-4">
+                        <div class="mb-3">
+                            <input type="file" name="file" accept="image/*" required class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-success">分析開始</button>
+                    </form>
+                </div>              
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

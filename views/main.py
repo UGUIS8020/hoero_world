@@ -14,6 +14,9 @@ from flask import current_app
 import re
 from urllib.parse import quote, unquote
 import shutil
+import io
+import base64
+from utils.colors_image import process_image  # 追加
 
 bp = Blueprint('main', __name__, url_prefix='/main', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 
@@ -97,6 +100,47 @@ def blog_maintenance():
     page = request.args.get('page', 1, type=int)
     blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
     return render_template('main/blog_maintenance.html', blog_posts=blog_posts)
+
+@bp.route('/colors', methods=['GET', 'POST'])
+def colors():
+    if request.method == 'POST':
+        return colors_image_upload()
+    return render_template('main/colors.html')
+
+@bp.route('/colors_image_upload', methods=['GET', 'POST'])
+def colors_image_upload():
+    if 'file' not in request.files:
+        return 'ファイルがありません', 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return 'ファイルが選択されていません', 400
+
+    try:
+        # ファイルを一時保存
+        filename = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(filename)
+        
+        # 画像を処理
+        result_img = process_image(filename)
+        
+        # 結果画像をBase64エンコード
+        buffered = io.BytesIO()
+        result_img.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+        
+        # 一時ファイルを削除
+        if os.path.exists(filename):
+            os.remove(filename)
+            
+        return render_template('main/result.html', image_data=img_str)
+            
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        # エラーが発生した場合も一時ファイルを削除
+        if os.path.exists(filename):
+            os.remove(filename)
+        return str(e), 500
 
 @bp.route('/ugu_box')
 def ugu_box():

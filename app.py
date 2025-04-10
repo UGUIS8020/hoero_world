@@ -4,17 +4,24 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from extensions import db, login_manager
 from dotenv import load_dotenv
+from views.main import index
 import sys
 
 load_dotenv()
 
 flask_app = Flask(__name__)
 
+@flask_app.route('/')
+def home():
+    return index()
+
 flask_app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024
 flask_app.config['SECRET_KEY'] = 'mysecretkey'
 basedir = os.path.abspath(os.path.dirname(__file__))
 flask_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
 flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+flask_app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
+os.makedirs(flask_app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(flask_app)
 login_manager.init_app(flask_app)
@@ -48,8 +55,8 @@ flask_app.register_blueprint(main_bp)
 flask_app.register_blueprint(users_bp)
 flask_app.register_blueprint(error_bp)
 
-
 if __name__ == '__main__':
     flask_app.run(debug=True)
+
 
 

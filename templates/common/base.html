@@ -47,10 +47,14 @@
             </ul>
             <br>
             <ul class="navbar-nav ms-auto">
+
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.blog_maintenance' %}active{% endif %}" href="{{ url_for('main.colors') }}">色分析</a>
+              </li>
               
               {% if current_user.is_authenticated and current_user.is_administrator %}
                <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.blog_maintenance' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
+                <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
               </li>
               {% endif %}
 

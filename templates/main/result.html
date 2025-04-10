@@ -1,0 +1,57 @@
+{% extends "common/base.html" %}
+{% block title %}分析結果 - 画像カラー分析{% endblock %}
+{% block content %}
+        
+        <style>            
+            .Analysis_results_container {
+                background-color: #000000;
+                max-width: 800px;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 0 auto;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            h1 {
+                color: #999999;
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .Analysis_results_container02 {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .Analysis_results_image {
+                max-width: 100%;
+                height: auto;
+                border-radius: 4px;
+                box-shadow: 0 2px 4px rgba(141, 34, 34, 0.1);
+            }
+            .Analysis_results_back-btn {
+                display: inline-block;
+                background-color: #222222;
+                color: white;
+                padding: 10px 20px;
+                text-decoration: none;
+                border-radius: 4px;
+                margin-top: 20px;
+            }
+            .Analysis_results_back-btn:hover {
+                background-color: #45a049;
+            }
+        </style>
+
+        <div class="Analysis_results_container">
+            <h1>Analysis results</h1>
+            <div class="Analysis_results_container02">
+                <img
+                    src="data:image/png;base64,{{ image_data }}"
+                    alt="分析結果"
+                    class="Analysis_results_image"
+                />
+            </div>
+            <div style="text-align: center">
+                <a href="/main/colors" class="Analysis_results_back-btn">もう一度分析する</a>
+            </div>
+        </div>
+  
+    {% endblock %}

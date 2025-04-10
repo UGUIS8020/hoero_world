@@ -2,7 +2,6 @@ from datetime import datetime
 from pytz import timezone
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_login import UserMixin
-
 from extensions import db, login_manager
 
 @login_manager.user_loader
@@ -39,12 +38,13 @@ class User(db.Model, UserMixin):
     def password(self, password):
         self.password_hash = generate_password_hash(password)
 
+    @property
     def is_administrator(self):
         if self.administrator == "1":
             return 1
         else:
             return 0
-
+           
     def count_posts(self, userid):
         return BlogPost.query.filter_by(user_id=userid).count()
 
