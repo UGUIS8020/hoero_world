@@ -118,7 +118,6 @@ def save_resized_upload(file, save_path, max_width=1000):
         img = img.resize((max_width, new_height), Image.LANCZOS)
     img.save(save_path)
 
-
 @bp.route('/colors_image_upload', methods=['GET', 'POST'])
 def colors_image_upload():
     if 'file' not in request.files:
@@ -129,21 +128,32 @@ def colors_image_upload():
         return 'ファイルが選択されていません', 400
 
     try:
-        # ファイルの保存先パス
+        # オリジナル画像をS3にアップロード
+        original_img = Image.open(file.stream)
+        s3_buffer = io.BytesIO()
+        original_img.save(s3_buffer, format='PNG')
+        s3_buffer.seek(0)
+
+        s3.upload_fileobj(
+            s3_buffer,
+            os.getenv('S3_BUCKET'),
+            f'analysis_original/{file.filename}',  # S3上の保存パス
+            ExtraArgs={'ContentType': 'image/png'}
+        )
+
+        # ファイルの保存先（リサイズ保存）
         filename = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
+        save_resized_upload(file, filename)  # 小さくしてローカル保存
 
-        # ✅ ファイル保存と同時にリサイズ
-        save_resized_upload(file, filename)
-
-        # 画像を処理（リサイズ済み画像）
+        # 処理実行
         result_img = process_image(filename)
 
-        # 結果画像をBase64エンコード
+        # 結果画像をBase64でテンプレートへ
         buffered = io.BytesIO()
         result_img.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
 
-        # 一時ファイルを削除
+        # ローカルファイル削除
         if os.path.exists(filename):
             os.remove(filename)
 
