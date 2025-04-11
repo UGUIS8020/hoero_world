@@ -1,30 +1,98 @@
 {% extends "common/base.html" %}
-{% block content %}  
+{% block content %}     
 
-<header id="page-header">
-        <div class="container my-3 bg-light">
-            <div class="row">
-                <div class="col-md-6 m-auto text-center">
-                    {% if blog_category %}
-                        <h1 class="fst-italic">{{ blog_category.category }}</h1>
-                        <br>
-                    {% elif user %}
-                        <h1 class="fst-italic">{{ user.username }}</h1>
-                        <br>
-                    {% elif searchtext %}
-                        <h1 class="fst-italic">"{{ searchtext }}"の検索結果</h1>
-                        <br>
-                    {% else %}
-                        <h1 class="fst-italic">UGUIS.</h1>                        
-                    {% endif %}
-                </div>
-            </div>
+    <style>
+    h1 {
+        text-align:center; 
+        color: #222222;
+        margin: 25px 0px 0px 0px;
+        padding: 0px;
+        }
+
+        h2 {
+        /* background-color:green; */
+        text-align:center; 
+        color: #222222;
+        margin: 0px 0px 0px 0px;
+        padding: 5px 0px 0px 0px;
+        }
+
+        h3 {
+        /* background-color:red; */
+        text-align:center; 
+        color: #222222;
+        margin: 0px 0px 0px 0px;
+        padding: 5px 0px 0px 0px;
+        /* margin: 5px 0px 0px 0px; */
+        /* padding: 5px 0px 0px 0px; */
+        }
+
+        h4 {
+        text-align:center; 
+        color: #333333;
+        font-weight: normal;
+        font-size: 18px;
+        margin: 5px;
+        padding: 5px;
+        }
+    .dental-header {
+        display: flex;
+        background-color: rgb(243, 244, 245);
+        align-items: center;
+        margin: 0 auto;
+        padding: 20px;
+        width: 100%;
+        
+        color: #7c1820;
+        justify-content: center;
+        }
+
+    .logo img {
+        max-width: 100%;
+        height: auto;
+        margin-right: 20px; /* 画像と文字の間隔 */
+        }
+
+    .text-content {
+        display: flex;
+        flex-direction: column;
+        }
+
+    .japanese-text {
+        font-weight: normal;
+        font-size: 50px;
+        font-family: "Shin Go", "Shin-Go", 
+                    "Kozuka Gothic Pro", "Kozuka Gothic Pr6N", "KozGoPro-Medium", 
+                    "Hiragino Kaku Gothic Pro", "ヒラギノ角ゴ Pro W3", 
+                    "Meiryo", "メイリオ", 
+                    "MS PGothic", "ＭＳ Ｐゴシック", 
+                    sans-serif;
+        }
+
+    section .english-text {
+        font-size: 24px; /* 英語テキストのフォントサイズを変更 */
+        }
+
+    </style>    
+
+     <section class="dental-header">
+        <div class="logo">         
+          
+          <img src="{{ url_for('static', filename='main/top/logo02.jpg') }}" alt="ロゴ" class="img-fluid">
         </div>
-    </header>
+        <div class="text-content">
+          <div class="japanese-text">渋谷歯科技工所</div>
+          <div class="english-text">SHIBUYA Dental Laboratory</div>
+        </div>
+    </section>  
 
     <div>
         <title>データ送信</title>
 <style>
+    a:link { color: #8b0000; text-decoration:none }
+    a:visited { color: #b22222; text-decoration:none }
+    a:hover { color: #b22222; text-decoration:none }
+    a:active { color: #b22222; text-decoration:none }
     .drop-zone {
         border: 2px dashed #ccc;
         padding: 20px;
@@ -151,7 +219,30 @@
         background-color: #6c757d;
         cursor: not-allowed;
     }
+
+    .iframe-container {
+          background-color: #f4f4f4;
+          position: relative;
+          width: 100%;
+          height: 800px;  /* 固定の高さを設定 */          
+          margin:0 auto;
+          overflow: hidden;
+        }
+        .iframe-container iframe {
+          width: 100%;
+          height: 100%;   
+          margin: 0 auto;
+        }
 </style>
+
+<h3>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h3>
+<h2><a href = "tel:0489618151">Tel 048-961-8151</a></h2>
+<h3>E-mail shibuya8020@gmail.com</h3>
+
+<div class="d-flex flex-column gap-3 mb-4 mt-3 mx-auto" style="max-width: 550px; width: 100%;">
+    <a href="https://line.me/ti/p/9KRzw2ndvX" target="_blank" rel="noopener noreferrer" class="btn" style="background-color: #00B900; color: white;"><b>LINEで連絡</b></a>
+    <!-- <img src="images/line.jpg" alt="LINEのQRコード" width="200" height="200" class="img-fluid" loading="lazy"> -->
+</div>
 
 
 <h2 style="text-align: center;">データ送信</h2>
@@ -195,6 +286,11 @@
     <div id="progressBar" class="progress-bar">0%</div>
 </div>
 <div id="fileList" class="file-list"></div>
+
+    <!-- 埋め込み用のセクション -->
+    <div class="iframe-container">
+        <iframe src="https://uguis-raiden.com/" allowfullscreen></iframe>
+    </div>
 
 
    
