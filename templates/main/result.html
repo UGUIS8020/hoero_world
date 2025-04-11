@@ -33,10 +33,28 @@
                 padding: 10px 20px;
                 text-decoration: none;
                 border-radius: 4px;
-                margin-top: 20px;
+                margin-top: 0px;
             }
             .Analysis_results_back-btn:hover {
                 background-color: #45a049;
+            }
+        </style>
+        <style>
+            .color-codes-wrapper {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 20px;
+            }
+
+            .color-code-item {
+            font-family: monospace;
+            padding: 5px 5px;
+            border-radius: 8px;
+            color: #333333; /* 色が暗くても見やすく */        
+            min-width: 120px;
+            text-align: center;
             }
         </style>
 
@@ -53,5 +71,17 @@
                 <a href="/main/colors" class="Analysis_results_back-btn">もう一度分析する</a>
             </div>
         </div>
+
+        <div class="color-codes">   
+
+        <div class="color-codes-wrapper">
+        {% for color in color_data %}
+            <div class="color-code-item" style="border: 10px solid {{ color.hex }};">         
+            {{ color.hex }} {{ color.rgb }}
+            </div>
+        {% endfor %}
+        </div>
+</div>
+</div>
   
     {% endblock %}

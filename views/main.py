@@ -146,7 +146,8 @@ def colors_image_upload():
         save_resized_upload(file, filename)  # 小さくしてローカル保存
 
         # 処理実行
-        result_img = process_image(filename)
+        # result_img = process_image(filename)
+        result_img, color_data = process_image(filename)
 
         # 結果画像をBase64でテンプレートへ
         buffered = io.BytesIO()
@@ -157,7 +158,7 @@ def colors_image_upload():
         if os.path.exists(filename):
             os.remove(filename)
 
-        return render_template('main/result.html', image_data=img_str)
+        return render_template('main/result.html', image_data=img_str, color_data=color_data)
 
     except Exception as e:
         print(f"Error occurred: {str(e)}")

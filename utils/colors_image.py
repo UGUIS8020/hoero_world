@@ -23,6 +23,7 @@ def get_main_color_list_img(img_path):
     cluster = KMeans(n_clusters=5, random_state=42)
     cluster.fit(X=cv2_img)
     colors = cluster.cluster_centers_.astype(int, copy=False)
+    hex_rgb_list = []  # ← ここを追加
 
     # 基本設定
     IMG_SIZE = 80
@@ -34,13 +35,15 @@ def get_main_color_list_img(img_path):
     # 結果画像のサイズ
     width = COLOR_BLOCK_WIDTH
     height = IMG_SIZE + MARGIN * 2 + TEXT_LINES * LINE_HEIGHT + 10
+    # height = IMG_SIZE + MARGIN + TEXT_LINES * LINE_HEIGHT
+    # height = IMG_SIZE + TEXT_LINES * LINE_HEIGHT + 10
 
     # 新しい画像キャンバス作成
     tiled_color_img = Image.new('RGB', (width, height), '#000000')
     draw = ImageDraw.Draw(tiled_color_img)
 
     try:
-        font = ImageFont.truetype("arial.ttf", 14)
+        font = ImageFont.truetype("arial.ttf", 16)
     except IOError:
         font = ImageFont.load_default()
 
@@ -59,14 +62,17 @@ def get_main_color_list_img(img_path):
         rgb_str = f'({rgb[0]}, {rgb[1]}, {rgb[2]})'
         combined_text = f'{hex_code}  {rgb_str}'
 
+        hex_rgb_list.append({'hex': hex_code, 'rgb': rgb_str})
+
         bbox = draw.textbbox((0, 0), combined_text, font=font)
         text_width = bbox[2] - bbox[0]
         text_x = (width - text_width) // 2
         text_y = text_y_start + i * LINE_HEIGHT
+        
 
         draw.text((text_x, text_y), combined_text, fill='white', font=font)
 
-    return tiled_color_img
+    return tiled_color_img, hex_rgb_list
 
 def get_original_small_img(img_path, max_width=500):
     """
@@ -122,14 +128,17 @@ def process_image(img_path):
         処理結果の画像。
     """
     # 色の抽出
-    color_img = get_main_color_list_img(img_path)
+    # color_img = get_main_color_list_img(img_path)
+    color_img, hex_rgb_list = get_main_color_list_img(img_path)
     
     # 元画像の縮小版
     small_img = get_original_small_img(img_path)
     
+    MARGIN = 10
     # 結果画像の作成（元画像の下にカラーチャート）
     result_width = max(small_img.width, color_img.width)
-    result_height = small_img.height + color_img.height + 20
+    result_height = small_img.height + color_img.height + MARGIN
+    
     
     result_img = Image.new('RGB', (result_width, result_height), '#000000')
     
@@ -139,9 +148,9 @@ def process_image(img_path):
     
     # カラーチャートを下に配置
     x_offset = (result_width - color_img.width) // 2
-    result_img.paste(color_img, (x_offset, small_img.height + 20))
+    result_img.paste(color_img, (x_offset, small_img.height + MARGIN))
     
-    return result_img
+    return result_img, hex_rgb_list
 
 
 
