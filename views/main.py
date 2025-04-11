@@ -107,7 +107,7 @@ def colors():
         return colors_image_upload()
     return render_template('main/colors.html')
 
-def save_resized_upload(file, save_path, max_width=1000):
+def save_resized_upload(file, save_path, max_width=1500):
     """
     アップロードされた画像を最大幅でリサイズして保存。
     """
@@ -128,22 +128,18 @@ def colors_image_upload():
         return 'ファイルが選択されていません', 400
 
     try:
-        # オリジナル画像をS3にアップロード
-        original_img = Image.open(file.stream)
-        s3_buffer = io.BytesIO()
-        original_img.save(s3_buffer, format='PNG')
-        s3_buffer.seek(0)
-
-        s3.upload_fileobj(
-            s3_buffer,
-            os.getenv('S3_BUCKET'),
-            f'analysis_original/{file.filename}',  # S3上の保存パス
-            ExtraArgs={'ContentType': 'image/png'}
-        )
-
         # ファイルの保存先（リサイズ保存）
         filename = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
         save_resized_upload(file, filename)  # 小さくしてローカル保存
+
+        # リサイズ後の画像をS3にアップロード
+        with open(filename, "rb") as f:
+            s3.upload_fileobj(
+                f,
+                os.getenv('S3_BUCKET'),
+                f'analysis_original/{file.filename}',
+                ExtraArgs={'ContentType': 'image/png'}
+            )
 
         # 処理実行
         # result_img = process_image(filename)
