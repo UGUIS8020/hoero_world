@@ -3,8 +3,6 @@ from flask_login import login_required, current_user
 from models.common import BlogCategory, BlogPost, Inquiry
 from models.main import BlogCategoryForm, UpdateCategoryForm, BlogPostForm, BlogSearchForm, InquiryForm
 from extensions import db
-from utils.zip_handler import ZipHandler
-from werkzeug.utils import secure_filename
 import boto3
 import os
 from dotenv import load_dotenv
@@ -12,11 +10,13 @@ from dotenv import load_dotenv
 from PIL import Image
 from flask import current_app
 import re
-from urllib.parse import quote, unquote
+from urllib.parse import quote
 import shutil
 import io
 import base64
 from utils.colors_image import process_image  # 追加
+from utils.text_fix import sanitize_filename
+from utils.zip_handler import ZipHandler
 
 bp = Blueprint('main', __name__, url_prefix='/main', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 
@@ -117,6 +117,7 @@ def save_resized_upload(file, save_path, max_width=1500):
         new_height = int(img.height * scale)
         img = img.resize((max_width, new_height), Image.LANCZOS)
     img.save(save_path)
+    print(f"画像保存成功: {save_path}")  # ← これを追加しておくと確認しやすい
 
 @bp.route('/colors_image_upload', methods=['GET', 'POST'])
 def colors_image_upload():
@@ -129,7 +130,11 @@ def colors_image_upload():
 
     try:
         # ファイルの保存先（リサイズ保存）
-        filename = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
+        safe_filename = sanitize_filename(file.filename)
+        
+        filename = os.path.join(current_app.config['UPLOAD_FOLDER'], safe_filename)       
+
+        # filename = os.path.join(current_app.config['UPLOAD_FOLDER'], file.filename)
         save_resized_upload(file, filename)  # 小さくしてローカル保存
 
         # リサイズ後の画像をS3にアップロード
@@ -137,7 +142,8 @@ def colors_image_upload():
             s3.upload_fileobj(
                 f,
                 os.getenv('S3_BUCKET'),
-                f'analysis_original/{file.filename}',
+                # f'analysis_original/{file.filename}',
+                f'analysis_original/{safe_filename}',
                 ExtraArgs={'ContentType': 'image/png'}
             )
 
@@ -350,28 +356,28 @@ def info():
 
 import traceback  # ← 追加（ファイルの先頭でもOK）
 
-def sanitize_filename(filename):
-    """
-    ファイル名をサニタイズする関数
-    - 危険な文字を除去
-    - 日本語などのマルチバイト文字を保持
-    - パス区切り文字を除去
-    """
-    # パス区切り文字を除去
-    filename = os.path.basename(filename)
+# def sanitize_filename(filename):
+#     """
+#     ファイル名をサニタイズする関数
+#     - 危険な文字を除去
+#     - 日本語などのマルチバイト文字を保持
+#     - パス区切り文字を除去
+#     """
+#     # パス区切り文字を除去
+#     filename = os.path.basename(filename)
     
-    # 危険な文字を除去（ただし日本語などのマルチバイト文字は保持）
-    # 英数字、日本語、一部の記号のみを許可
-    filename = re.sub(r'[^\w\s\-\.\u3000-\u9fff\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f]', '', filename)
+#     # 危険な文字を除去（ただし日本語などのマルチバイト文字は保持）
+#     # 英数字、日本語、一部の記号のみを許可
+#     filename = re.sub(r'[^\w\s\-\.\u3000-\u9fff\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f]', '', filename)
     
-    # 先頭と末尾の空白を除去
-    filename = filename.strip()
+#     # 先頭と末尾の空白を除去
+#     filename = filename.strip()
     
-    # 空のファイル名の場合はデフォルト名を使用
-    if not filename:
-        filename = "unnamed_file"
+#     # 空のファイル名の場合はデフォルト名を使用
+#     if not filename:
+#         filename = "unnamed_file"
     
-    return filename
+#     return filename
 
 def get_unique_filename(bucket, key):
     """
