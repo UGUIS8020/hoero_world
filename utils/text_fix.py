@@ -24,8 +24,8 @@ def sanitize_filename(filename, max_length=100):
 def get_font(font_size=18):
     font_paths = [
         "C:/Windows/Fonts/msgothic.ttc",  # Windows
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",  # Linux代替
+        "/usr/share/fonts/ipa-gothic-fonts/ipag.ttf",  # ← 追加済みの日本語フォント
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # fallback
     ]
     for path in font_paths:
         if os.path.exists(path):
