@@ -18,7 +18,7 @@
             }
             .Analysis_results_container02 {
                 text-align: center;
-                margin-bottom: 30px;
+                margin-bottom: 0px;
             }
             .Analysis_results_image {
                 max-width: 100%;
@@ -28,7 +28,7 @@
             }
             .Analysis_results_back-btn {
                 display: inline-block;
-                background-color: #222222;
+                background-color: #333333;
                 color: white;
                 padding: 10px 20px;
                 text-decoration: none;
@@ -36,26 +36,45 @@
                 margin-top: 0px;
             }
             .Analysis_results_back-btn:hover {
-                background-color: #45a049;
+                background-color: #111;  /* ブラックトーンで統一 */
+                color: #fff;  
             }
-        </style>
+        </style>  
+
         <style>
             .color-codes-wrapper {
             display: flex;
-            justify-content: center;
             flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 20px;
+            justify-content: center;
+            gap: 16px;
+            max-width: 600px;
+            margin: 20px auto;
             }
 
             .color-code-item {
             font-family: monospace;
-            padding: 5px 5px;
+            padding: 4px 2px;
             border-radius: 8px;
-            color: #333333; /* 色が暗くても見やすく */        
-            min-width: 120px;
+            color: #333;
+            width: 160px;
             text-align: center;
+            box-sizing: border-box;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             }
+
+            .color-hex {
+            font-weight: bold;
+            margin-bottom: 4px;
+            }
+
+            .color-rgb {
+            font-size: 0.95em;
+            line-height: 1.2;
+            }
+        
         </style>
 
         <div class="Analysis_results_container">
@@ -76,8 +95,9 @@
 
         <div class="color-codes-wrapper">
         {% for color in color_data %}
-            <div class="color-code-item" style="border: 10px solid {{ color.hex }};">         
-            {{ color.hex }} {{ color.rgb }}
+            <div class="color-code-item" style="border: 12px solid {{ color.hex }};">         
+            <div class="color-hex">{{ color.hex }}</div>
+            <div class="color-rgb">{{ color.rgb }}</div>
             </div>
         {% endfor %}
         </div>
