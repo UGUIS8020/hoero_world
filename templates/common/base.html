@@ -66,9 +66,12 @@
               </li>
               
               {% if current_user.is_authenticated and current_user.is_administrator %}
-               <li class="nav-item">
+              <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
+              </li>              
               {% endif %}
 
               {% if current_user.is_authenticated %}

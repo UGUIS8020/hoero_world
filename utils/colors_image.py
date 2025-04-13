@@ -12,8 +12,8 @@ from collections import Counter
 
 def get_main_color_list_img(img_path):
     """
-    画像の主要7色を抽出し、使用頻度順にカラーブロック上部＋その下に色コード一覧を中央に表示する画像を生成。
-    使用頻度（%）を明確に表示し、色ブロックの幅も使用頻度に応じて変化させる。
+    画像の主要7色を抽出し、使用頻度順にカラーブロック上部＋パーセンテージのみを表示する画像を生成。
+    下部の色コード一覧テキストは表示しない。
     """
     # 画像読み込み & 色抽出
     cv2_img = cv2.imread(img_path)
@@ -51,19 +51,17 @@ def get_main_color_list_img(img_path):
     IMG_SIZE = 80
     MARGIN = 75
     COLOR_BLOCK_WIDTH = IMG_SIZE * 7 + MARGIN * 2
-    TEXT_LINES = 7  # 色の数だけ
-    LINE_HEIGHT = 30  # 行間隔を増やす
-
-    # 結果画像のサイズ
+    
+    # 結果画像のサイズ（テキスト表示部分を除去）
     width = COLOR_BLOCK_WIDTH
-    height = IMG_SIZE + MARGIN * 2 + TEXT_LINES * LINE_HEIGHT 
+    height = IMG_SIZE + MARGIN * 2  # テキスト行分の高さを削除
 
     # 新しい画像キャンバス作成
     tiled_color_img = Image.new('RGB', (width, height), '#000000')
     draw = ImageDraw.Draw(tiled_color_img)
 
     try:
-        font = ImageFont.truetype("msgothic.ttc", 18)  # Windowsの場合
+        font = ImageFont.truetype("msgothic.ttc", 20)  # Windowsの場合
     except IOError:
         font = ImageFont.load_default()
     
@@ -84,31 +82,17 @@ def get_main_color_list_img(img_path):
         text_width = bbox[2] - bbox[0]
         text_x = x + (IMG_SIZE - text_width) // 2
         draw.text((text_x, y - 30), percentage_label, fill='white', font=font)
-
-    # 説明テキストを下に中央表示
-    text_y_start = IMG_SIZE + MARGIN + 50
-    for i, (_, rgb, _, percentage) in enumerate(color_info):
-        hex_code = '#%02x%02x%02x' % tuple(rgb)
-        rgb_str = f'({rgb[0]}, {rgb[1]}, {rgb[2]})'
         
-        # 順位を表示に追加
-        rank_str = f"#{i+1}"
+        # データは収集するが表示はしない
+        rgb_str = f'({rgb[0]}, {rgb[1]}, {rgb[2]})'
         percentage_str = f'{percentage:.1f}%'
-        combined_text = f'{rank_str}: {hex_code}  {rgb_str}  {percentage_str}'
-
+        
         hex_rgb_list.append({
             'rank': i+1,
             'hex': hex_code, 
             'rgb': rgb_str,
             'percentage': percentage_str
         })
-
-        bbox = draw.textbbox((0, 0), combined_text, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_x = (width - text_width) // 2
-        text_y = text_y_start + i * LINE_HEIGHT
-        
-        draw.text((text_x, text_y), combined_text, fill='white', font=font)
 
     return tiled_color_img, hex_rgb_list
 

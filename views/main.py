@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, url_for, redirect, flash, abort,jsonify,send_from_directory
+from flask import Blueprint, render_template, request, url_for, redirect, flash, abort, jsonify, send_from_directory, current_app, request
 from flask_login import login_required, current_user
 from models.common import BlogCategory, BlogPost, Inquiry
 from models.main import BlogCategoryForm, UpdateCategoryForm, BlogPostForm, BlogSearchForm, InquiryForm
@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from PIL import Image
 from flask import current_app
 import re
-from urllib.parse import quote
+from urllib.parse import quote,unquote
 import shutil
 import io
 import base64
@@ -544,6 +544,110 @@ def download_file(filename):
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
+@bp.route('/s3_browser')
+@bp.route('/s3_browser/<int:page>')
+def s3_browser(page=1):
+    """
+    S3にアップロードされた画像一覧を表示するページ（ページネーション対応）
+    """
+    try:
+        # S3バケットから'analysis_original/'プレフィックスを持つオブジェクト一覧を取得
+        response = s3.list_objects_v2(
+            Bucket=BUCKET_NAME,
+            Prefix='analysis_original/'
+        )
+        
+        if 'Contents' not in response:
+            return render_template('main/s3_browser.html', images=[], pagination={
+                'total': 0, 'pages': 0, 'current': page, 'has_prev': False, 'has_next': False
+            })
+        
+        all_images = []
+        for obj in response['Contents']:
+            # ファイル名のみを抽出（プレフィックスを除く）
+            key = obj['Key']
+            filename = key.split('/')[-1]
+            
+            # S3の一時的なURL生成（1時間有効）
+            url = s3.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': BUCKET_NAME,
+                    'Key': key
+                },
+                ExpiresIn=3600
+            )
+            
+            all_images.append({
+                'filename': filename,
+                'key': key,
+                'url': url,
+                'size': obj['Size'],
+                'last_modified': obj['LastModified']
+            })
+        
+        # 最新の画像が先頭に来るようにソート
+        all_images.sort(key=lambda x: x['last_modified'], reverse=True)
+        
+        # ページネーション設定
+        per_page = 9  # 1ページあたりの表示数（3×3グリッド）
+        total_images = len(all_images)
+        total_pages = (total_images + per_page - 1) // per_page  # 切り上げ除算
+        
+        # ページ番号の検証
+        if page < 1:
+            page = 1
+        elif page > total_pages and total_pages > 0:
+            page = total_pages
+        
+        # 現在のページの画像を取得
+        start_idx = (page - 1) * per_page
+        end_idx = min(start_idx + per_page, total_images)
+        current_images = all_images[start_idx:end_idx]
+        
+        # ページネーション情報
+        pagination = {
+            'total': total_images,
+            'pages': total_pages,
+            'current': page,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+            'prev_page': page - 1 if page > 1 else None,
+            'next_page': page + 1 if page < total_pages else None,
+            'page_range': range(max(1, page - 2), min(total_pages + 1, page + 3))  # ページ番号の範囲
+        }
+        
+        return render_template(
+            'main/s3_browser.html', 
+            images=current_images, 
+            pagination=pagination
+        )
+    
+    except Exception as e:
+        return f"エラーが発生しました: {str(e)}", 500
+
+@bp.route('/s3_delete/<path:key>', methods=['POST'])
+def s3_delete(key):
+    """
+    S3から指定された画像を削除する
+    """
+    try:
+        # URLデコード
+        decoded_key = unquote(key)
+        
+        # S3からファイル削除
+        s3.delete_object(
+            Bucket=BUCKET_NAME,
+            Key=decoded_key
+        )
+        
+        flash(f"ファイル '{decoded_key}' を削除しました", 'success')
+        return redirect(url_for('main.s3_browser'))
+    
+    except Exception as e:
+        flash(f"削除中にエラーが発生しました: {str(e)}", 'danger')
+        return redirect(url_for('main.s3_browser'))
+    
 def add_featured_image(upload_image):
     image_filename = upload_image.filename
     filepath = os.path.join(current_app.root_path, r'static/featured_image', image_filename)

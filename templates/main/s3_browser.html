@@ -1,0 +1,106 @@
+
+{% extends "common/base.html" %}
+
+{% block title %}S3アップロード画像ブラウザ{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">アップロード済み画像一覧</h1>
+    
+    <!-- フラッシュメッセージ表示 -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- 画像がない場合 -->
+    {% if not images %}
+        <div class="alert alert-info">アップロードされた画像はありません。</div>
+    {% else %}
+        <!-- 画像一覧 -->
+        <div class="row">
+            {% for image in images %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="{{ image.url }}" class="card-img-top" alt="{{ image.filename }}" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ image.filename }}</h5>
+                            <p class="card-text">
+                                サイズ: {{ (image.size / 1024)|round(1) }} KB<br>
+                                更新日: {{ image.last_modified.strftime('%Y-%m-%d %H:%M') }}
+                            </p>
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ image.url }}" class="btn btn-primary" target="_blank">表示</a>
+                                <form action="{{ url_for('main.s3_delete', key=image.key) }}" method="post" onsubmit="return confirm('本当に削除しますか？');">
+                                    <button type="submit" class="btn btn-danger">削除</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- ページネーション -->
+        <div class="mt-4">
+            <nav aria-label="画像一覧のページ">
+                <ul class="pagination justify-content-center">
+                    
+                    <!-- 前のページへのリンク -->
+                    {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.s3_browser', page=pagination.prev_page) }}" aria-label="前へ">
+                                <span aria-hidden="true">&laquo;</span>
+                                <span class="sr-only">前へ</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&laquo;</span>
+                        </li>
+                    {% endif %}
+                    
+                    <!-- ページ番号 -->
+                    {% for page_num in pagination.page_range %}
+                        <li class="page-item {% if page_num == pagination.current %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('main.s3_browser', page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                    {% endfor %}
+                    
+                    <!-- 次のページへのリンク -->
+                    {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('main.s3_browser', page=pagination.next_page) }}" aria-label="次へ">
+                                <span aria-hidden="true">&raquo;</span>
+                                <span class="sr-only">次へ</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&raquo;</span>
+                        </li>
+                    {% endif %}
+                    
+                </ul>
+            </nav>
+            
+            <!-- ページネーション情報 - minを使わないように変更 -->
+            <div class="text-center mt-2 text-muted small">
+                {% set start_index = (pagination.current - 1) * 9 + 1 %}
+                {% set end_index = pagination.current * 9 %}
+                {% if end_index > pagination.total %}
+                    {% set end_index = pagination.total %}
+                {% endif %}
+                全{{ pagination.total }}件中 {{ start_index }}-{{ end_index }}件を表示
+            </div>
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">トップに戻る</a>
+    </div>
+</div>
+{% endblock %}

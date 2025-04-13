@@ -21,6 +21,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 flask_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'data.sqlite')
 flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 flask_app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
+flask_app.config['DEBUG'] = True
 os.makedirs(flask_app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(flask_app)
