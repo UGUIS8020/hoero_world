@@ -61,7 +61,7 @@ def get_main_color_list_img(img_path):
     draw = ImageDraw.Draw(tiled_color_img)
 
     try:
-        font = ImageFont.truetype("msgothic.ttc", 20)  # Windowsの場合
+        font = ImageFont.truetype("msgothic.ttc", 50)  # Windowsの場合
     except IOError:
         font = ImageFont.load_default()
     
