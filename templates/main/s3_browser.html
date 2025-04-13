@@ -89,8 +89,8 @@
             
             <!-- ページネーション情報 - minを使わないように変更 -->
             <div class="text-center mt-2 text-muted small">
-                {% set start_index = (pagination.current - 1) * 9 + 1 %}
-                {% set end_index = pagination.current * 9 %}
+                {% set start_index = (pagination.current - 1) * 12 + 1 %}
+                {% set end_index = pagination.current * 12 %}
                 {% if end_index > pagination.total %}
                     {% set end_index = pagination.total %}
                 {% endif %}

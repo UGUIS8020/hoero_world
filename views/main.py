@@ -590,7 +590,7 @@ def s3_browser(page=1):
         all_images.sort(key=lambda x: x['last_modified'], reverse=True)
         
         # ページネーション設定
-        per_page = 9  # 1ページあたりの表示数（3×3グリッド）
+        per_page = 12  # 1ページあたりの表示数（3×3グリッド）
         total_images = len(all_images)
         total_pages = (total_images + per_page - 1) // per_page  # 切り上げ除算
         
