@@ -1,3 +1,4 @@
+from PIL import ImageFont
 import os
 import re
 
@@ -19,3 +20,14 @@ def sanitize_filename(filename, max_length=100):
     name = name[:max_name_length]
 
     return name + ext
+
+def get_font(font_size=18):
+    font_paths = [
+        "C:/Windows/Fonts/msgothic.ttc",  # Windows
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Linux
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",  # Linux代替
+    ]
+    for path in font_paths:
+        if os.path.exists(path):
+            return ImageFont.truetype(path, font_size)
+    return ImageFont.load_default()

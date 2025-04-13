@@ -4,6 +4,7 @@ import numpy as np
 from PIL import ImageDraw, ImageFont, Image
 from sklearn.cluster import KMeans
 from collections import Counter
+from utils.text_fix import get_font
 
 # アップロードされたファイルの一時保存先
 # UPLOAD_FOLDER = 'uploads'
@@ -60,11 +61,7 @@ def get_main_color_list_img(img_path):
     tiled_color_img = Image.new('RGB', (width, height), '#000000')
     draw = ImageDraw.Draw(tiled_color_img)
 
-    try:
-        font = ImageFont.truetype("msgothic.ttc", 18)  # Windowsの場合
-    except IOError:
-        font_path = "C:/Windows/Fonts/msgothic.ttc"  # または "meiryo.ttc", "YuGothR.ttc" など
-        font = ImageFont.truetype(font_path, 18)
+    font = get_font(18)   
     
     # 使用頻度ラベルの追加
     draw.text((MARGIN, 35), "主要色（使用頻度順）:", fill='white', font=font)
