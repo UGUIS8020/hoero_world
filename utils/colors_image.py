@@ -61,9 +61,10 @@ def get_main_color_list_img(img_path):
     draw = ImageDraw.Draw(tiled_color_img)
 
     try:
-        font = ImageFont.truetype("msgothic.ttc", 50)  # Windowsの場合
+        font = ImageFont.truetype("msgothic.ttc", 18)  # Windowsの場合
     except IOError:
-        font = ImageFont.load_default()
+        font_path = "C:/Windows/Fonts/msgothic.ttc"  # または "meiryo.ttc", "YuGothR.ttc" など
+        font = ImageFont.truetype(font_path, 18)
     
     # 使用頻度ラベルの追加
     draw.text((MARGIN, 35), "主要色（使用頻度順）:", fill='white', font=font)
