@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="all">
     <meta name="keywords" content="歯科技工所,埼玉県,越谷市,新越谷,南越谷,IOSデータ,自家歯牙移植,3Dプリント,デジタルデンティストリー,バイオブロック,矯正装置,口腔内スキャナー">
-    <meta name="description" content="埼玉県越谷市の渋谷歯科技工所。最新のデジタル技術を活用した歯科技工サービスを提供。biobloc バイオブロック 矯正装置各種をIOS(口腔内スキャナー)で承ります。自家歯牙移植用3Dレプリカ、CAD/CAM修復物など。【電話】048-961-8151">
     <meta name="author" content="渋谷歯科技工所">
 
     <!-- Open Graph Tags -->
     <meta property="og:url" content="https://shibuya8020.com/">
     <meta property="og:type" content="website">
     <meta property="og:title" content="渋谷歯科技工所 | バイオブロック矯正装置 | SHIBUYA Dental Laboratory">
+
+    {% block meta_description %}
+    <meta name="description" content="埼玉県越谷市の渋谷歯科技工所。最新のデジタル技術を活用した歯科技工サービスを提供。biobloc バイオブロック 矯正装置各種をIOS(口腔内スキャナー)で承ります。自家歯牙移植用3Dレプリカ、CAD/CAM修復物など。【電話】048-961-8151">
     <meta property="og:description" content="埼玉県越谷市の渋谷歯科技工所。biobloc バイオブロック 矯正装置各種をIOS(口腔内スキャナー)で承ります。最新のデジタル技術を活用した歯科技工サービスを提供。【電話】048-961-8151">
+    {% endblock %}
+    
     <meta property="og:image" content="https://shibuya8020.com/images/logo02.jpg">
     <meta property="og:site_name" content="渋谷歯科技工所">
     
@@ -22,6 +26,8 @@
 
       <!-- Title -->
     <title>{% block title %}渋谷歯科技工所 | SHIBUYA Dental Laboratory{% endblock %}</title>
+     
+    {% block head_extras %}{% endblock %}
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7MRMSYX9Q5"></script>
