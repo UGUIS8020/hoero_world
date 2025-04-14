@@ -51,10 +51,12 @@ sys.stdout.flush()
 from views.main import bp as main_bp
 from views.users import bp as users_bp
 from views.error_pages import bp as error_bp
+from views.pages import bp as pages_bp
 
 flask_app.register_blueprint(main_bp)
 flask_app.register_blueprint(users_bp)
 flask_app.register_blueprint(error_bp)
+flask_app.register_blueprint(pages_bp)
 
 if __name__ == '__main__':
     flask_app.run(debug=True)

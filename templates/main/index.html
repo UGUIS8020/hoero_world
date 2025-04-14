@@ -313,8 +313,8 @@
 </div>
 <div id="fileList" class="file-list"></div>
 
-    <div class="box box1">
-        <A HREF="shibuya/rootreplica.html"target="_self">
+    <div class="box box1">        
+        <a href="{{ url_for('pages.root_replica') }}" target="_self">
             <h2>rootreplica</h2>
             <h3>自家歯牙移植用3Dドナーレプリカ(歯根レプリカ)</h3>
             <h3>自家歯牙移植用サージカルガイド</h3>          
@@ -323,6 +323,7 @@
           <img src="{{ url_for('static', filename='main/top/root_replica003.jpg') }}">
           <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}">
           </div>
+          </a>
     </div>
 
     <h3>ChatBot:弊社,歯科に関する質問に応答するチャットボットです</h3>
