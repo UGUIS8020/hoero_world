@@ -356,28 +356,6 @@ def info():
 
 import traceback  # ← 追加（ファイルの先頭でもOK）
 
-# def sanitize_filename(filename):
-#     """
-#     ファイル名をサニタイズする関数
-#     - 危険な文字を除去
-#     - 日本語などのマルチバイト文字を保持
-#     - パス区切り文字を除去
-#     """
-#     # パス区切り文字を除去
-#     filename = os.path.basename(filename)
-    
-#     # 危険な文字を除去（ただし日本語などのマルチバイト文字は保持）
-#     # 英数字、日本語、一部の記号のみを許可
-#     filename = re.sub(r'[^\w\s\-\.\u3000-\u9fff\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f]', '', filename)
-    
-#     # 先頭と末尾の空白を除去
-#     filename = filename.strip()
-    
-#     # 空のファイル名の場合はデフォルト名を使用
-#     if not filename:
-#         filename = "unnamed_file"
-    
-#     return filename
 
 def get_unique_filename(bucket, key):
     """

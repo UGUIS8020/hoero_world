@@ -233,6 +233,32 @@
           height: 100%;   
           margin: 0 auto;
         }
+
+        .box1 {
+        border: solid 1px orange;
+        margin: 10px auto;   
+        padding: 10px;     
+        }
+        .box1 div {
+        text-align: center; /* 画像を囲むdiv内で中央揃え */
+        }
+
+</style>
+<style>
+  .file-summary {
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-weight: bold;
+  }
+
+  .folder-summary {
+    padding: 8px;
+    margin: 5px 0;
+    background-color: #f8f8f8;
+    border-left: 3px solid #ddd;
+  }
 </style>
 
 <h3>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h3>
@@ -286,6 +312,18 @@
     <div id="progressBar" class="progress-bar">0%</div>
 </div>
 <div id="fileList" class="file-list"></div>
+
+    <div class="box box1">
+        <A HREF="shibuya/rootreplica.html"target="_self">
+            <h2>rootreplica</h2>
+            <h3>自家歯牙移植用3Dドナーレプリカ(歯根レプリカ)</h3>
+            <h3>自家歯牙移植用サージカルガイド</h3>          
+
+           <div>      
+          <img src="{{ url_for('static', filename='main/top/root_replica003.jpg') }}">
+          <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}">
+          </div>
+    </div>
 
     <!-- 埋め込み用のセクション -->
     <div class="iframe-container">
@@ -483,9 +521,11 @@
 
         // ファイルパスでグループ化
         const filesByFolder = {};
+        let totalFileCount = 0;
 
         selectedFiles.forEach((file) => {
             totalSize += file.size;
+            totalFileCount++;
             const path = getRelativePath(file);
             const folderPath = path.includes("/")
                 ? path.substring(0, path.lastIndexOf("/"))
@@ -497,65 +537,41 @@
             filesByFolder[folderPath].push(file);
         });
 
-        // フォルダごとに表示
-        Object.keys(filesByFolder)
-            .sort()
-            .forEach((folder) => {
-                if (folder !== "") {
-                    // フォルダ見出し
-                    const folderItem = document.createElement("div");
-                    folderItem.className = "file-item folder-item";
-                    folderItem.innerHTML = `<span>📁 ${folder}/</span>`;
-                    fileList.appendChild(folderItem);
-                }
+        // フォルダ数とファイル数の概要を表示
+        const folderCount = Object.keys(filesByFolder).filter(f => f !== "").length;
+        
+        const summaryItem = document.createElement("div");
+        summaryItem.className = "file-summary";
+        
+        let summaryText = `合計 ${totalFileCount} ファイル選択済み (${formatFileSize(totalSize)})`;
+        if (folderCount > 0) {
+            summaryText += `, ${folderCount} フォルダ`;
+        }
+        
+        summaryItem.textContent = summaryText;
+        fileList.appendChild(summaryItem);
 
-                // そのフォルダ内のファイル
-                filesByFolder[folder].forEach((file) => {
-                    const path = getRelativePath(file);
-                    const fileName = path.includes("/")
-                        ? path.substring(path.lastIndexOf("/") + 1)
-                        : path;
-
-                    const item = document.createElement("div");
-                    item.className = "file-item";
-                    item.innerHTML = `
-                    <div>
-                        <span>${fileName}</span>
-                        <span class="file-size">(${formatFileSize(
-                            file.size
-                        )})</span>
-                    </div>
-                    <span class="file-remove" data-path="${path}">❌</span>
-                `;
-                    fileList.appendChild(item);
-
-                    // 削除ボタンのイベントリスナー
-                    item.querySelector(".file-remove").addEventListener(
-                        "click",
-                        function () {
-                            const pathToRemove = this.getAttribute("data-path");
-                            selectedFiles = selectedFiles.filter(
-                                (f) => getRelativePath(f) !== pathToRemove
-                            );
-                            displayFiles();
-                            updateButtonState();
-
-                            if (selectedFiles.length === 0) {
-                                showStatus(
-                                    "ファイルが選択されていません。",
-                                    "info"
-                                );
-                            }
-                        }
-                    );
-                });
-            });
+        // オプション: フォルダごとの概要を簡易表示
+        Object.keys(filesByFolder).sort().forEach((folder) => {
+            const files = filesByFolder[folder];
+            const folderSize = files.reduce((sum, file) => sum + file.size, 0);
+            
+            if (folder !== "") {
+                const folderItem = document.createElement("div");
+                folderItem.className = "folder-summary";
+                folderItem.textContent = `📁 ${folder}/: ${files.length} ファイル (${formatFileSize(folderSize)})`;
+                fileList.appendChild(folderItem);
+            } else if (folder === "" && files.length > 0) {
+                const rootItem = document.createElement("div");
+                rootItem.className = "folder-summary";
+                rootItem.textContent = `ルートディレクトリ: ${files.length} ファイル (${formatFileSize(folderSize)})`;
+                fileList.appendChild(rootItem);
+            }
+        });
 
         if (selectedFiles.length > 0) {
             showStatus(
-                `${
-                    selectedFiles.length
-                }ファイル選択済み (合計: ${formatFileSize(totalSize)})`,
+                `${selectedFiles.length}ファイル選択済み (合計: ${formatFileSize(totalSize)})`,
                 "info"
             );
         }
