@@ -11,13 +11,14 @@
 <div class="row">
     <div class="col-md-10 mx-auto">
         <div class="card shadow">
-            <div class="card-header bg-dark text-white text-center">
+            <div class="card-header bg-white text-dark text-center">
                 <h2>画像カラー分析</h2>
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    <form action="/main/colors_image_upload" method="post" enctype="multipart/form-data" class="mb-4">
-                        <div class="mb-3">
+                    <form id="uploadForm" action="/main/colors_image_upload" method="post" enctype="multipart/form-data" class="mb-4">
+                        <div id="drop-area" class="mb-3" style="border: 2px dashed #ccc; padding: 20px; border-radius: 5px; text-align: center;">
+                            <p>ここにファイルをドラッグ＆ドロップ、または選択してください</p>
                             <input type="file" name="file" accept="image/*" required class="form-control">
                         </div>
                         <button type="submit" class="btn btn-success">分析開始</button>
@@ -28,8 +29,108 @@
     </div>
 </div>
 
+
+ 
+
+
 <div class="text-center mt-4">      
     <img src="{{ url_for('static', filename='main/top/analysis.jpg') }}">    
 </div>
+
+ <style>    
+    .analysis_container {
+      max-width: 800px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .analysis_container h1, .analysis_container h2 {
+      margin-top: 0;
+    }
+    .analysis_containerol {
+      padding-left: 20px;
+    }
+    .analysis_containerli {
+      margin-bottom: 20px;
+    }
+  </style>
+
+  <div class="analysis_container">
+    <h1>サービス概要</h1>
+    <p>
+      このページでは、アップロードした画像の色を分析し、主要な色のパレットと使用頻度を可視化します。デザインや資料作成、色の比較などに活用できるツールです。
+    </p>
+
+    <h2>使い方</h2>
+    <ol>
+      <li>
+        <strong>画像を選択する</strong><br>
+        アップロードフォームから分析したい画像を選択またはドラッグ＆ドロップしてください。
+      </li>
+      <li>
+        <strong>分析ボタンを押す</strong><br>
+        画像のアップロードが完了したら、「分析する」などのボタンをクリックして色分析を開始します。
+      </li>
+      <li>
+        <strong>結果を確認する</strong><br>
+        分析が完了すると、抽出された主要色とそれぞれの使用頻度、HEXコードなどが表示されます。
+      </li>
+    </ol>
+  </div>
+
+  <style>
+  /* ドラッグ＆ドロップエリアのハイライト */
+  #drop-area.highlight {
+    border-color: #3399ff;
+    background-color: #f0f8ff;
+  }
+</style>
+
+<script>
+  // ドラッグ＆ドロップ機能を実装
+  const dropArea = document.getElementById('drop-area');
+  const fileInput = dropArea.querySelector('input[type="file"]');
+
+  // デフォルトの挙動（ファイル表示など）をキャンセル
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, preventDefaults, false);
+    document.body.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  // ドラッグされたときにエリアをハイライト
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, () => {
+      dropArea.classList.add('highlight');
+    }, false);
+  });
+
+  // ドラッグが離れたときにハイライト解除
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, () => {
+      dropArea.classList.remove('highlight');
+    }, false);
+  });
+
+  // ドロップしたファイルをinputにセット
+  dropArea.addEventListener('drop', handleDrop, false);
+
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length > 0) {
+      fileInput.files = files;  // inputにドロップしたファイルを設定
+    }
+  }
+</script>
+
+
+
 
 {% endblock %}
