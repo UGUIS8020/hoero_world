@@ -60,7 +60,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 # ここで stdout に明示的に出力！
 sys.stdout.write(f"DEBUG: AWS_REGION = {os.getenv('AWS_REGION')}\n")
-sys.stdout.write(f"DEBUG: S3_BUCKET = {os.getenv('S3_BUCKET')}\n")
+sys.stdout.write(f"DEBUG: BUCKET_NAME = {os.getenv('BUCKET_NAME')}\n")
 sys.stdout.flush()
 
 from views.main import bp as main_bp

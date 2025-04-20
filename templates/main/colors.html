@@ -16,8 +16,10 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    <form id="uploadForm" action="/main/colors_image_upload" method="post" enctype="multipart/form-data" class="mb-4">
-                        <div id="drop-area" class="mb-3" style="border: 2px dashed #ccc; padding: 20px; border-radius: 5px; text-align: center;">
+                    <form id="uploadForm" action="/colors_image_upload" method="post" enctype="multipart/form-data" class="mb-4">
+                       <!-- CSRFトークンを追加 -->
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">  
+                      <div id="drop-area" class="mb-3" style="border: 2px dashed #ccc; padding: 20px; border-radius: 5px; text-align: center;">
                             <p>ここにファイルをドラッグ＆ドロップ、または選択してください</p>
                             <input type="file" name="file" accept="image/*" required class="form-control">
                         </div>

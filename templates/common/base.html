@@ -37,6 +37,13 @@
       gtag('js', new Date());
 
       gtag('config', 'G-7MRMSYX9Q5');
+
+      
+    </script>
+
+    <script>
+        // CSRFトークンをJavaScriptで使用できるようにする
+        const csrf_token = "{{ csrf_token() }}";
     </script>
  
     <!-- CSS（Bootstrap） -->
@@ -115,14 +122,15 @@
 
               {% endif %}
 
-              {% if current_user.is_authenticated and current_user.is_administrator %}
+              <!-- tempファイルの削除 -->
+              <!-- {% if current_user.is_authenticated and current_user.is_administrator %}
               <form action="{{ url_for('main.manual_cleanup') }}" method="post">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit" class="btn btn-warning">
                   TempFile消去
                 </button>
               </form>  
-              {% endif %}
+              {% endif %} -->
 
             </ul>
           </div>

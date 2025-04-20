@@ -160,7 +160,7 @@ def colors_image_upload():
         with open(filename, "rb") as f:
             s3.upload_fileobj(
                 f,
-                os.getenv('S3_BUCKET_INDEX'),
+                os.getenv('BUCKET_NAME'),
                 # f'analysis_original/{file.filename}',
                 f'analysis_original/{safe_filename}',
                 ExtraArgs={'ContentType': 'image/png'}
@@ -388,6 +388,13 @@ def meziro():
 
 @bp.route('/meziro_upload', methods=['POST'])
 def meziro_upload():    
+    # print("Form data received:", dict(request.form))
+    # print("Files received:", [f.filename for f in request.files.getlist('files[]')])
+    # print("Environment variables:", {
+    #     'BUCKET_NAME': os.getenv('BUCKET_NAME'),
+    #     'AWS_REGION': os.getenv('AWS_REGION')
+    # })
+
     message = request.form.get('message')
     if not message:
         return jsonify({'error': 'メッセージが入力されていません'}), 400
@@ -528,28 +535,71 @@ def meziro_download(key):
         return redirect(url_for('main.meziro'))
 
 # ファイル削除用ルート
+# @bp.route('/meziro/delete', methods=['POST'])
+# def meziro_delete():
+#     try:
+#         selected_files = request.form.getlist('selected_files')
+        
+#         if not selected_files:
+#             flash("削除するファイルが選択されていません", "warning")
+#             return redirect(url_for('main.meziro'))
+        
+#         deleted_count = 0
+#         for key in selected_files:
+#             # URLデコード
+#             decoded_key = unquote(key)
+            
+#             # S3からファイル削除
+#             s3.delete_object(
+#                 Bucket=BUCKET_NAME,
+#                 Key=decoded_key
+#             )
+#             deleted_count += 1
+        
+#         flash(f"{deleted_count}件のファイルを削除しました", "success")
+#     except Exception as e:
+#         flash(f"削除中にエラーが発生しました: {str(e)}", "danger")
+    
+#     return redirect(url_for('main.meziro'))
+
+# ファイル削除用ルート
 @bp.route('/meziro/delete', methods=['POST'])
 def meziro_delete():
     try:
-        selected_files = request.form.getlist('selected_files')
+        # URLパラメータからキーを取得（単一ファイル削除用）
+        key_param = request.args.get('key')
         
-        if not selected_files:
-            flash("削除するファイルが選択されていません", "warning")
-            return redirect(url_for('main.meziro'))
-        
-        deleted_count = 0
-        for key in selected_files:
-            # URLデコード
-            decoded_key = unquote(key)
+        if key_param:
+            # 単一ファイル削除
+            decoded_key = unquote(key_param)
             
             # S3からファイル削除
             s3.delete_object(
                 Bucket=BUCKET_NAME,
                 Key=decoded_key
             )
-            deleted_count += 1
-        
-        flash(f"{deleted_count}件のファイルを削除しました", "success")
+            flash(f"ファイルを削除しました", "success")
+        else:
+            # 複数ファイル選択削除
+            selected_files = request.form.getlist('selected_files')
+            
+            if not selected_files:
+                flash("削除するファイルが選択されていません", "warning")
+                return redirect(url_for('main.meziro'))
+            
+            deleted_count = 0
+            for key in selected_files:
+                # URLデコード
+                decoded_key = unquote(key)
+                
+                # S3からファイル削除
+                s3.delete_object(
+                    Bucket=BUCKET_NAME,
+                    Key=decoded_key
+                )
+                deleted_count += 1
+            
+            flash(f"{deleted_count}件のファイルを削除しました", "success")
     except Exception as e:
         flash(f"削除中にエラーが発生しました: {str(e)}", "danger")
     

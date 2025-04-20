@@ -47,6 +47,8 @@
                                         <td>                                            
                                             <a href="{{ url_for('main.meziro_download', key=file.key) }}" class="btn btn-sm btn-success">ダウンロード</a>
                                             <form method="POST" action="{{ url_for('main.meziro_delete', key=file.key) }}" class="d-inline">
+                                                <!-- CSRFトークンを追加 -->
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('このファイルを削除してもよろしいですか？');">削除</button>
                                             </form>
                                         </td>

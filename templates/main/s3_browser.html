@@ -35,7 +35,10 @@
                             <div class="d-flex justify-content-between">
                                 <a href="{{ image.url }}" class="btn btn-primary" target="_blank">表示</a>
                                 <form action="{{ url_for('main.s3_delete', key=image.key) }}" method="post" onsubmit="return confirm('本当に削除しますか？');">
-                                    <button type="submit" class="btn btn-danger">削除</button>
+                                     <!-- CSRFトークンを追加 -->
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    
+                                <button type="submit" class="btn btn-danger">削除</button>
                                 </form>
                             </div>
                         </div>

@@ -196,6 +196,9 @@
 
         const formData = new FormData();
 
+        // CSRFトークンを追加（最初に追加しておく）
+        formData.append("csrf_token", csrf_token);
+
         const message = document.getElementById("userMessage").value;
         if (message) {
             formData.append("message", message);
@@ -225,6 +228,9 @@
         try {
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/meziro_upload", true);
+
+            // CSRFトークンをヘッダーに追加（これが重要な変更点）
+            xhr.setRequestHeader("X-CSRFToken", csrf_token);
 
             // プログレス処理
             xhr.upload.onprogress = function (event) {
@@ -434,4 +440,3 @@ clearButton.addEventListener("click", () => {
     showStatus("ファイル選択をクリアしました。", "info");
     updateButtonState();
 });
-

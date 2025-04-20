@@ -452,6 +452,9 @@ async function uploadFiles(files) {
     if (files.length === 0) return;
 
     const formData = new FormData();
+    // CSRFトークンを追加（この行を追加）
+    formData.append("csrf_token", csrf_token);    
+
     let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
     let uploadedBytes = 0;
 
@@ -571,6 +574,8 @@ function deleteFile(fileName) {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/ugu_box/delete", true);
     xhr.setRequestHeader("Content-Type", "application/json");
+     // CSRFトークンをヘッダーに追加
+    xhr.setRequestHeader("X-CSRFToken", csrf_token);
     
     xhr.onload = function() {
         if (xhr.status === 200) {

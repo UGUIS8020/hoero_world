@@ -92,7 +92,12 @@ class ZipHandler:
             # エラー発生時は一時ディレクトリを削除
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
-            raise e  
+            raise e
+        
+# アップロードされたファイルの一時保存先
+# UPLOAD_FOLDER = 'uploads'
+# if not os.path.exists(UPLOAD_FOLDER):
+#     os.makedirs(UPLOAD_FOLDER)
 
 def get_main_color_list_img(img_path):
     """
@@ -298,11 +303,6 @@ def cleanup_temp_files(app_root_path, days_old=7):
     days_old : int, optional
         この日数より古いファイルを削除する (デフォルト: 7日)
     """
-    # コンソールにも出力するため
-    print(f"\n===== 一時ファイルクリーンアップ開始 =====")
-    print(f"実行時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"設定: {days_old}日（または{days_old * 10}秒）より古いファイルを削除\n")
-    
     # クリーンアップ対象のディレクトリ
     directories_to_clean = [
         os.path.join(app_root_path, 'temp_downloads'),
@@ -313,14 +313,10 @@ def cleanup_temp_files(app_root_path, days_old=7):
     
     for temp_dir in directories_to_clean:
         if not os.path.exists(temp_dir):
-            msg = f"ディレクトリが存在しません: {temp_dir}"
-            print(msg)
-            logger.info(msg)
+            logger.info(f"ディレクトリが存在しません: {temp_dir}")
             continue
             
-        msg = f"一時ディレクトリのクリーンアップを実行中: {temp_dir}"
-        print(msg)
-        logger.info(msg)
+        logger.info(f"一時ディレクトリのクリーンアップを実行中: {temp_dir}")
         files_deleted = 0
         
         for filename in os.listdir(temp_dir):
@@ -329,43 +325,23 @@ def cleanup_temp_files(app_root_path, days_old=7):
                 if os.path.isfile(file_path):
                     # ファイルの最終更新時間を確認
                     file_mod_time = os.path.getmtime(file_path)
-                    file_age = time.time() - file_mod_time
                     # days_old日以上前のファイルを削除
-                    # if file_age > days_old * 24 * 60 * 60:
-                    if file_age > days_old * 10:
+                    if time.time() - file_mod_time > days_old * 24 * 60 * 60:                    
                         os.remove(file_path)
                         files_deleted += 1
-                        msg = f"  削除: {filename} (最終更新: {time.ctime(file_mod_time)}, 経過: {int(file_age)}秒)"
-                        print(msg)
-                        logger.info(msg)
-                    else:
-                        print(f"  保持: {filename} (最終更新: {time.ctime(file_mod_time)}, 経過: {int(file_age)}秒)")
+                        logger.debug(f"古い一時ファイルを削除: {filename} (最終更新: {time.ctime(file_mod_time)})")
                 elif os.path.isdir(file_path):
                     # サブディレクトリの場合はディレクトリ自体の最終更新時間をチェック
                     dir_mod_time = os.path.getmtime(file_path)
-                    dir_age = time.time() - dir_mod_time
-                    # if dir_age > days_old * 24 * 60 * 60:
-                    if dir_age > days_old * 10:
+                    if time.time() - dir_mod_time > days_old * 24 * 60 * 60:
                         shutil.rmtree(file_path)
                         files_deleted += 1
-                        msg = f"  削除: ディレクトリ {filename} (最終更新: {time.ctime(dir_mod_time)}, 経過: {int(dir_age)}秒)"
-                        print(msg)
-                        logger.info(msg)
-                    else:
-                        print(f"  保持: ディレクトリ {filename} (最終更新: {time.ctime(dir_mod_time)}, 経過: {int(dir_age)}秒)")
+                        logger.debug(f"古い一時ディレクトリを削除: {filename} (最終更新: {time.ctime(dir_mod_time)})")
             except Exception as e:
-                msg = f"  エラー: ファイル {file_path} の削除中にエラー発生: {str(e)}"
-                print(msg)
-                logger.error(msg)
+                logger.error(f"一時ファイル削除エラー ({file_path}): {e}")
         
         total_files_deleted += files_deleted
-        msg = f"ディレクトリ {temp_dir} のクリーンアップ完了: {files_deleted}個のファイルを削除しました"
-        print(msg)
-        logger.info(msg)
-    
-    msg = f"\n===== 一時ファイルクリーンアップ完了 合計: {total_files_deleted}個のファイルを削除しました ====="
-    print(msg)
-    logger.info(msg)
+        logger.info(f"ディレクトリ {temp_dir} のクリーンアップ完了: {files_deleted}ファイルを削除しました")
     
     return total_files_deleted
 
