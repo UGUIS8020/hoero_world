@@ -179,364 +179,425 @@ block content %}
 <hr style="margin: 40px auto; max-width: 800px" />
 
 <h2 style="text-align: center">アップロード済みファイル一覧</h2>
-
-<div style="max-width: 500px; margin: 0 auto">
-    {% if s3_files %}
-    <ul style="list-style: none; padding: 0">
-        {% for file in s3_files %}
-        <li
-            style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin: 10px 0;
-                padding: 10px;
-                border-bottom: 1px solid #ccc;
-            "
-        >
-            <div>
-                <a
-                    href="{{ file.url }}"
-                    target="_blank"
-                    style="text-decoration: none; color: #007bff"
-                    >{{ file.filename }}</a
-                >
-                <div style="font-size: 0.8em; color: #666">
-                    {{ file.last_modified }}
-                </div>
-            </div>
-            <form
-                action="{{ url_for('main.delete_file') }}"
-                method="POST"
-                style="margin: 0"
-            >
-                <input
-                    type="hidden"
-                    name="filename"
-                    value="{{ file.filename }}"
-                />
-                <button
-                    type="submit"
-                    style="
-                        background-color: #007bff;
-                        border: none;
-                        color: white;
-                        padding: 6px 12px;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 14px;
-                    "
-                >
-                    削除
-                </button>
-            </form>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p style="text-align: center">
-        アップロードされたファイルはまだありません。
-    </p>
-    {% endif %}
+<div id="uploadedFilesList" style="max-width: 700px; margin: 0 auto">
+    <p style="text-align: center">読み込み中...</p>
 </div>
+               
+</div>
+
 <script>
-    const dropZone = document.getElementById("dropZone");
-    const fileInput = document.getElementById("fileInput");
-    const folderInput = document.getElementById("folderInput");
-    const fileList = document.getElementById("fileList");
-    const status = document.getElementById("status");
-    const uploadButton = document.getElementById("uploadButton");
-    const clearButton = document.getElementById("clearButton");
-    const progressContainer = document.getElementById("progressContainer");
-    const progressBar = document.getElementById("progressBar");
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+const folderInput = document.getElementById("folderInput");
+const fileList = document.getElementById("fileList");
+const status = document.getElementById("status");
+const uploadButton = document.getElementById("uploadButton");
+const clearButton = document.getElementById("clearButton");
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
 
-    let selectedFiles = []; // 選択されたファイルを保持
-    let totalSize = 0;
+let selectedFiles = []; // 選択されたファイルを保持
+let totalSize = 0;
 
-    // 100件以上のファイルを取得するために必要な関数
-    async function readAllEntries(reader) {
-        const entries = [];
+// 100件以上のファイルを取得するために必要な関数
+async function readAllEntries(reader) {
+    const entries = [];
 
-        async function readBatch() {
-            return new Promise((resolve, reject) => {
-                reader.readEntries((batch) => {
-                    if (batch.length === 0) {
-                        resolve(null); // 終了条件
-                    } else {
-                        resolve(batch);
-                    }
-                }, reject);
-            });
+    async function readBatch() {
+        return new Promise((resolve, reject) => {
+            reader.readEntries((batch) => {
+                if (batch.length === 0) {
+                    resolve(null); // 終了条件
+                } else {
+                    resolve(batch);
+                }
+            }, reject);
+        });
+    }
+
+    let batch;
+    while ((batch = await readBatch()) !== null) {
+        entries.push(...batch);
+    }
+
+    return entries;
+}
+
+function showStatus(message, type) {
+    status.innerHTML = `<div class="${type}">${message}</div>`;
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+}
+
+function updateButtonState() {
+    uploadButton.disabled = selectedFiles.length === 0;
+    clearButton.disabled = selectedFiles.length === 0;
+}
+
+function getRelativePath(file) {
+    // webkitRelativePathがある場合はそれを使用
+    if (file.webkitRelativePath) return file.webkitRelativePath;
+
+    // DataTransferItemでのフォルダアップロードの場合
+    if (file.relativePath) return file.relativePath;
+
+    // 通常のファイル
+    return file.name;
+}
+
+function displayFiles() {
+    fileList.innerHTML = "";
+    totalSize = 0;
+
+    // ファイルパスでグループ化
+    const filesByFolder = {};
+
+    selectedFiles.forEach((file) => {
+        totalSize += file.size;
+        const path = getRelativePath(file);
+        const folderPath = path.includes("/")
+            ? path.substring(0, path.lastIndexOf("/"))
+            : "";
+
+        if (!filesByFolder[folderPath]) {
+            filesByFolder[folderPath] = [];
         }
+        filesByFolder[folderPath].push(file);
+    });
 
-        let batch;
-        while ((batch = await readBatch()) !== null) {
-            entries.push(...batch);
-        }
-
-        return entries;
-    }
-
-    function showStatus(message, type) {
-        status.innerHTML = `<div class="${type}">${message}</div>`;
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-        if (bytes < 1024 * 1024 * 1024)
-            return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-        return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB";
-    }
-
-    function updateButtonState() {
-        uploadButton.disabled = selectedFiles.length === 0;
-        clearButton.disabled = selectedFiles.length === 0;
-    }
-
-    function getRelativePath(file) {
-        // webkitRelativePath がある場合はそれを使用
-        if (file.webkitRelativePath) return file.webkitRelativePath;
-
-        // DataTransferItemでのフォルダアップロードの場合
-        if (file.relativePath) return file.relativePath;
-
-        // 通常のファイル
-        return file.name;
-    }
-
-    function isFolderEntry(entry) {
-        return entry && entry.isDirectory;
-    }
-
-    function displayFiles() {
-        fileList.innerHTML = "";
-        totalSize = 0;
-
-        // ファイルパスでグループ化
-        const filesByFolder = {};
-
-        selectedFiles.forEach((file) => {
-            totalSize += file.size;
-            const path = getRelativePath(file);
-            const folderPath = path.includes("/")
-                ? path.substring(0, path.lastIndexOf("/"))
-                : "";
-
-            if (!filesByFolder[folderPath]) {
-                filesByFolder[folderPath] = [];
+    // フォルダごとに表示
+    Object.keys(filesByFolder)
+        .sort()
+        .forEach((folder) => {
+            if (folder !== "") {
+                // フォルダ見出し
+                const folderItem = document.createElement("div");
+                folderItem.className = "file-item folder-item";
+                folderItem.innerHTML = `<span>📁 ${folder}/</span>`;
+                fileList.appendChild(folderItem);
             }
-            filesByFolder[folderPath].push(file);
+
+            // そのフォルダ内のファイル
+            filesByFolder[folder].forEach((file) => {
+                const path = getRelativePath(file);
+                const fileName = path.includes("/")
+                    ? path.substring(path.lastIndexOf("/") + 1)
+                    : path;
+
+                const item = document.createElement("div");
+                item.className = "file-item";
+                item.innerHTML = `
+                <div>
+                    <span>${fileName}</span>
+                    <span class="file-size">(${formatFileSize(
+                        file.size
+                    )})</span>
+                </div>
+                <span class="file-remove" data-path="${path}">❌</span>
+            `;
+                fileList.appendChild(item);
+
+                // 削除ボタンのイベントリスナー
+                item.querySelector(".file-remove").addEventListener(
+                    "click",
+                    function () {
+                        const pathToRemove = this.getAttribute("data-path");
+                        selectedFiles = selectedFiles.filter(
+                            (f) => getRelativePath(f) !== pathToRemove
+                        );
+                        displayFiles();
+                        updateButtonState();
+
+                        if (selectedFiles.length === 0) {
+                            showStatus(
+                                "ファイルが選択されていません。",
+                                "info"
+                            );
+                        }
+                    }
+                );
+            });
         });
 
-        // フォルダごとに表示
-        Object.keys(filesByFolder)
-            .sort()
-            .forEach((folder) => {
-                if (folder !== "") {
-                    // フォルダ見出し
-                    const folderItem = document.createElement("div");
-                    folderItem.className = "file-item folder-item";
-                    folderItem.innerHTML = `<span>📁 ${folder}/</span>`;
-                    fileList.appendChild(folderItem);
-                }
+    if (selectedFiles.length > 0) {
+        showStatus(
+            `${
+                selectedFiles.length
+            }ファイル選択済み (合計: ${formatFileSize(totalSize)})`,
+            "info"
+        );
+    }
+}
 
-                // そのフォルダ内のファイル
-                filesByFolder[folder].forEach((file) => {
-                    const path = getRelativePath(file);
-                    const fileName = path.includes("/")
-                        ? path.substring(path.lastIndexOf("/") + 1)
-                        : path;
-
-                    const item = document.createElement("div");
-                    item.className = "file-item";
-                    item.innerHTML = `
-                    <div>
-                        <span>${fileName}</span>
-                        <span class="file-size">(${formatFileSize(
-                            file.size
-                        )})</span>
-                    </div>
-                    <span class="file-remove" data-path="${path}">❌</span>
-                `;
-                    fileList.appendChild(item);
-
-                    // 削除ボタンのイベントリスナー
-                    item.querySelector(".file-remove").addEventListener(
-                        "click",
-                        function () {
-                            const pathToRemove = this.getAttribute("data-path");
-                            selectedFiles = selectedFiles.filter(
-                                (f) => getRelativePath(f) !== pathToRemove
-                            );
-                            displayFiles();
-                            updateButtonState();
-
-                            if (selectedFiles.length === 0) {
-                                showStatus(
-                                    "ファイルが選択されていません。",
-                                    "info"
-                                );
-                            }
-                        }
-                    );
-                });
-            });
-
-        if (selectedFiles.length > 0) {
-            showStatus(
-                `${
-                    selectedFiles.length
-                }ファイル選択済み (合計: ${formatFileSize(totalSize)})`,
-                "info"
-            );
-        }
+// ファイル追加処理
+function addFiles(files) {
+    // サイズチェック
+    const oversizedFiles = Array.from(files).filter(
+        (f) => f.size > 2 * 1024 * 1024 * 1024
+    );
+    if (oversizedFiles.length > 0) {
+        showStatus(
+            `警告: 次のファイルは2GBを超えるため無視されました: ${oversizedFiles
+                .map((f) => f.name)
+                .join(", ")}`,
+            "error"
+        );
     }
 
-    // ファイル追加処理
-    function addFiles(files) {
-        // サイズチェック
-        const oversizedFiles = Array.from(files).filter(
-            (f) => f.size > 2 * 1024 * 1024 * 1024
-        );
-        if (oversizedFiles.length > 0) {
-            showStatus(
-                `警告: 次のファイルは2GBを超えるため無視されました: ${oversizedFiles
-                    .map((f) => f.name)
-                    .join(", ")}`,
-                "error"
-            );
-        }
+    // 有効なファイルだけを追加
+    const validFiles = Array.from(files).filter(
+        (f) => f.size <= 2 * 1024 * 1024 * 1024
+    );
 
-        // 有効なファイルだけを追加
-        const validFiles = Array.from(files).filter(
-            (f) => f.size <= 2 * 1024 * 1024 * 1024
+    // 重複チェック
+    for (const file of validFiles) {
+        const path = getRelativePath(file);
+        const duplicate = selectedFiles.find(
+            (f) => getRelativePath(f) === path
         );
 
-        // 重複チェック
-        for (const file of validFiles) {
-            const path = getRelativePath(file);
-            const duplicate = selectedFiles.find(
-                (f) => getRelativePath(f) === path
-            );
-
-            if (!duplicate) {
-                selectedFiles.push(file);
-            }
-        }
-
-        displayFiles();
-        updateButtonState();
-    }
-
-    // フォルダからファイルを再帰的に読み込む
-    async function readEntryRecursively(entry) {
-        if (isFolderEntry(entry)) {
-            const reader = entry.createReader();
-            const entries = await readAllEntries(reader); // ✅ ここを変更
-
-            for (const childEntry of entries) {
-                await readEntryRecursively(childEntry);
-            }
-        } else if (entry.isFile) {
-            const file = await new Promise((resolve) => {
-                entry.file(resolve);
-            });
-
-            file.relativePath = entry.fullPath.substring(1); // 先頭の '/' を除く
-            const isDuplicate = selectedFiles.some(
-                (f) => f.relativePath === file.relativePath
-            );
-            if (!isDuplicate && file.size <= 2 * 1024 * 1024 * 1024) {
-                selectedFiles.push(file);
-            }
+        if (!duplicate) {
+            selectedFiles.push(file);
         }
     }
 
-    // ドラッグ＆ドロップされたアイテムを処理
-    async function handleDroppedItems(items) {
-        for (const item of items) {
-            if (item.kind === "file") {
-                const entry = item.webkitGetAsEntry();
-                if (entry) {
-                    await readEntryRecursively(entry);
-                }
+    displayFiles();
+    updateButtonState();
+}
+
+// FileEntryからFileオブジェクトを取得する関数
+function getFileFromEntry(fileEntry) {
+    return new Promise((resolve) => {
+        fileEntry.file(
+            (file) => resolve(file),
+            (error) => {
+                console.error("ファイルの取得エラー:", error);
+                resolve(null);
+            }
+        );
+    });
+}
+
+// ディレクトリを再帰的に読み込む関数
+async function readDirectory(directoryEntry) {
+    const files = [];
+    const dirReader = directoryEntry.createReader();
+    const entries = await readAllEntries(dirReader);
+    
+    for (const entry of entries) {
+        if (entry.isDirectory) {
+            // サブディレクトリの場合、再帰的に読み込む
+            const subFiles = await readDirectory(entry);
+            files.push(...subFiles);
+        } else {
+            // ファイルの場合、Fileオブジェクトに変換して追加
+            const file = await getFileFromEntry(entry);
+            if (file) {
+                file.relativePath = entry.fullPath.substring(1); // 先頭の '/' を除く
+                files.push(file);
             }
         }
-        displayFiles();
-        updateButtonState();
     }
+    
+    return files;
+}
 
-    async function uploadFiles(files) {
-        if (files.length === 0) return;
-
-        const formData = new FormData();
-        let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
-        let uploadedBytes = 0;
-
-        // ファイルパスを保持するためのディレクトリ構造
-        const paths = {};
-
-        for (const file of files) {
-            const path = getRelativePath(file);
-            formData.append("files[]", file);
-            // パス情報を別途送信
-            paths[file.name] = path;
-        }
-
-        // パス情報をJSONとして追加
-        formData.append("paths", JSON.stringify(paths));
-
-        progressContainer.style.display = "block";
-        showStatus("ファイルをアップロード中...", "processing");
-        uploadButton.disabled = true;
-        clearButton.disabled = true;
-
-        try {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "/main/upload", true);
-
-            // プログレス処理
-            xhr.upload.onprogress = function (event) {
-                if (event.lengthComputable) {
-                    uploadedBytes = event.loaded;
-                    const percentage = Math.round(
-                        (uploadedBytes / totalBytes) * 100
-                    );
-                    progressBar.style.width = percentage + "%";
-                    progressBar.textContent = percentage + "%";
-                }
-            };
-
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    const result = JSON.parse(xhr.responseText);
-                    showStatus(result.message || "アップロード成功", "success");
-                    fileList.innerHTML = "";
-                    selectedFiles = [];
-                    updateButtonState();
-                    progressContainer.style.display = "none";
+// DataTransferItemListからファイルとフォルダを処理する関数
+async function handleDroppedItems(items) {
+    const allFiles = [];
+    
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        if (item.kind === "file") {
+            const entry = item.webkitGetAsEntry();
+            if (entry) {
+                if (entry.isDirectory) {
+                    // フォルダの場合、再帰的に処理
+                    const files = await readDirectory(entry);
+                    allFiles.push(...files);
                 } else {
-                    throw new Error(
-                        xhr.statusText || "アップロードに失敗しました"
-                    );
+                    // ファイルの場合、そのまま追加
+                    const file = item.getAsFile();
+                    if (file) allFiles.push(file);
                 }
-            };
-
-            xhr.onerror = function () {
-                throw new Error("ネットワークエラーが発生しました");
-            };
-
-            xhr.send(formData);
-        } catch (error) {
-            console.error("アップロードエラー:", error);
-            showStatus("エラーが発生しました: " + error.message, "error");
-            progressContainer.style.display = "none";
-            updateButtonState();
+            }
         }
     }
+    
+    // 取得したファイルをaddFilesに渡す
+    if (allFiles.length > 0) {
+        addFiles(allFiles);
+        showStatus(`${allFiles.length}個のファイルが選択されました。`, "success");
+    }
+}
 
-    // ドラッグ＆ドロップ処理
+// 複数ファイルを処理する関数
+function handleFiles(files) {
+    // nullを除外
+    const validFiles = files.filter(file => file !== null);
+    
+    if (validFiles.length > 0) {
+        addFiles(validFiles);
+        showStatus(`${validFiles.length}個のファイルが選択されました。`, "success");
+    }
+}
+
+async function uploadFiles(files) {
+    if (files.length === 0) return;
+
+    const formData = new FormData();
+    let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+    let uploadedBytes = 0;
+
+    // ファイルパスを保持するためのディレクトリ構造
+    const paths = {};
+
+    for (const file of files) {
+        const path = getRelativePath(file);
+        formData.append("files[]", file);
+        // パス情報を別途送信
+        paths[file.name] = path;
+    }
+
+    // パス情報をJSONとして追加
+    formData.append("paths", JSON.stringify(paths));
+
+    progressContainer.style.display = "block";
+    showStatus("ファイルをアップロード中...", "processing");
+    uploadButton.disabled = true;
+    clearButton.disabled = true;
+
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", '/ugu_box/upload', true);
+
+        // プログレス処理
+        xhr.upload.onprogress = function (event) {
+            if (event.lengthComputable) {
+                uploadedBytes = event.loaded;
+                const percentage = Math.round(
+                    (uploadedBytes / totalBytes) * 100
+                );
+                progressBar.style.width = percentage + "%";
+                progressBar.textContent = percentage + "%";
+            }
+        };
+
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                const result = JSON.parse(xhr.responseText);
+                showStatus(result.message || "アップロード成功", "success");
+                fileList.innerHTML = "";
+                selectedFiles = [];
+                updateButtonState();
+                progressContainer.style.display = "none";
+                
+                // 通常のファイル一覧のみ更新
+                if (result.all_files && Array.isArray(result.all_files)) {
+                    const filesList = document.getElementById("uploadedFilesList");
+                    if (filesList) {
+                        filesList.innerHTML = "";
+                        result.all_files.forEach(fileInfo => {
+                            const item = document.createElement("div");
+                            item.className = "file-item";
+                            item.innerHTML = `
+                                <div>
+                                    <span class="file-name">${fileInfo.name}</span>
+                                    <span class="file-size">(${formatFileSize(fileInfo.size)})</span>
+                                    <span class="file-date">${fileInfo.date}</span>
+                                </div>
+                                <div class="file-actions">
+                                    <button class="download-btn" data-file="${fileInfo.name}">ダウンロード</button>
+                                    <button class="delete-btn" data-file="${fileInfo.name}">削除</button>
+                                </div>
+                            `;
+                            filesList.appendChild(item);
+                        });
+                        
+                        // 削除ボタンにイベントリスナーを追加
+                        document.querySelectorAll('.delete-btn').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const fileName = this.getAttribute('data-file');
+                                deleteFile(fileName);
+                            });
+                        });
+                    }
+                }
+            } else {
+                throw new Error(
+                    xhr.statusText || "アップロードに失敗しました"
+                );
+            }
+        };
+
+        xhr.onerror = function () {
+            showStatus("アップロード中にエラーが発生しました", "error");
+            progressContainer.style.display = "none";
+        };
+
+        xhr.send(formData);
+    } catch (error) {
+        showStatus("アップロード中にエラーが発生しました", "error");
+        console.error(error);
+    } finally {
+        uploadButton.disabled = false;
+        clearButton.disabled = false;
+    }
+}
+
+// ファイルダウンロード機能
+function downloadFile(fileName) {
+    // サーバー側の/ugu_box/download/エンドポイントを使用
+    const downloadUrl = `/ugu_box/download/${fileName}`;
+    
+    // 画面遷移してダウンロード
+    window.location.href = downloadUrl;
+    
+    showStatus(`「${fileName}」をダウンロードしています...`, 'info');
+}
+
+// ファイル削除機能
+function deleteFile(fileName) {
+    if (!confirm(`「${fileName}」を削除してもよろしいですか？`)) {
+        return;
+    }
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/ugu_box/delete", true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            const result = JSON.parse(xhr.responseText);
+            if (result.success) {
+                showStatus(`「${fileName}」を削除しました`, "success");
+                // 関連する要素をDOMから削除
+                const fileElem = document.querySelector(`[data-file="${fileName}"]`).closest('.file-item');
+                if (fileElem) {
+                    fileElem.remove();
+                }
+            } else {
+                showStatus(`削除エラー: ${result.message || "不明なエラー"}`, "error");
+            }
+        } else {
+            showStatus("削除処理中にエラーが発生しました", "error");
+        }
+    };
+    
+    xhr.onerror = function() {
+        showStatus("サーバーとの通信エラーが発生しました", "error");
+    };
+    
+    xhr.send(JSON.stringify({ filename: fileName }));
+}
+
+// ドラッグ＆ドロップ処理
 dropZone.addEventListener("dragover", (e) => {
     e.preventDefault();
     dropZone.classList.add("active");
@@ -558,107 +619,6 @@ dropZone.addEventListener("drop", async (e) => {
         handleFiles(Array.from(e.dataTransfer.files));
     }
 });
-
-// DataTransferItemListからファイルとフォルダを処理する関数
-async function handleDroppedItems(items) {
-    const filePromises = [];
-    
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        
-        if (item.kind === "file") {
-            // webkitGetAsEntryがサポートされている場合はそれを使用
-            if (item.webkitGetAsEntry) {
-                const entry = item.webkitGetAsEntry();
-                if (entry) {
-                    if (entry.isDirectory) {
-                        // フォルダの場合、再帰的に処理
-                        filePromises.push(readDirectory(entry));
-                    } else {
-                        // ファイルの場合、そのまま追加
-                        filePromises.push(Promise.resolve([item.getAsFile()]));
-                    }
-                }
-            } else {
-                // webkitGetAsEntryがサポートされていない場合は直接ファイルを取得
-                filePromises.push(Promise.resolve([item.getAsFile()]));
-            }
-        }
-    }
-    
-    // すべてのファイル取得が完了するのを待つ
-    const fileArrays = await Promise.all(filePromises);
-    // 平坦化して単一のファイル配列にする
-    const allFiles = fileArrays.flat();
-    
-    // 取得したファイルをaddFilesに渡す
-    handleFiles(allFiles);
-}
-
-// ディレクトリを再帰的に読み込む関数
-function readDirectory(directoryEntry) {
-    return new Promise((resolve) => {
-        const dirReader = directoryEntry.createReader();
-        const files = [];
-        
-        // ディレクトリ内のエントリを読み込む
-        function readEntries() {
-            dirReader.readEntries(async (entries) => {
-                if (entries.length === 0) {
-                    // すべてのエントリを読み込んだらresolveする
-                    resolve(files);
-                    return;
-                }
-                
-                // 各エントリを処理
-                for (let i = 0; i < entries.length; i++) {
-                    const entry = entries[i];
-                    
-                    if (entry.isDirectory) {
-                        // サブディレクトリの場合、再帰的に読み込む
-                        const subFiles = await readDirectory(entry);
-                        files.push(...subFiles);
-                    } else {
-                        // ファイルの場合、Fileオブジェクトに変換して追加
-                        files.push(await getFileFromEntry(entry));
-                    }
-                }
-                
-                // まだエントリが残っている可能性があるので再度読み込み
-                readEntries();
-            }, (error) => {
-                console.error("ディレクトリの読み込みエラー:", error);
-                resolve(files);
-            });
-        }
-        
-        readEntries();
-    });
-}
-
-// FileEntryからFileオブジェクトを取得する関数
-function getFileFromEntry(fileEntry) {
-    return new Promise((resolve) => {
-        fileEntry.file(
-            (file) => resolve(file),
-            (error) => {
-                console.error("ファイルの取得エラー:", error);
-                resolve(null);
-            }
-        );
-    });
-}
-
-// 複数ファイルを処理する関数
-function handleFiles(files) {
-    // nullを除外
-    const validFiles = files.filter(file => file !== null);
-    
-    if (validFiles.length > 0) {
-        addFiles(validFiles);
-        showStatus(`${validFiles.length}個のファイルが選択されました。`, "success");
-    }
-}
 
 // ファイル選択処理
 fileInput.addEventListener("change", (e) => {
@@ -685,5 +645,77 @@ clearButton.addEventListener("click", () => {
     updateButtonState();
 });
 
+function fetchFilesList() {
+    fetch("/ugu_box/files")
+        .then(response => response.json())
+        .then(data => {
+            updateFilesListUI(data);
+        })
+        .catch(error => {
+            console.error("ファイル一覧取得エラー:", error);
+            const filesList = document.getElementById("uploadedFilesList");
+            if (filesList) {
+                filesList.innerHTML = "<p>ファイル一覧の取得に失敗しました。</p>";
+            }
+        });
+}
+
+// ✅ 追加：ページロード時に呼び出す
+document.addEventListener("DOMContentLoaded", () => {
+    fetchFilesList();
+});
+
+    // ファイル一覧UIを更新する関数
+    function updateFilesListUI(files) {
+    const filesList = document.getElementById("uploadedFilesList");
+    if (!filesList) return;
+
+    filesList.innerHTML = "";
+
+    if (files.length === 0) {
+        filesList.innerHTML = "<p style='text-align: center;'>アップロードされたファイルはありません。</p>";
+        return;
+    }
+
+    files.forEach(fileInfo => {
+        const item = document.createElement("div");
+        item.className = "file-item";
+
+        // ファイル拡張子でアイコンを決定（任意）
+        let fileIcon = "📄";
+        const ext = fileInfo.filename.split(".").pop().toLowerCase();
+        if (["jpg", "jpeg", "png", "gif"].includes(ext)) fileIcon = "🖼️";
+        else if (["zip", "rar"].includes(ext)) fileIcon = "🗜️";
+        else if (["pdf", "txt"].includes(ext)) fileIcon = "📝";
+
+        item.innerHTML = `
+            <div>
+                <span class="file-icon">${fileIcon}</span>
+                <a href="${fileInfo.url}" download style="color: #007bff; text-decoration: none;">
+                    ${fileInfo.filename}
+                </a>
+                <span class="file-date">${fileInfo.last_modified}</span>
+            </div>
+            <div class="file-actions">
+                <a href="${fileInfo.url}" download="${fileInfo.filename}" 
+                   style="margin-right: 8px; background-color: #28a745; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 14px;">
+                   ダウンロード
+                </a>
+                <button class="delete-btn" data-file="${fileInfo.filename}">削除</button>
+            </div>
+        `;
+
+        filesList.appendChild(item);
+    });
+
+    // 削除ボタンイベント
+    document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", function () {
+            const fileName = this.getAttribute("data-file");
+            deleteFile(fileName);
+        });
+    });
+}
 </script>
+
 {% endblock %}

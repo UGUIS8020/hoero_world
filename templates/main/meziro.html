@@ -1,0 +1,103 @@
+{% extends "common/base.html" %}
+{% block content %}
+<div class="container mt-4" style="max-width: 900px;">
+    <h1>MEZIRO ファイル管理</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">            
+                <h2 class="h5 mb-0">アップロードされたファイル一覧</h2>
+                <div>
+                    <button type="button" id="selectAllBtn" class="btn btn-sm btn-outline-secondary">すべて選択</button>
+                    <button type="button" id="deleteSelectedBtn" class="btn btn-sm btn-danger" disabled>選択削除</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if s3_files %}
+                <form id="deleteForm" method="POST" action="{{ url_for('main.meziro_delete') }}">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th width="50">選択</th>
+                                    <th>ファイル名</th>
+                                    <th>アップロード日時</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file in s3_files %}
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input file-checkbox" type="checkbox" name="selected_files" value="{{ file.key }}" id="file-{{ loop.index }}">
+                                            </div>
+                                        </td>
+                                        <td>{{ file.filename }}</td>
+                                        <td>{{ file.last_modified }}</td>
+                                        <td>                                            
+                                            <a href="{{ url_for('main.meziro_download', key=file.key) }}" class="btn btn-sm btn-success">ダウンロード</a>
+                                            <form method="POST" action="{{ url_for('main.meziro_delete', key=file.key) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('このファイルを削除してもよろしいですか？');">削除</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            {% else %}
+                <p class="text-center">ファイルがありません</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if s3_files %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const checkboxes = document.querySelectorAll('.file-checkbox');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    // チェックボックスの状態変更を監視
+    function updateButtonState() {
+        const checkedCount = document.querySelectorAll('.file-checkbox:checked').length;
+        deleteSelectedBtn.disabled = checkedCount === 0;
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateButtonState);
+    });
+    
+    // すべて選択/解除ボタン
+    selectAllBtn.addEventListener('click', function() {
+        const isAllSelected = document.querySelectorAll('.file-checkbox:checked').length === checkboxes.length;
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = !isAllSelected;
+        });
+        updateButtonState();
+    });
+    
+    // 選択削除ボタン
+    deleteSelectedBtn.addEventListener('click', function() {
+        const checkedCount = document.querySelectorAll('.file-checkbox:checked').length;
+        if (confirm(`選択した${checkedCount}件のファイルを削除してもよろしいですか？`)) {
+            deleteForm.submit();
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

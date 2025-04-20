@@ -73,11 +73,14 @@
               
               {% if current_user.is_authenticated and current_user.is_administrator %}
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
+                <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
+              </li> 
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.meziro' %}active{% endif %}" href="{{ url_for('main.meziro') }}">MEZIRO</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
-              </li>              
+                <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
+              </li>                                       
               {% endif %}
 
               {% if current_user.is_authenticated %}
@@ -111,6 +114,16 @@
               </li>             
 
               {% endif %}
+
+              {% if current_user.is_authenticated and current_user.is_administrator %}
+              <form action="{{ url_for('main.manual_cleanup') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-warning">
+                  TempFile消去
+                </button>
+              </form>  
+              {% endif %}
+
             </ul>
           </div>
         </div>
