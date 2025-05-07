@@ -1,18 +1,29 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dental Missing Pattern Calculator: 28 Teeth Combinations</title>
+
+{% extends "common/base.html" %}
+{% block title %}Dental Defect Combination Checker{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="上下顎28本の歯の欠損パターン組み合わせを計算するツールです。欠損本数を入力すると可能な組み合わせ数を表示します。">
+<meta name="description" content="Calculator tool that shows the number of possible combinations when teeth are missing from a total of 28 teeth in upper and lower jaws." lang="en">
+<meta property="og:description" content="歯科の欠損パターン計算ツール：上下顎28本の歯から欠損した場合の組み合わせ数を即時計算します。Dental defect calculator: Instantly computes possible missing teeth pattern combinations.">
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 850px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
+                font-family: Arial, sans-serif;
+                background-color: #f5f5f5;
+            }
+
+            /* コンテンツ領域用のラッパー追加 */
+            .content-wrapper {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+        .dental-container {
             background-color: white;
             padding: 30px;
             border-radius: 10px;
@@ -35,6 +46,8 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            width: 100%; /* 明示的に幅を100%に設定 */
+            max-width: 750px; /* 必要に応じて最大幅を設定 */
         }
         input[type="range"] {
             flex: 1;
@@ -84,9 +97,9 @@
             color: #dc3545;
         }
     </style>
-</head>
-<body>
-    <div class="container">        
+
+
+    <div class="dental-container">        
         <h1>Dental Defect Combination Checker 268,435,455</h1>
         <h3>歯の欠損パターン計算ツール: 上下顎28本の組み合わせ</h3>
         <p>上下顎あわせた28本の歯の中から、何本欠損したときにどれくらいの欠損パターンがあるかを表示します。</p> 
@@ -155,5 +168,5 @@
         // 初期計算
         calculate();
     </script>
-</body>
-</html>
+</div>
+{% endblock %}
