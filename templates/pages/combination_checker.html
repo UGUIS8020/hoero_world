@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欠損歯組み合わせチェッカー（上下顎対応）</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin: 30px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        input[type="range"] {
+            flex: 1;
+            height: 30px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e0e0e0;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 30px;
+            height: 30px;
+            background: #007bff;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 30px;
+            height: 30px;
+            background: #007bff;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .value-display {
+            background: #e9ecef;
+            padding: 10px 20px;
+            border-radius: 5px;
+            min-width: 60px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        /* 送信ボタンのスタイルは削除 */
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        .error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">        
+        <h1>Dental Defect Combination Checker 268,435,455</h1>
+        <p>上下顎あわせた28本の歯の中から、何本欠損したときにどれくらいの欠損パターンがあるかを表示します。</p> 
+        <p>Shows how many missing patterns exist when a certain number of teeth are missing from a total of 28 teeth (14 upper and 14 lower jaw teeth, excluding wisdom teeth).</p>
+
+        
+        <div class="input-group">
+            <label>欠損歯の本数(上下顎 合計) Number of missing teeth (total of upper and lower jaw)</label>
+            <div class="slider-container">
+                <input type="range" id="teethRange" min="0" max="28" value="10">
+                <div class="value-display" id="valueDisplay">10</div>
+            </div>
+        </div>
+        
+        <!-- 送信ボタンは不要なので削除 -->
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const teethRange = document.getElementById('teethRange');
+        const valueDisplay = document.getElementById('valueDisplay');
+        const resultDiv = document.getElementById('result');
+
+        teethRange.addEventListener('input', function() {
+            valueDisplay.textContent = this.value;
+            calculate();  // スライダーを動かすたびに自動計算
+        });
+
+        function factorial(n) {
+            if (n <= 1) return 1;
+            let result = 1;
+            for (let i = 2; i <= n; i++) {
+                result *= i;
+            }
+            return result;
+        }
+
+        function combination(n, k) {
+            if (k < 0 || k > n) return 0;
+            if (k === 0 || k === n) return 1;
+            if (k > n / 2) k = n - k; // 効率化のため
+            
+            let result = 1;
+            for (let i = 1; i <= k; i++) {
+                result = result * (n - i + 1) / i;
+            }
+            return Math.round(result);
+        }
+
+        function calculate() {
+            const n = parseInt(teethRange.value);
+            
+            if (n < 0 || n > 28) {
+                resultDiv.innerHTML = '<div class="error">0〜28本の間で入力してください。<br>Please enter a value between 0 and 28.</div>';
+                return;
+            }
+            
+            const combinations = combination(28, n);
+            const formattedCombinations = combinations.toLocaleString('ja-JP');
+            
+            resultDiv.innerHTML = `<div class="result-ja">上下顎あわせて ${n} 本が欠損している場合、<br>組み合わせ数は ${formattedCombinations} 通りです。</div>
+                                <div class="result-en">When ${n} teeth are missing from both upper and lower jaws,<br>there are ${formattedCombinations} possible combinations.</div>`;
+        }
+
+        // 初期計算
+        calculate();
+    </script>
+</body>
+</html>

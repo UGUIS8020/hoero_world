@@ -6,3 +6,8 @@ bp = Blueprint('pages', __name__, url_prefix='/pages', template_folder='hoero_wo
 def root_replica():
     
     return render_template('pages/root_replica.html')
+
+@bp.route('/combination_checker')
+def combination_checker():
+    
+    return render_template('pages/combination_checker.html')
