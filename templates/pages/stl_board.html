@@ -1,0 +1,286 @@
+{% extends "common/base.html" %}
+
+{% block title %}STL掲示板{% endblock %}
+{% block content %}
+<div class="container mt-4">  
+
+  <!-- 新規投稿フォーム -->
+  {% if current_user.is_authenticated %}
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">新規投稿</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+          {{ form.title.label(class="form-label") }}
+          {{ form.title(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.content.label(class="form-label") }}
+          {{ form.content(class="form-control", rows=3) }}
+        </div>
+        <div class="mb-3">
+          {{ form.stl_file.label(class="form-label") }}
+          {{ form.stl_file(class="form-control") }}
+          <div class="form-text">STLファイルをアップロードしてください</div>
+        </div>
+        <div class="d-grid">
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info text-center mb-4">
+    投稿するには<a href="{{ url_for('users.login') }}">ログイン</a>してください
+  </div>
+  {% endif %}
+
+  <!-- 投稿一覧 -->
+  <h4 class="mb-3">投稿一覧</h4>
+  {% for post in posts.items %}
+<div class="card post-card mb-3 {% if selected_post_id == post.id %}selected-post{% endif %}">
+  <div class="card-body">
+    <h5 class="card-title">{{ post.title }}</h5>
+    <h6 class="card-subtitle mb-2 text-muted">
+      {{ post.author.display_name }} - {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}
+    </h6>
+
+    <!-- 投稿本文 -->
+    {% if post.content %}
+      <p class="mt-2">{{ post.content }}</p>
+    {% else %}
+      <p class="mt-2 text-muted"><em>本文なし</em></p>
+    {% endif %}
+
+    <!-- モデル表示 -->
+    {% if post.stl_file_path and post.s3_presigned_url %}
+    <div style="width: 100%; background: #f8f8f8; border: 1px solid #ccc; border-radius: 8px; padding: 10px; margin-bottom: 20px;">
+      <model-viewer
+        id="model-viewer-{{ post.id }}"
+        src="{{ post.s3_presigned_url }}"
+        alt="3Dモデル"
+        auto-rotate
+        camera-controls
+        style="display: block; margin: 0 auto; width: 100%; height: 500px; background-color: #FFFFFF;"
+      </model-viewer>
+    </div>
+    {% endif %}
+
+    <!-- 削除ボタン（ログイン済み、かつ投稿者 or 管理者のみ） -->
+    {% if current_user.is_authenticated and (current_user.id == post.user_id or current_user.administrator) %}
+      <form method="POST" action="{{ url_for('stl_board.delete_post', post_id=post.id) }}"
+            onsubmit="return confirm('本当にこの投稿を削除しますか？');" class="mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-danger">投稿を削除</button>
+      </form>
+    {% endif %}
+
+    <!-- コメント一覧 -->
+    <div class="mt-3">      
+      {% set has_comment = false %}
+      {% for comment in comments %}
+        {% if comment.post_id == post.id and not comment.parent_comment_id %}
+        {% set has_comment = true %}
+        <div class="card mt-2">
+          <div class="card-body">
+            <h6 class="text-muted">{{ comment.author.display_name }} - {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</h6>
+            <p>{{ comment.content }}</p>
+          </div>
+        </div>
+
+        <!-- 返信 -->
+        {% for reply in comments %}
+          {% if reply.parent_comment_id == comment.id %}
+          <div class="card mt-2 ms-4">
+            <div class="card-body">
+              <h6 class="text-muted">{{ reply.author.display_name }} - {{ reply.created_at.strftime('%Y-%m-%d %H:%M') }}</h6>
+              <p>{{ reply.content }}</p>
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+
+        {% endif %}
+      {% endfor %}
+      {% if not has_comment %} 
+      <p class="text-muted">コメントはまだありません。</p>       
+      {% endif %}
+    </div>
+
+    <!-- コメント投稿フォーム（ログイン済のみ） -->
+    {% if current_user.is_authenticated %}
+    <form method="POST" action="{{ url_for('stl_board.add_comment', post_id=post.id) }}" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="parent_id" value="">
+      <div class="mb-3">
+        <label for="comment_content_{{ post.id }}" class="form-label">コメントを追加</label>
+        <textarea id="comment_content_{{ post.id }}" name="content" class="form-control" rows="2" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-sm btn-outline-primary">コメント投稿</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+   
+{% endfor %}
+
+  <!-- ページネーション -->
+  {% if posts.pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center">
+      {% if posts.has_prev %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('stl_board.index', page=posts.prev_num) }}">前へ</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">前へ</span></li>
+      {% endif %}
+      {% for page_num in posts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+      {% if page_num %}
+        {% if page_num == posts.page %}
+        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+        {% else %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('stl_board.index', page=page_num) }}">{{ page_num }}</a></li>
+        {% endif %}
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+      {% endfor %}
+      {% if posts.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('stl_board.index', page=posts.next_num) }}">次へ</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">次へ</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+  <!-- 選択された投稿詳細 -->
+  {% if selected_post %}
+  <div class="card mt-5">
+    <div class="card-header">
+      <h4 class="mb-0">{{ selected_post.title }}</h4>
+    </div>
+    <div class="card-body">
+      <p class="mb-3">{{ selected_post.content or "本文なし" }}</p>
+      <div class="d-flex mb-3">
+        <!-- いいねボタン -->
+        <form method="POST" action="{{ url_for('stl_board.like_post', post_id=selected_post.id) }}" class="me-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            ❤️ いいね
+            <span class="badge bg-secondary">{{ selected_post.likes.count() }}</span>
+          </button>
+        </form>
+
+        {% if selected_post.stl_file_path %}
+        <a href="{{ selected_post.s3_presigned_url }}" class="btn btn-sm btn-success" download="{{ selected_post.stl_filename }}">
+        STLファイルダウンロード
+        </a>
+        {% endif %}
+      </div>
+
+      {% if selected_post.stl_file_path %}
+      <!-- STLビューワー -->
+      <div id="stl-viewer" style="width: 100%; height: 500px; background-color: #f0f0f0;"></div>
+      {% endif %}
+
+      <!-- コメント投稿フォーム -->
+      <div class="mt-4">
+        {% if current_user.is_authenticated %}
+        <form method="POST" action="{{ url_for('stl_board.add_comment', post_id=selected_post.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="parent_id" id="parent_comment_id" value="">
+          <div class="mb-3">
+            <label for="comment_content" class="form-label">コメントを追加</label>
+            <textarea id="comment_content" name="content" class="form-control" rows="3" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">コメント投稿</button>
+        </form>
+        {% else %}
+        <div class="alert alert-info text-center">
+          コメントするには<a href="{{ url_for('users.login') }}">ログイン</a>してください
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- コメント一覧 -->
+      <div class="mt-4">
+        <h5>コメント一覧</h5>
+        {% for comment in comments %}
+          {% if comment.post_id == selected_post.id and not comment.parent_comment_id %}
+          <div class="card mt-2">
+            <div class="card-body">
+              <h6 class="text-muted">{{ comment.author.display_name }} - {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</h6>
+              <p>{{ comment.content }}</p>
+            </div>
+          </div>
+
+          <!-- 返信コメント -->
+          {% for reply in comments %}
+            {% if reply.parent_comment_id == comment.id %}
+            <div class="card mt-2 ms-4">
+              <div class="card-body">
+                <h6 class="text-muted">{{ reply.author.display_name }} - {{ reply.created_at.strftime('%Y-%m-%d %H:%M') }}</h6>
+                <p>{{ reply.content }}</p>
+              </div>
+            </div>
+            {% endif %}
+          {% endfor %}
+
+          {% endif %}
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
+
+{% endblock %}

@@ -2,7 +2,7 @@
 {% block content %}     
 
     <style>
-    h1 {
+        h1 {
         text-align:center; 
         color: #222222;
         margin: 25px 0px 0px 0px;
@@ -13,16 +13,18 @@
         /* background-color:green; */
         text-align:center; 
         color: #222222;
-        margin: 0px 0px 0px 0px;
-        padding: 5px 0px 0px 0px;
+        margin: 10px 0px 5px 0px;       
+        font-size: 1.6rem; /
+
         }
 
         h3 {
         /* background-color:red; */
         text-align:center; 
         color: #222222;
-        margin: 0px 0px 0px 0px;
+        margin: 10px 5px;
         padding: 5px 0px 0px 0px;
+        font-size: 1.2rem; /
         /* margin: 5px 0px 0px 0px; */
         /* padding: 5px 0px 0px 0px; */
         }
@@ -107,7 +109,7 @@
         background-color: #e8f4ff;
     }
     .file-list {
-        margin-top: 20px;
+        margin-top: 10px;
         max-width: 800px;
         margin-left: auto;
         margin-right: auto;
@@ -261,7 +263,7 @@
   }
 </style>
 
-<h3>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h3>
+<h2>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h2>
 <h2><a href = "tel:0489618151">Tel 048-961-8151</a></h2>
 <h3>E-mail shibuya8020@gmail.com</h3>
 
@@ -317,14 +319,12 @@
 </div>
 
 
-
+<h2>自家歯牙移植用3Dドナーレプリカ(歯根レプリカ)</h2>
 <div id="fileList" class="file-list"></div>
 
     <div class="box box1">        
         <a href="{{ url_for('pages.root_replica') }}" target="_self">
-            <h2>rootreplica</h2>
-            <h3>自家歯牙移植用3Dドナーレプリカ(歯根レプリカ)</h3>
-            <h3>自家歯牙移植用サージカルガイド</h3>          
+            <h2>rootreplica</h2>                   
 
            <div>      
           <img src="{{ url_for('static', filename='main/top/root_replica003.jpg') }}">

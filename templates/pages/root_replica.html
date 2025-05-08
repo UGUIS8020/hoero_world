@@ -1,6 +1,6 @@
 
 {% extends "common/base.html" %}
-{% block title %}root_replica{% endblock %}
+{% block title %}自家歯牙移植用レプリカ{% endblock %}
 
 {% block meta_description %}
 <meta name="description" content="歯牙移植用の3Dレプリカモデル製作サービス。CTデータから正確な歯根形状を再現し、自家歯牙移植の成功率を向上させます。短時間での移植と歯根膜の保護を実現。 / 3D dental replica service for tooth autotransplantation. Creates accurate root models from CT data to improve transplant success rates by reducing surgery time and protecting periodontal ligaments.">
@@ -9,12 +9,25 @@
 
 {% block content %}
 
+<style> 
+.box-replica {
+  display: flex;
+  gap: 10px; /* 画像間の隙間 */
+  flex-wrap: wrap; /* 必要に応じて折り返し */
+  justify-content: center; /* 中央揃え（任意） */ 
+}
+.box-replica h3 {
+  width: 100%;
+  flex-basis: 100%; /* フレックスボックス内での幅 */
+}
+</style>
+
 
 <center>
-<h1>歯牙製作 歯牙複製 歯牙造形サービス</h1>
-<h1>自家歯牙移植のためのドナーレプリカ(3Dレプリカ)</h1>
-<h1>移植歯シミュレーションモデル</h1>
-<h1>CBCT画像(CTデータ)から歯牙歯根モデルの作製。</h1>
+<h1>歯牙製作、歯牙造形サービス</h1>
+<h2>自家歯牙移植ドナーレプリカ(3Dレプリカ)</h2>
+<h2>移植歯シミュレーションモデル</h2>
+<h2>CBCT画像(CTデータ)から歯牙歯根モデルの作製。</h2>
 
 
 </font>
@@ -24,50 +37,69 @@
 <h2>3Dレプリカ 1歯8500円</h2>
 <h2>3Dレプリカ(造影剤有) 1歯9000円</h2>
 <h2>移植歯比較シミュレーション5000円</h2>
-
-<h2>ご質問等はお気軽にお電話ください<h2><a href = "tel:0489618151"><h2>Tel 048-961-8151</a></h2>
-
-  <h2>CTデータをこちら弊社DoropBox↓↓に入れてください。データ確認後ご連絡いたします</h2>
-  <div class="data_reception">
-  
-    <h2>  <A href="https://www.dropbox.com/request/QmjTpqLwGWYUNO7uN9dj"target="_blank">
-      データ受付 CTデータ</h3></a>
-  
-  </div>
+   
 
   <h3>郵送の場合は下記にお願いいたします</h3>
   <h3>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h3>
   <h2><a href = "tel:0489618151">Tel 048-961-8151</a></h2>
   <h3>E-mail shibuya8020@gmail.com</h3>
 
-CTデータは大きすぎてメールで送れないので大容量ファイル転送サービスをご利用ください↓<br>
+<h3>CTデータはメールでは受送信できませんので大容量ファイル転送サービスをご利用ください↓</h3>
 
 <a href="https://gigafile.nu/" target="_blank">
-<b>ギガファイル便</b></a><p>
+<h3><b>ギガファイル便</b></a></h3>
 
-または郵送にてUSB、SDカードなどでデータをお送りください<br>
+<h3>または郵送にてUSB、SDカードなどでデータをお送りください</h3>
 
-<div class="box6">
-  <h2>【症例紹介】</h2>
+<div class="box-replica mt-5">
+  <h2>【症例紹介 1】</h2>
   <h3>右下8番を左下6番に移植 造形剤有りのレプリカ使用</h3>
 
-     <div class="box00">     
-     <img src="{{ url_for('static', filename='pages/root_replica_case/case016.jpg') }}">
-     <img src="{{ url_for('static', filename='pages/root_replica_case/case017.jpg') }}">
+  <div class="replica-row">
+    <img src="{{ url_for('static', filename='pages/root_replica_case/case016.jpg') }}">
+    <img src="{{ url_for('static', filename='pages/root_replica_case/case017.jpg') }}">
+  </div>
+
+  <div class="replica-row">
+    <img src="{{ url_for('static', filename='pages/root_replica_case/case018.jpg') }}">
+    <img src="{{ url_for('static', filename='pages/root_replica_case/case019.jpg') }}">
+  </div>
+
+  <div class="replica-row">
+    <img src="{{ url_for('static', filename='pages/root_replica_case/case020.jpg') }}">
+    <img src="{{ url_for('static', filename='pages/root_replica_case/case021.jpg') }}">
+  </div>
+
+  <h3>【画像提供】<a href="https://kaedenomori-dc.jp/" target="_blank">
+    熊本県合志市:楓の森歯科クリニック Dr.白濱義将</a></h3>
+</div>
+
+<div class="box-replica mt-5">
+  <h2>【症例紹介 2】</h2>
+  <h3>左下8番を右下6番に移植 造形剤有りのレプリカ使用</h3>
+
+     <div class="replica-row">     
+     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/013.jpg') }}">
+     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/014.jpg') }}">     
      </div>  
 
-     <div class="box00">
-     <img src="{{ url_for('static', filename='pages/root_replica_case/case018.jpg') }}">
-     <img src="{{ url_for('static', filename='pages/root_replica_case/case019.jpg') }}">     
+     <div class="replica-row">
+     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/015.jpg') }}">
+     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/016.jpg') }}">     
      </div>  
 
-      <div class="box00">
-      <img src="{{ url_for('static', filename='pages/root_replica_case/case020.jpg') }}">
-      <img src="{{ url_for('static', filename='pages/root_replica_case/case021.jpg') }}">  
+      <div class="replica-row">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/017.jpg') }}">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/018.jpg') }}">  
       </div>  
+
+      <div class="replica-row">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/019.jpg') }}">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/020.jpg') }}">  
+      </div> 
       
      <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">
-      熊本県合志市:楓の森歯科クリニック Dr.白濱義将</h3></a>     
+      熊本県合志市:楓の森歯科クリニック Dr.白濱義将</a></h3>     
 
 </div>
 
@@ -124,40 +156,43 @@ CTデータは大きすぎてメールで送れないので大容量ファイル
   「再植」とは外傷や事故などで抜けてしまった歯を再度歯を元の場所に戻すことをいいます。<br>
   「移植」とは、むし歯や歯周病などで失った歯のあったところに、違う歯を移すという方法です。自分の歯を利用する場合自家歯牙移植といいます。<br>
   もともと自分の歯ですから生体に対して優しく、歯の機能はもとのままで移植でき条件が合えばとても有効な方法です。<p>
-  <center>
-  <IMG SRC="root_replica/029.jpg"border="0"><br>
+  <center>  
+    <img src="{{ url_for('static', filename='pages/root_replica/029.jpg') }}">
   </center>
- 
+ </div>
 
-
-</div>
-
-<div class="box6">
-  <h2>【症例紹介】</h2>
+<div class="box-replica mt-5">
+  <h2>【症例紹介 3】</h2>
   <h3>左下8番を左下6番に移植</h3>
+  
 
-     <div class="box00">
+     <div class="replica-row">     
      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/001.jpg') }}">
      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/002.jpg') }}">      
      </div>  
 
-     <div class="box00">
+     <div class="replica-row">
      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/003.jpg') }}">
      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/004.jpg') }}">     
      </div>  
 
-     <div class="box00">
-      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/005.jpg') }}">
-      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/006.jpg') }}">      
-       </div>  
-
-       <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">熊本県合志市:楓の森歯科クリニック Dr.白濱義将</h3></a>
+      <div class="replica-row">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/005.jpg') }}">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/006.jpg') }}">  
+      </div>       
+            
+     <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">
+      熊本県合志市:楓の森歯科クリニック Dr.白濱義将</a></h3>     
 
 </div>
 
 
-<div class="box6">
-  <h2>【症例紹介】</h2>
+
+
+
+
+<div class="box-replica mt-5">
+  <h2>【症例紹介 4】</h2>
   <h3>左下8番を左下6番に移植</h3>
 
      <div class="box00">
@@ -170,8 +205,9 @@ CTデータは大きすぎてメールで送れないので大容量ファイル
      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/010.jpg') }}">     
      </div>  
 
-     <h3>３週間後</h3>
+     
      <div class="box00">
+      <h3>３週間後</h3>
       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/011.jpg') }}">
       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012.jpg') }}">       
       </div>  
@@ -181,8 +217,8 @@ CTデータは大きすぎてメールで送れないので大容量ファイル
 
 </div>
 
-<div class="box6">
-  <h2>【症例紹介】</h2>
+<div class="box-replica mt-5">
+  <h2>【症例紹介 5】</h2>
 
 <h3>移植歯に合わせた移植床(移植先受容側部の窩洞)の形成をスムーズかつ正確にするため</h3>
 <h3>事前にCTデーターから移植歯の形態をPMMA(レジン)に置き換えて準備しておきます</h3>
@@ -207,16 +243,10 @@ CTデータは大きすぎてメールで送れないので大容量ファイル
        
     <h3>【画像提供】<a href="https://www.yumoto-dc.com/"target="_blank">埼玉県さいたま市:歯内療法専門歯科 ユモトデンタルクリニック Dr.湯本 真幸</h3></a>
 
-
-
 </div>
 
-
-
-
-
-<div class="box6">
-  <h2>【症例紹介】</h2>
+<div class="box-replica mt-5">
+  <h2>【症例紹介 6】</h2>
   
      <div class="box00">
      <img src="{{ url_for('static', filename='pages/root_replica/020.jpg') }}"> 
@@ -245,8 +275,8 @@ CTデータは大きすぎてメールで送れないので大容量ファイル
 </div>
 
 
-  <div class="box6">
-    <h2>【症例紹介】</h2>
+  <div class="box-replica mt-5">
+    <h2>【症例紹介 7】</h2>
     <h3>【上下顎骨レプリカ、3Dプリント造形】</h3>
     
        <div class="box00">

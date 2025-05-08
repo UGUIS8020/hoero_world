@@ -1,0 +1,11 @@
+
+/* ナビバーのユーザー名リンク専用スタイル */
+a.navbar-text.user-name {
+    color: #007bff !important; /* 通常ユーザーは青 */
+    font-weight: bold !important;
+}
+
+a.navbar-text.admin-name {
+    color: #e79b37 !important; /* 管理者は赤 */
+    font-weight: bold !important;
+}
