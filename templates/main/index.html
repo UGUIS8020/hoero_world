@@ -299,6 +299,15 @@
             directory
             style="display: none"
         />
+        <input type="hidden" id="shade" value="A2">
+        <input type="hidden" id="businessName" value="dummy-lab">
+        <input type="hidden" id="userName" value="dummy-user">
+        <input type="hidden" id="userEmail" value="dummy@example.com">
+        <input type="hidden" id="PatientName" value="dummy-patient">
+        <input type="hidden" id="appointmentDate" value="2025-01-01">
+        <input type="hidden" id="appointmentHour" value="09:00">
+        <input type="hidden" id="projectType" value="プロビジョナル">
+
         <button onclick="document.getElementById('fileInput').click()">
             ファイルを選択
         </button>
@@ -464,7 +473,8 @@
                 </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/meziro_upload.js') }}"></script>
+    
+    <script src="{{ url_for('static', filename='js/meziro_upload.js') }}" defer></script>
 
 
 {% endblock %}

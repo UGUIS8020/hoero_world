@@ -395,7 +395,7 @@ def meziro_upload():
     #     'AWS_REGION': os.getenv('AWS_REGION')
     # })
 
-    message = request.form.get('message')
+    message = request.form.get('userMessage')
     if not message:
         return jsonify({'error': 'メッセージが入力されていません'}), 400
 
