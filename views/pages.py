@@ -11,3 +11,8 @@ def root_replica():
 def combination_checker():
     
     return render_template('pages/combination_checker.html')
+
+@bp.route('/missing_teeth_nation')
+def missing_teeth_nation():
+    
+    return render_template('pages/missing_teeth_nation.html')

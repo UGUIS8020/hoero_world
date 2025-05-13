@@ -79,7 +79,10 @@
               </li>
 
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.blog_maintenance' %}active{% endif %}" href="{{ url_for('pages.combination_checker') }}">checker</a>
+                <a class="nav-link {% if request.endpoint == 'main.blog_maintenance' %}active{% endif %}" href="{{ url_for('pages.combination_checker') }}">MTN</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.blog_maintenance' %}active{% endif %}" href="{{ url_for('pages.missing_teeth_nation') }}">MTN-V2.0</a>
               </li>
               
               {% if current_user.is_authenticated and current_user.is_administrator %}

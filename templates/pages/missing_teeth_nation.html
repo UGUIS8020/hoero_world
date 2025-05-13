@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欠損チャレンジ Missing Teeth Nation</title>
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- React と ReactDOM -->
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">欠損チャレンジ Missing Teeth Nation</h1>
+        
+        <!-- React アプリケーションのマウントポイント -->
+        <div id="dental-chart-app"></div>
+    </div>
+
+    <!-- React コンポーネント -->
+    <script type="text/babel" src="{{ url_for('static', filename='js/mtn.js') }}"></script>
+    <script type="text/babel">
+        // Reactコンポーネントをマウント
+        ReactDOM.render(<DentalChart />, document.getElementById('dental-chart-app'));
+    </script>
+</body>
+</html>
