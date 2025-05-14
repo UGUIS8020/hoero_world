@@ -251,13 +251,7 @@
 <div class="d-flex flex-column gap-3 mb-4 mt-3 mx-auto" style="max-width: 550px; width: 100%;">
     <a href="https://line.me/ti/p/9KRzw2ndvX" target="_blank" rel="noopener noreferrer" class="btn" style="background-color: #00B900; color: white;"><b>LINEで連絡</b></a>
     <!-- <img src="images/line.jpg" alt="LINEのQRコード" width="200" height="200" class="img-fluid" loading="lazy"> -->
-</div>
-
-
-
-    <a class="nav-link {% if request.blueprint == 'stl_board' %}active{% endif %}" href="{{ url_for('main.meziro_upload_index') }}">
-        <h2 style="text-align: center;">データ送信はココをクリック</h2>
-    </a>      
+</div>         
 
     <a href="{{ url_for('main.meziro_upload_index') }}" class="text-decoration-none">
   <div class="alert alert-primary text-center shadow-sm" style="cursor: pointer; font-size: 1.5rem; font-weight: bold;">
