@@ -1,0 +1,589 @@
+{% extends "common/base.html" %}
+{% block content %}     
+
+    <style>
+    h1 {
+        text-align:center; 
+        color: #222222;
+        margin: 25px 0px 0px 0px;
+        padding: 0px;
+        }
+
+        h2 {
+        /* background-color:green; */
+        text-align:center; 
+        color: #222222;
+        margin: 0px 0px 0px 0px;
+        padding: 5px 0px 0px 0px;
+        }
+
+        h3 {
+        /* background-color:red; */
+        text-align:center; 
+        color: #222222;
+        margin: 0px 0px 0px 0px;
+        padding: 5px 0px 0px 0px;
+        /* margin: 5px 0px 0px 0px; */
+        /* padding: 5px 0px 0px 0px; */
+        }
+
+        h4 {
+        text-align:center; 
+        color: #333333;
+        font-weight: normal;
+        font-size: 18px;
+        margin: 5px;
+        padding: 5px;
+        }
+    .dental-header {
+        display: flex;
+        background-color: rgb(243, 244, 245);
+        align-items: center;
+        margin: 0 auto;
+        padding: 20px;
+        width: 100%;
+        
+        color: #7c1820;
+        justify-content: center;
+        }
+
+    .logo img {
+        max-width: 100%;
+        height: auto;
+        margin-right: 20px; /* 画像と文字の間隔 */
+        }
+
+    .text-content {
+        display: flex;
+        flex-direction: column;
+        }
+
+    .japanese-text {
+        font-weight: normal;
+        font-size: 50px;
+        font-family: "Shin Go", "Shin-Go", 
+                    "Kozuka Gothic Pro", "Kozuka Gothic Pr6N", "KozGoPro-Medium", 
+                    "Hiragino Kaku Gothic Pro", "ヒラギノ角ゴ Pro W3", 
+                    "Meiryo", "メイリオ", 
+                    "MS PGothic", "ＭＳ Ｐゴシック", 
+                    sans-serif;
+        }
+
+    section .english-text {
+        font-size: 24px; /* 英語テキストのフォントサイズを変更 */
+        }
+
+    .file-list {
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #ffffff;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+        background-color: #fafafa;
+        border-radius: 4px;
+        margin-bottom: 5px;
+        font-size: 0.95em;
+    }
+
+    .file-item:last-child {
+        border-bottom: none;
+    }
+
+    .file-name {
+        flex: 1;
+        text-align: left;
+        word-break: break-word;
+    }
+
+    .file-size {
+        color: #666;
+        font-size: 0.85em;
+        margin-left: 10px;
+    }
+
+    .file-remove {
+        color: red;
+        cursor: pointer;
+        margin-left: 15px;
+    }
+
+    </style>    
+
+    
+
+    <div>
+        <title>データ送信</title>
+<style>
+    a:link { color: #8b0000; text-decoration:none }
+    a:visited { color: #b22222; text-decoration:none }
+    a:hover { color: #b22222; text-decoration:none }
+    a:active { color: #b22222; text-decoration:none }
+    .drop-zone {
+        border: 2px dashed #ccc;
+        padding: 20px;
+        text-align: center;
+        margin: 20px auto;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        max-width: 800px;
+    }
+    .drop-zone.active {
+        border-color: #007bff;
+        background-color: #e8f4ff;
+    }
+    .input-zone {
+        border: 2px dashed #ccc;
+        padding: 20px;
+        text-align: center;
+        margin: 20px auto;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        max-width: 800px;
+    }
+    .input-zone.active {
+        border-color: #007bff;
+        background-color: #e8f4ff;
+    }
+    .file-list {
+        margin-top: 20px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background-color: #f8f9fa;
+        margin-bottom: 5px;
+        border-radius: 4px;
+    }
+    .folder-item {
+        background-color: #e8f4ff;
+        font-weight: bold;
+    }
+    .file-path {
+        color: #666;
+        font-size: 0.8em;
+        display: block;
+        word-break: break-all;
+    }
+    .file-remove {
+        color: red;
+        cursor: pointer;
+        padding: 0 10px;
+    }
+    #status {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .processing {
+        background-color: #e2e3e5;
+        color: #383d41;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 4px;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% {
+            opacity: 0.6;
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0.6;
+        }
+    }
+    .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .success {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .progress-container {
+        width: 100%;
+        background-color: #f1f1f1;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    .progress-bar {
+        height: 20px;
+        background-color: #4caf50;
+        border-radius: 4px;
+        width: 0%;
+        transition: width 0.3s;
+        text-align: center;
+        line-height: 20px;
+        color: white;
+    }
+    .button-group {
+        margin-top: 15px;
+    }
+    button {
+        padding: 8px 16px;
+        margin: 0 5px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: #0069d9;
+    }
+    button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+    }
+
+    .iframe-container {
+          background-color: #f4f4f4;
+          position: relative;
+          width: 100%;
+          height: 800px;  /* 固定の高さを設定 */          
+          margin:0 auto;
+          overflow: hidden;
+        }
+        .iframe-container iframe {
+          width: 100%;
+          height: 100%;   
+          margin: 0 auto;
+        }
+
+        .box1 {
+        border: solid 1px orange;
+        margin: 10px auto;   
+        padding: 10px;     
+        }
+        .box1 div {
+        text-align: center; /* 画像を囲むdiv内で中央揃え */
+        }
+
+</style>
+<style>
+  .file-summary {
+    padding: 10px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    font-weight: bold;
+  }
+
+  .folder-summary {
+    padding: 8px;
+    margin: 5px 0;
+    background-color: #f8f8f8;
+    border-left: 3px solid #ddd;
+  }
+</style>
+
+
+<h2 style="text-align: center;">データ送信</h2>
+<div class="drop-zone" id="dropZone">
+    <p>
+        ここにファイル・フォルダをドラッグ＆ドロップするか、クリックして選択してください
+    </p>
+    <p style="font-size: 0.9em; color: #666">
+        最大ファイルサイズ: 2GB<br />
+        対応ファイル: すべて<br />        
+    </p>
+    <div class="button-group">
+        <input
+            type="file"
+            id="fileInput"
+            name="files[]"
+            multiple
+            style="display: none"
+        />
+        <input
+            type="file"
+            id="folderInput"
+            name="folders[]"
+            multiple
+            webkitdirectory
+            directory
+            style="display: none"
+        />
+        <button onclick="document.getElementById('fileInput').click()">
+            ファイルを選択
+        </button>
+        <button onclick="document.getElementById('folderInput').click()">
+            フォルダを選択
+        </button>        
+    </div>
+</div>
+<div id="fileList" class="file-list"></div>
+
+<div class="input-zone" id="input-zone">
+    <div class="mt-3 mb-2">
+    <!-- 名前入力欄 -->
+    <div class="mb-2">
+        <label for="userName" class="form-label">事業者名</label>
+        <input type="text" id="businessName" class="form-control" placeholder="医院名、ラボ名を入力してください" required>
+    </div>
+    <div class="mb-2">
+        <label for="userName" class="form-label">送信者名</label>
+        <input type="text" id="userName" class="form-control" placeholder="担当医,担当者名を入力してください" required>
+    </div>
+    
+    <!-- メールアドレス入力欄 -->
+<div class="mb-2">
+    <label for="userEmail" class="form-label">メールアドレス</label>
+    <input type="email" id="userEmail" class="form-control" placeholder="メールアドレスを入力してください" required>
+</div>
+
+    <!-- 患者名 -->
+<div class="mb-2">
+    <label for="PatientName" class="form-label">患者名</label>
+    <input type="PatientName" id="PatientName" class="form-control" placeholder="患者名を入力してください" required>
+</div>
+
+<!-- セット希望日時 -->
+<div class="mb-2">
+    <div class="text-center mb-2">
+        <label for="appointmentDate" class="form-label">セット希望日時 <span class="text-danger">必須</span></label>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-auto">
+            <label for="appointmentDate" class="form-label">日付:</label>
+            <input type="date" id="appointmentDate" class="form-control" style="width: 200px;" required>
+        </div>
+        <div class="col-auto">
+            <label for="appointmentTime" class="form-label">時間:</label>
+            <div class="d-flex">
+                <select id="appointmentHour" class="form-control" style="width: 200px;" required>
+                    <option value="" disabled selected>選択してください</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                    <option value="13">13</option>
+                    <option value="14">14</option>
+                    <option value="15">15</option>
+                    <option value="16">16</option>
+                    <option value="17">17</option>
+                    <option value="18">18</option>
+                    <option value="19">19</option>
+                    <option value="20">20</option>
+                </select>
+                <span class="align-self-center mx-1">時</span>                
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 製作物プルダウン -->
+<div class="mb-2">
+    <label for="projectType" class="form-label">製作物</label>
+    <select id="projectType" class="form-control" required>
+        <option value="" disabled selected>製作物の種類を選択してください</option>
+        <option value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
+        <option value="replica">自家歯牙移植用レプリカ(造影剤有)</option>
+        <option value="ZirconiaCrown">ジルコニアグラデーションクラウン</option>
+        <option value="milling">ミリング:CAD/CAM冠</option>
+        <option value="milling">ミリング:ジルコニア</option>        
+        <option value="other">その他</option>
+    </select>
+</div>  
+
+
+<!-- 部位選択セクション -->
+<div class="mb-2">
+    <label for="teethSelection" class="form-label">部位 <span class="text-danger">必須</span></label>
+       
+        
+        <!-- 上顎の歯 -->
+        <div style="display: table; width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <div style="display: table-row;">
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">8</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">7</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">6</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">5</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">4</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">3</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">2</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">1</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">1</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">2</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">3</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">4</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">5</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">6</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">7</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">8</div>
+            </div>
+            <div style="display: table-row;">
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="18" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="17" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="16" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="15" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="14" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="13" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="12" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="11" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="21" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="22" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="23" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="24" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="25" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="26" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="27" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="28" style="transform: scale(1.2);"></div>
+            </div>
+        </div>
+        
+        <!-- 下顎の歯 -->
+        <div style="display: table; width: 100%; border-collapse: collapse; margin-top: 5px;">
+            <div style="display: table-row;">
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="48" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="47" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="46" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="45" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="44" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="43" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="42" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="41" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="31" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="32" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="33" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="34" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="35" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="36" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="37" style="transform: scale(1.2);"></div>
+                <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;"><input type="checkbox" name="teeth[]" value="38" style="transform: scale(1.2);"></div>
+            </div>
+            <div style="display: table-row;">
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">8</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">7</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">6</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">5</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">4</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">3</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">2</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">1</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">1</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">2</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">3</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">4</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">5</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">6</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">7</div>
+                <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">8</div>
+            </div>
+        </div>
+
+        <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+        <div style="margin-bottom: 5px;">
+                <label style="margin-right: 15px;">
+                    <input type="radio" name="crown_type" value="その他" checked> その他
+                </label>
+                <label style="margin-right: 15px;">
+                    <input type="radio" name="crown_type" value="単冠"> 単冠
+                </label>
+                <label style="margin-right: 15px;">
+                    <input type="radio" name="crown_type" value="連冠"> 連冠
+                </label>
+                <label>
+                    <input type="radio" name="crown_type" value="ブリッジ"> ブリッジ
+                </label>
+            </div>
+        </div>
+        
+        <!-- シェード選択 -->
+        <div style="margin-top: 15px;">
+            <label for="shade" style="display: block; margin-bottom: 5px;">シェード</label>
+            <select id="shade" name="shade" class="form-control">
+                <option value="">指定なし(指定不要なケース)</option>
+                <option value="A1">A1</option>
+                <option value="A2">A2</option>
+                <option value="A3">A3</option>
+                <option value="A3.5">A3.5</option>
+                <option value="A4">A4</option>
+                <option value="B1">B1</option>
+                <option value="B2">B2</option>
+                <option value="B3">B3</option>
+                <option value="B4">B4</option>
+                <option value="C1">C1</option>
+                <option value="C2">C2</option>
+                <option value="C3">C3</option>
+                <option value="C4">C4</option>
+                <option value="D2">D2</option>
+                <option value="D3">D3</option>
+                <option value="D4">D4</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="mb-2">
+    <label for="userMessage" class="form-label">メッセージ</label>
+    <textarea id="userMessage" class="form-control" rows="4" placeholder="確認のため指示、備考など入力してください。&#10;空欄ですと送信できません。&#10;メッセージはアップロードと同時に送信されます。"></textarea>
+</div>
+
+<div id="status"></div>
+<div id="progressContainer" class="progress-container" style="display: none">
+    <div id="progressBar" class="progress-bar">0%</div>
+</div>
+
+    <div class="button-group">
+        <input
+            type="file"
+            id="fileInput"
+            name="files[]"
+            multiple
+            style="display: none"
+        />
+        <input
+            type="file"
+            id="folderInput"
+            name="folders[]"
+            multiple
+            webkitdirectory
+            directory
+            style="display: none"
+        />       
+        <button id="uploadButton" disabled>送信</button>
+        <button id="clearButton" disabled>クリア</button>
+    </div>
+
+    <p>口腔内スキャナー,IOSデータも受付できます</p>
+    <p>shibuya8020@gmailで検索できると思います</p>
+
+    <script src="{{ url_for('static', filename='js/meziro_upload.js') }}"></script>
+
+
+
+{% endblock %}

@@ -19,7 +19,7 @@
                         <h1 class="fst-italic">{{ blog_category.category }}</h1>
                         <br>
                     {% elif user %}
-                        <h1 class="fst-italic">{{ user.username }}</h1>
+                        <h1 class="fst-italic">{{ user.display_name }}</h1>
                         <br>
                     {% elif searchtext %}
                         <h1 class="fst-italic">"{{ searchtext }}"の検索結果</h1>

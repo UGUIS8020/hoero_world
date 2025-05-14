@@ -1,0 +1,202 @@
+{% extends "common/base.html" %}
+{% block title %}自家歯牙移植用レプリカ症例{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="レプリカを使用した自家歯牙移植の症例。CTデータから精密な歯根モデルを作成し、移植時間の短縮と歯根膜保護により治療成功率を向上。天然歯を活かした理想的な歯の回復を実現します。 / Case studies of tooth autotransplantation using replicas. Creating precise root models from CT data improves treatment success rates by reducing transplantation time and protecting periodontal ligaments. Achieves ideal dental restoration by utilizing the patient's natural teeth.">
+<meta property="og:description" content="レプリカを使用した自家歯牙移植の症例。CTデータから精密な歯根モデルを作成し、移植時間の短縮と歯根膜保護により治療成功率を向上。天然歯を活かした理想的な歯の回復を実現します。 / Case studies of tooth autotransplantation using replicas. Creating precise root models from CT data improves treatment success rates by reducing transplantation time and protecting periodontal ligaments. Achieves ideal dental restoration by utilizing the patient's natural teeth.">
+{% endblock %}
+
+{% block content %}
+
+<style> 
+  .box-replica {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* 画像間の隙間 */
+    flex-wrap: wrap; /* 必要に応じて折り返し */
+    align-items: center; /* 中央揃え（任意） */ 
+
+  }
+  .box-replica h2 {
+    width: 100%;
+    flex-basis: 100%; /* フレックスボックス内での幅 */
+    margin: 15px 0px 0px 0px;  
+  }
+  .box-replica h3 {
+    width: 100%;
+    flex-basis: 100%; /* フレックスボックス内での幅 */
+    margin: 0px 0px 0px 0px; 
+  }
+   .box00 h3 {
+    width: 100%;
+    flex-basis: 100%; /* フレックスボックス内での幅 */
+    margin: 10px 0px 5px 0px; 
+  }
+  </style>
+  <h1>レプリカを使用した自家歯牙移植症例</h1>
+
+  <div class="box-replica mt-3">
+    <h2>【症例 6】</h2>
+    <h3>左下5番を左下6番に移植</h3>
+  
+       <div class="box00">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/030.jpg') }}">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/031.jpg') }}">    
+       </div>  
+  
+       <div class="box00">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/032.jpg') }}">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/033.jpg') }}">     
+       </div>  
+  
+       <div class="box00">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/034.jpg') }}">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/035.jpg') }}">     
+       </div> 
+  
+       <div class="box00">      
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/036.jpg') }}">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/037.jpg') }}">       
+       </div>
+       
+       <div class="box00">        
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/038.jpg') }}">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/039.jpg') }}">       
+        </div>  
+  
+        <div class="box00">          
+          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/040.jpg') }}">
+          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/041.jpg') }}">       
+        </div>
+
+        <div class="box00">          
+          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/042.jpg') }}">
+          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/044.jpg') }}">       
+        </div>
+  
+       <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</h3></a>
+       
+  
+    </div>
+
+  <div class="box-replica mt-3">
+    <h2>【症例紹介 7】</h2>
+    <h3>矮小歯を4番に移植</h3>   
+    
+    <div style="display: block; margin-bottom: 20px; width: 100%; text-align: center;">
+        <img src="{{ url_for('static', filename='pages/root_replica/034.jpg') }}">     
+    </div>  
+    
+    <h3>移植歯を抜歯する前に歯牙3Dレプリカにて当たりを確認しながら移植床の形成を進めていく</h3>
+  
+    <div style="display: block; margin-bottom: 20px; width: 100%; text-align: center;">
+        <img src="{{ url_for('static', filename='pages/root_replica/008.jpg') }}"> 
+    </div>  
+  
+    <div style="display: block; margin-bottom: 0px; width: 100%; text-align: center;">
+        <img src="{{ url_for('static', filename='pages/root_replica/009.jpg') }}">       
+    </div>     
+    <h3>【画像提供】<a href="https://www.yumoto-dc.com/" target="_blank">埼玉県さいたま市:歯内療法専門歯科 ユモトデンタルクリニック Dr.湯本 真幸</a></h3>
+  </div>  
+
+  <div class="box-replica mt-3">
+    <h2>【症例 8】</h2>
+    <h3>左下8番を左下6番に移植</h3>
+  
+       <div class="box00">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/007.jpg') }}">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/008.jpg') }}">    
+       </div>  
+  
+       <div class="box00">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/009.jpg') }}">
+       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/010.jpg') }}">     
+       </div>  
+  
+       <div class="box00">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/011.jpg') }}">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012.jpg') }}">     
+       </div> 
+  
+       <div class="box00">      
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012.jpg') }}">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_02.jpg') }}">       
+       </div>
+       
+       <div class="box00">
+        <h3>３週間後</h3>
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_03.jpg') }}">
+        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_03_01.jpg') }}">       
+        </div>  
+  
+        <div class="box00">
+          <h3>補綴後</h3>
+          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_04.jpg') }}">
+          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_05.jpg') }}">       
+        </div>
+  
+       <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</h3></a>
+       
+  
+    </div>
+
+<div class="box-replica mt-3">
+  <h2>【症例 9】</h2>
+  
+     <div class="box00">
+     <img src="{{ url_for('static', filename='pages/root_replica/020.jpg') }}"> 
+     <img src="{{ url_for('static', filename='pages/root_replica/021.jpg') }}">     
+     </div>  
+
+     <div class="box00">     
+     </div>  
+     <h3>移植歯を抜歯する前に歯牙3Dレプリカにて当たりを確認しながら移植床の形成を進めていく</h3>
+     <div class="box00">
+     <img src="{{ url_for('static', filename='pages/root_replica/023.jpg') }}"> 
+     <img src="{{ url_for('static', filename='pages/root_replica/024.jpg') }}">       
+     </div>  
+
+     <div class="box00">
+     <img src="{{ url_for('static', filename='pages/root_replica/025.jpg') }}"> 
+     <img src="{{ url_for('static', filename='pages/root_replica/025_01.jpg') }}">      
+     </div>  
+
+       
+
+       <h3>【画像提供】<a href="https://www.yumoto-dc.com/"target="_blank">埼玉県さいたま市:歯内療法専門歯科 ユモトデンタルクリニック Dr.湯本 真幸</h3></a>
+
+
+</div>
+
+
+  <div class="box-replica mt-3">    
+    <h2>【上下顎骨レプリカ、3Dプリント造形】</h2>
+    
+       <div class="box00">
+        <img src="{{ url_for('static', filename='pages/root_replica/gaku004.jpg') }}">       
+       </div>  
+       <h3>自家歯牙移植用レプリカを使用した場合の移植シミュレーションをご提供致します</h3>
+       <div class="box00">
+        <img src="{{ url_for('static', filename='pages/root_replica/simulation001.jpg') }}">       
+       </div>  
+       <div class="box00">
+        <img src="{{ url_for('static', filename='pages/root_replica/simulation002.jpg') }}">         
+       </div>  
+    
+       <h3>【画像提供】<a href="https://www.yumoto-dc.com/"target="_blank">埼玉県さいたま市:歯内療法専門歯科 ユモトデンタルクリニック Dr.湯本 真幸</h3></a>
+  
+  
+  </div>
+
+<div class="box-replica mt-3">
+  <a href="{{ url_for('pages.root_replica') }}"><h3>自家歯牙移植用レプリカページに戻る</a></h3>
+</div>
+
+  <div style="margin: 20px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center;">
+    <p style="margin: 0; font-style: italic; color: #555;">※画像掲載について：先生と患者さまの許可をいただいております</p>
+  </div>
+</div>
+
+
+{% endblock %}
+

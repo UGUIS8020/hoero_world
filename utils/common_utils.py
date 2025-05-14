@@ -14,6 +14,9 @@ from collections import Counter
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import re
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -29,20 +32,71 @@ counter_table = dynamodb.Table('Meziro-Counters')  # カウンター用のテー
 
 def get_next_sequence_number():
     try:
-        # アトミックカウンターを使用して番号を増加させる
         response = counter_table.update_item(
             Key={'counter_name': 'meziro_upload'},
             UpdateExpression='SET #val = if_not_exists(#val, :start) + :incr',
             ExpressionAttributeNames={'#val': 'counter_value'},
-            ExpressionAttributeValues={':incr': 1, ':start': 0},  # 0から開始
+            ExpressionAttributeValues={':incr': 1, ':start': 0},
             ReturnValues='UPDATED_NEW'
         )
-        return int(response['Attributes']['counter_value'])
+        return int(response['Attributes']['counter_value']), None  # ← 2つ返す
     except ClientError as e:
-        print(f"DynamoDBエラー: {e}")
-        # エラー時はタイムスタンプを使用
-        return int(time.time())
+        fallback_id = int(time.time())
+        warning_msg = f"[WARNING] DynamoDB失敗。代替IDとして {fallback_id} を使用します: {e}"
+        print(warning_msg)
+        return fallback_id, warning_msg  # ← 2つ返す
     
+# class ZipHandler:
+#     def __init__(self, upload_folder='uploads', temp_zip_folder='temp_zips'):
+#         self.UPLOAD_FOLDER = upload_folder
+#         self.TEMP_ZIP_FOLDER = temp_zip_folder
+        
+#         # ディレクトリの作成
+#         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
+#         os.makedirs(self.TEMP_ZIP_FOLDER, exist_ok=True)   
+
+#     def process_files(self, files):
+#         """ファイルを処理してZIPファイルを作成"""
+#         if not files:
+#             raise ValueError('ファイルが選択されていません')
+
+#         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+#         temp_dir = os.path.join(self.TEMP_ZIP_FOLDER, timestamp)
+#         os.makedirs(temp_dir, exist_ok=True)
+
+#         try:
+#             if len(files) <= 10:
+#                 print("Saving files without compression")
+#                 saved_files = []
+#                 for file in files:
+#                     filename = secure_filename(file.filename)
+#                     save_path = os.path.join(temp_dir, filename)
+#                     file.save(save_path)
+#                     saved_files.append(save_path)
+#                 # 一時ディレクトリは削除せず、呼び出し元で削除する
+#                 return saved_files, temp_dir
+#             else:
+#                 print("Creating compressed zip")
+#                 zip_path = os.path.join(self.TEMP_ZIP_FOLDER, f'compressed_{timestamp}.zip')
+#                 with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+#                     for file in files:
+#                         print(f"Processing file: {file.filename}")
+#                         filename = secure_filename(file.filename)
+#                         temp_path = os.path.join(temp_dir, filename)
+#                         file.save(temp_path)
+#                         zipf.write(temp_path, filename)
+                
+#                 # ZIPファイル作成後、一時ディレクトリを削除
+#                 if os.path.exists(temp_dir):
+#                     shutil.rmtree(temp_dir, ignore_errors=True)
+                
+#                 return zip_path, None
+#         except Exception as e:
+#             # エラー発生時は一時ディレクトリを削除
+#             if os.path.exists(temp_dir):
+#                 shutil.rmtree(temp_dir, ignore_errors=True)
+#             raise e
+        
 class ZipHandler:
     def __init__(self, upload_folder='uploads', temp_zip_folder='temp_zips'):
         self.UPLOAD_FOLDER = upload_folder
@@ -52,8 +106,8 @@ class ZipHandler:
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
         os.makedirs(self.TEMP_ZIP_FOLDER, exist_ok=True)   
 
-    def process_files(self, files):
-        """ファイルを処理してZIPファイルを作成"""
+    def process_files(self, files, has_folder_structure=False):
+        """ファイルを処理（常にZIPファイルを作成）"""
         if not files:
             raise ValueError('ファイルが選択されていません')
 
@@ -62,42 +116,37 @@ class ZipHandler:
         os.makedirs(temp_dir, exist_ok=True)
 
         try:
-            if len(files) <= 10:
-                print("Saving files without compression")
-                saved_files = []
+            print(f"Creating ZIP file {'(folder structure)' if has_folder_structure else '(all files)'}")
+            zip_path = os.path.join(self.TEMP_ZIP_FOLDER, f'compressed_{timestamp}.zip')
+            
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for file in files:
+                    print(f"Processing file: {file.filename}")
                     filename = secure_filename(file.filename)
-                    save_path = os.path.join(temp_dir, filename)
-                    file.save(save_path)
-                    saved_files.append(save_path)
-                # 一時ディレクトリは削除せず、呼び出し元で削除する
-                return saved_files, temp_dir
-            else:
-                print("Creating compressed zip")
-                zip_path = os.path.join(self.TEMP_ZIP_FOLDER, f'compressed_{timestamp}.zip')
-                with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                    for file in files:
-                        print(f"Processing file: {file.filename}")
-                        filename = secure_filename(file.filename)
-                        temp_path = os.path.join(temp_dir, filename)
-                        file.save(temp_path)
-                        zipf.write(temp_path, filename)
+                    
+                    # フォルダ構造がある場合はパスを保持
+                    if has_folder_structure and hasattr(file, 'webkitRelativePath') and file.webkitRelativePath:
+                        arc_name = file.webkitRelativePath
+                    elif has_folder_structure and hasattr(file, 'relativePath') and file.relativePath:
+                        arc_name = file.relativePath
+                    else:
+                        # 構造がない場合は単にファイル名を使用
+                        arc_name = filename
+                        
+                    temp_path = os.path.join(temp_dir, filename)
+                    file.save(temp_path)
+                    zipf.write(temp_path, arcname=arc_name)
+            
+            # 一時ディレクトリを削除
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            
+            return zip_path, None
                 
-                # ZIPファイル作成後、一時ディレクトリを削除
-                if os.path.exists(temp_dir):
-                    shutil.rmtree(temp_dir, ignore_errors=True)
-                
-                return zip_path, None
         except Exception as e:
-            # エラー発生時は一時ディレクトリを削除
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
             raise e
-        
-# アップロードされたファイルの一時保存先
-# UPLOAD_FOLDER = 'uploads'
-# if not os.path.exists(UPLOAD_FOLDER):
-#     os.makedirs(UPLOAD_FOLDER)
 
 def get_main_color_list_img(img_path):
     """
@@ -292,58 +341,56 @@ def get_font(font_size=18):
 import os
 import time
 
-def cleanup_temp_files(app_root_path, days_old=7):
+def cleanup_temp_files(app_root_path, days_old=7, include_system_temp=False):
     """
-    temp_downloadsとtemp_zipsディレクトリの古いファイルをクリーンアップする
-    
-    Parameters:
-    -----------
-    app_root_path : str
-        アプリケーションのルートパス
-    days_old : int, optional
-        この日数より古いファイルを削除する (デフォルト: 7日)
+    アプリ内の一時ディレクトリおよび（任意で）OS標準一時ディレクトリをクリーンアップする
     """
-    # クリーンアップ対象のディレクトリ
+    import tempfile
+
     directories_to_clean = [
         os.path.join(app_root_path, 'temp_downloads'),
-        os.path.join(app_root_path, 'temp_zips')
+        os.path.join(app_root_path, 'temp_zips'),
+        os.path.join(app_root_path, 'temp_uploads'),  # 追加対象
     ]
     
     total_files_deleted = 0
-    
+
     for temp_dir in directories_to_clean:
-        if not os.path.exists(temp_dir):
-            logger.info(f"ディレクトリが存在しません: {temp_dir}")
-            continue
-            
-        logger.info(f"一時ディレクトリのクリーンアップを実行中: {temp_dir}")
-        files_deleted = 0
-        
-        for filename in os.listdir(temp_dir):
-            file_path = os.path.join(temp_dir, filename)
-            try:
-                if os.path.isfile(file_path):
-                    # ファイルの最終更新時間を確認
-                    file_mod_time = os.path.getmtime(file_path)
-                    # days_old日以上前のファイルを削除
-                    if time.time() - file_mod_time > days_old * 24 * 60 * 60:                    
-                        os.remove(file_path)
-                        files_deleted += 1
-                        logger.debug(f"古い一時ファイルを削除: {filename} (最終更新: {time.ctime(file_mod_time)})")
-                elif os.path.isdir(file_path):
-                    # サブディレクトリの場合はディレクトリ自体の最終更新時間をチェック
-                    dir_mod_time = os.path.getmtime(file_path)
-                    if time.time() - dir_mod_time > days_old * 24 * 60 * 60:
-                        shutil.rmtree(file_path)
-                        files_deleted += 1
-                        logger.debug(f"古い一時ディレクトリを削除: {filename} (最終更新: {time.ctime(dir_mod_time)})")
-            except Exception as e:
-                logger.error(f"一時ファイル削除エラー ({file_path}): {e}")
-        
-        total_files_deleted += files_deleted
-        logger.info(f"ディレクトリ {temp_dir} のクリーンアップ完了: {files_deleted}ファイルを削除しました")
-    
+        total_files_deleted += _cleanup_dir(temp_dir, days_old)
+
+    if include_system_temp:
+        system_temp_dir = tempfile.gettempdir()
+        total_files_deleted += _cleanup_dir(system_temp_dir, days_old, filter_exts={'.stl', '.glb', '.zip'})
+
     return total_files_deleted
+
+
+def _cleanup_dir(temp_dir, days_old, filter_exts=None):
+    files_deleted = 0
+    if not os.path.exists(temp_dir):
+        logger.info(f"ディレクトリが存在しません: {temp_dir}")
+        return 0
+
+    logger.info(f"クリーンアップ中: {temp_dir}")
+
+    for filename in os.listdir(temp_dir):
+        file_path = os.path.join(temp_dir, filename)
+        try:
+            if os.path.isfile(file_path):
+                if filter_exts and not any(filename.endswith(ext) for ext in filter_exts):
+                    continue
+                if time.time() - os.path.getmtime(file_path) > days_old * 86400:
+                    os.remove(file_path)
+                    files_deleted += 1
+            elif os.path.isdir(file_path):
+                if time.time() - os.path.getmtime(file_path) > days_old * 86400:
+                    shutil.rmtree(file_path)
+                    files_deleted += 1
+        except Exception as e:
+            logger.error(f"削除失敗: {file_path} ({e})")
+
+    logger.info(f"{temp_dir} 内の削除数: {files_deleted}")
+    return files_deleted
 
 def setup_scheduled_cleanup(app):
     """

@@ -49,7 +49,7 @@
                                     {% for user in users.items %}
                                     <tr>
                                         <td>{{ user.id }}</td>
-                                        <td>{{ user.username | truncate(10) }}</td>
+                                        <td>{{ display_name | truncate(10) }}</td>
                                         <td>{{ user.email | truncate(20) }}</td>
                                         <td>{{ user.administrator }}</td>
                                         <td><a href="{{ url_for('users.user_posts', user_id=user.id) }}">{{ user.count_posts(user.id) }}</a></td>

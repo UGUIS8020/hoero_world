@@ -7,6 +7,21 @@ def root_replica():
     
     return render_template('pages/root_replica.html')
 
+@bp.route('/root_replica_case')
+def root_replica_case():
+    
+    return render_template('pages/root_replica_case.html')
+
+@bp.route('/root_replica_info')
+def root_replica_info():
+    
+    return render_template('pages/root_replica_info.html')
+
+@bp.route('/zirconia')
+def zirconia():
+    
+    return render_template('pages/zirconia.html')
+
 @bp.route('/combination_checker')
 def combination_checker():
     

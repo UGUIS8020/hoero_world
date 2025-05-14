@@ -1,0 +1,60 @@
+{% extends "common/base.html" %}
+{% block title %}Zirconia{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="Zirconia">
+<meta property="og:description" content="Zirconia">
+{% endblock %}
+
+{% block content %}
+
+<style> 
+  .box-zirconia {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* 画像間の隙間 */
+    flex-wrap: wrap; /* 必要に応じて折り返し */
+    align-items: center; /* 中央揃え（任意） */ 
+
+  }
+  .box-zirconia h2 {
+    width: 100%;
+    flex-basis: 100%; /* フレックスボックス内での幅 */
+    margin: 15px 0px 0px 0px;  
+  }
+  .box-zirconia h3 {
+    width: 100%;
+    flex-basis: 100%; /* フレックスボックス内での幅 */
+    margin: 0px 0px 0px 0px; 
+  }
+  </style>
+
+<h1>Zirconia</h1>
+
+<div>
+    <div class="box4">
+     <h3>グラデーションジルコニア</h3> 
+       
+        
+     <div class="box-zirconia mt-3">
+        <div class="replica-row">
+            <img src="{{ url_for('static', filename='pages/zirconia/001.jpg') }}">
+            <img src="{{ url_for('static', filename='pages/zirconia/002.jpg') }}">
+        </div>
+
+        <div class="replica-row">
+            <img src="{{ url_for('static', filename='pages/zirconia/003.jpg') }}">
+            <img src="{{ url_for('static', filename='pages/zirconia/004.jpg') }}">
+        </div>
+
+        <div class="replica-row">
+            <img src="{{ url_for('static', filename='pages/zirconia/007.jpg') }}">
+            <img src="{{ url_for('static', filename='pages/zirconia/008.jpg') }}">
+        </div>
+     </div>
+ 
+
+ </div>
+
+{% endblock %}
+

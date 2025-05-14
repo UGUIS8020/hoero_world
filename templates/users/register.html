@@ -1,33 +1,110 @@
 {% extends "common/base.html" %}
+
 {% block content %}
-    <section id="user_register">
-        <div class="container my-5">
-            <div class="row">
-                <div class="col-lg-4 mx-auto">
-                    <div class="card bg-primary text-center">
-                        <div class="card-body text-light">
-                            <h3>ユーザー登録</h3>
-                            <p>ユーザー情報を入力してください。</p>
-                            <form method="POST">
-                                {{ form.hidden_tag() }}
-                                <div class="mb-3">
-                                    {{ render_field(form.username, placeholder="ユーザー名", class="form-control form-control-lg") }}
-                                </div>
-                                <div class="mb-3">
-                                    {{ render_field(form.email, placeholder="メールアドレス", class="form-control form-control-lg") }}
-                                </div>
-                                <div class="mb-3">
-                                    {{ render_field(form.password, placeholder="パスワード", class="form-control form-control-lg") }}
-                                </div>
-                                <div class="mb-3">
-                                    {{ render_field(form.pass_confirm, placeholder="パスワード(確認)", class="form-control form-control-lg") }}
-                                </div>                                             {{ form.submit(class="btn btn-outline-light w-100") }}                
-                            </form>
-                        </div>
+<section id="user_register">
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-lg-6 mx-auto">
+                <div class="card bg-primary text-center">
+                    <div class="card-body text-light">
+                        <h3>ユーザー登録</h3>
+                        <p>ユーザー情報を入力してください。</p>
+                        <form method="POST">
+                            {{ form.hidden_tag() }}
+
+                            <div class="mb-3">
+                                {{ render_field(form.display_name, placeholder="ユーザー名", class="form-control form-control-lg") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.email, placeholder="メールアドレス", class="form-control form-control-lg") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.full_name, placeholder="氏名", class="form-control form-control-lg") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.sender_name, placeholder="医院名・技工所名", class="form-control form-control-lg") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.phone, placeholder="電話番号", class="form-control form-control-lg") }}
+                            </div>
+
+                            <!-- 住所情報フィールド -->
+                            <div class="mb-3">
+                                {{ render_field(form.postal_code, placeholder="郵便番号", class="form-control form-control-lg") }}
+                                <!-- メッセージ表示エリア（後ろでJavaScriptが作る） -->
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.prefecture, placeholder="都道府県", class="form-control form-control-lg") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.address, placeholder="市区町村以下の住所", class="form-control form-control-lg") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.building, placeholder="建物名・部屋番号", class="form-control form-control-lg") }}
+                            </div>
+
+                            <!-- パスワード情報 -->
+                            <div class="mb-3">
+                                {{ render_field(form.password, placeholder="パスワード", class="form-control form-control-lg") }}
+                            </div>
+                            <div class="mb-3">
+                                {{ render_field(form.pass_confirm, placeholder="パスワード(確認)", class="form-control form-control-lg") }}
+                            </div>
+
+                            {{ form.submit(class="btn btn-outline-light w-100") }}
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
+<!-- 自動住所補完スクリプト -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const postalCodeInput = document.querySelector('input[name="postal_code"]');
+    const prefectureInput = document.querySelector('input[name="prefecture"]');
+    const addressInput = document.querySelector('input[name="address"]');
+
+    // メッセージ表示用エリアを作成して郵便番号フィールドの下に差し込む
+    const messageArea = document.createElement('div');
+    messageArea.style.color = 'yellow';
+    messageArea.style.fontSize = '0.9rem';
+    messageArea.style.marginTop = '5px';
+    postalCodeInput.parentNode.appendChild(messageArea);
+
+    function fetchAddress(zipcode) {
+        fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zipcode}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.results) {
+                    const result = data.results[0];
+                    prefectureInput.value = result.address1 || '';
+                    addressInput.value = (result.address2 || '') + (result.address3 || '');
+                    messageArea.textContent = '';
+                } else {
+                    prefectureInput.value = '';
+                    addressInput.value = '';
+                    messageArea.textContent = '住所が見つかりませんでした。';
+                }
+            })
+            .catch(() => {
+                prefectureInput.value = '';
+                addressInput.value = '';
+                messageArea.textContent = '住所検索に失敗しました。';
+            });
+    }
+
+    postalCodeInput.addEventListener('input', function() {
+        const zipcode = postalCodeInput.value.replace('-', '').trim();
+        if (zipcode.length === 7) {
+            fetchAddress(zipcode);
+        } else {
+            // 入力中に7桁未満になったらメッセージクリア
+            messageArea.textContent = '';
+        }
+    });
+});
+</script>
 {% endblock %}

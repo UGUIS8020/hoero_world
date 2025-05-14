@@ -1,3 +1,47 @@
+h1 {
+text-align:center; 
+color: #222222;
+margin: 5px 0px 5px 0px;
+padding: 0px;
+}
+
+h2 {
+/* background-color:green; */
+text-align:center; 
+color: #222222;
+margin: 5px 0px 5px 0px;       
+font-size: 1.6rem;
+
+}
+
+h3 {
+/* background-color:red; */
+text-align:center; 
+color: #222222;
+/* margin: 10px 5px; */
+/* padding: 5px 0px 0px 0px; */
+font-size: 1.2rem;
+margin: 5px 0px 0px 0px;
+/* padding: 5px 0px 0px 0px; */
+}
+
+h4 {
+text-align:center; 
+color: #333333;
+font-weight: normal;
+font-size: 18px;
+margin: 5px 0px 5px 0px;
+/* padding: 5px; */
+}
+
+p {
+    text-align:center; 
+    color: #333333;
+    font-weight: normal;
+    font-size: 18px;
+    margin: 5px 0px 5px 0px;
+    /* padding: 5px; */
+    }
 
 /* ナビバーのユーザー名リンク専用スタイル */
 a.navbar-text.user-name {

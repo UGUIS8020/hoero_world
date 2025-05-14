@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, ValidationError, TextAreaField, SelectField
 from wtforms.validators import DataRequired, Email
 from models.common import BlogCategory
+from models.common import BlogCategory, BlogPost, Inquiry
 from flask_wtf.file import FileField, FileAllowed
 
 class BlogCategoryForm(FlaskForm):

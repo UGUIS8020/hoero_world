@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, url_for, redirect, flash, abort, jsonify, send_from_directory, current_app, request
+from flask import Blueprint, render_template, request, url_for, redirect, flash, abort, jsonify, send_from_directory, current_app, request, session, send_file
 from flask_login import login_required, current_user
 from flask_mail import Mail, Message
 from models.common import BlogCategory, BlogPost, Inquiry
@@ -15,10 +15,14 @@ from urllib.parse import unquote
 import io
 import base64
 from extensions import mail
-from utils.common_utils import get_next_sequence_number, process_image, sanitize_filename, ZipHandler, setup_scheduled_cleanup, cleanup_temp_files
+from utils.common_utils import get_next_sequence_number, process_image, sanitize_filename, ZipHandler, cleanup_temp_files
+from utils.stl_reducer import reduce_stl_size
+import tempfile
+from werkzeug.utils import secure_filename
+import json
+from pytz import timezone
 
-
-JST = timezone(timedelta(hours=9))
+JST = timezone('Asia/Tokyo')
 current_time = datetime.now(JST)
 
 bp = Blueprint('main', __name__, template_folder='hoero_world/templates', static_folder='hoero_world/static')
@@ -73,7 +77,7 @@ def category_maintenance():
 @bp.route('/<int:blog_category_id>/blog_category', methods=['GET', 'POST'])
 @login_required
 def blog_category(blog_category_id):
-    if not current_user.is_administrator():
+    if not current_user.is_administrator:
         abort(403)
     blog_category = BlogCategory.query.get_or_404(blog_category_id)
     form = UpdateCategoryForm(blog_category_id)
@@ -89,7 +93,7 @@ def blog_category(blog_category_id):
 @bp.route('/<int:blog_category_id>/delete_category', methods=['GET', 'POST'])
 @login_required
 def delete_category(blog_category_id):
-    if not current_user.is_administrator():
+    if not current_user.is_administrator:
         abort(403)
     blog_category = BlogCategory.query.get_or_404(blog_category_id)
     db.session.delete(blog_category)
@@ -214,8 +218,7 @@ def ugu_box():
                     'filename': filename, 
                     'url': file_url,
                     'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M')   # 日時情報も追加
-                })
-        print("s3_files:", s3_files)
+                })        
 
     except Exception as e:
         flash(f"S3ファイル一覧取得中にエラー: {str(e)}", "error")
@@ -376,7 +379,7 @@ def meziro():
                     'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
                     'key': key  # 削除時に使用するため保存
                 })
-        print("s3_files:", s3_files)
+        
 
     except Exception as e:
         flash(f"S3ファイル一覧取得中にエラー: {str(e)}", "error")
@@ -385,19 +388,45 @@ def meziro():
         'main/meziro.html',  # MEZIROオリジナルのテンプレートを使用
         s3_files=s3_files
     )
+@bp.route('/meziro_upload_index', methods=['GET'])
+def meziro_upload_index():
+    return render_template('main/meziro_upload_index.html')
+
 
 @bp.route('/meziro_upload', methods=['POST'])
-def meziro_upload():    
-    # print("Form data received:", dict(request.form))
-    # print("Files received:", [f.filename for f in request.files.getlist('files[]')])
-    # print("Environment variables:", {
-    #     'BUCKET_NAME': os.getenv('BUCKET_NAME'),
-    #     'AWS_REGION': os.getenv('AWS_REGION')
-    # })
+def meziro_upload():   
 
-    message = request.form.get('userMessage')
+    business_name = request.form.get('businessName', '')
+    user_name = request.form.get('userName', '')
+    user_email = request.form.get('userEmail', '')
+    patient_name = request.form.get('PatientName', '')
+    appointment_date = request.form.get('appointmentDate', '')
+    appointment_hour = request.form.get('appointmentHour', '')
+    project_type = request.form.get('projectType', '')
+    crown_type = request.form.get('crown_type', '')
+    teeth_raw = request.form.get('teeth', '[]')
+    shade = request.form.get('shade', '')
+    try:
+        teeth = json.loads(teeth_raw)
+    except json.JSONDecodeError:
+        teeth = []
+    message = request.form.get('userMessage', '')
+
+     # 必須フィールドの検証
     if not message:
         return jsonify({'error': 'メッセージが入力されていません'}), 400
+    
+    if not business_name:
+        return jsonify({'error': '事業者名が入力されていません'}), 400
+        
+    if not user_name:
+        return jsonify({'error': '送信者名が入力されていません'}), 400
+        
+    if not user_email:
+        return jsonify({'error': 'メールアドレスが入力されていません'}), 400
+        
+    if not project_type:
+        return jsonify({'error': '製作物が選択されていません'}), 400
 
     if 'files[]' not in request.files:
         return jsonify({'error': 'ファイルが選択されていません'}), 400
@@ -408,25 +437,29 @@ def meziro_upload():
 
     uploaded_urls = []
     numbered_ids = []
-    
-    # DynamoDBから次の受付番号を取得
-    session_id = get_next_sequence_number()
-    # 管理番号として6桁のゼロ埋め形式に
-    id_str = f"{session_id:05d}"  # 例: 000001, 000002, ...
-    
+
+    # フォルダ構造の情報を取得
+    has_folder = request.form.get('has_folder_structure', 'false').lower() == 'true'
+    print(f"フォルダ構造の有無: {has_folder}")  # デバッグ用
+
+    session_id, warning_message = get_next_sequence_number()
+    id_str = f"{session_id:05d}"  # 管理番号として6桁のゼロ埋め形式に   
+
     try:
-        result, temp_dir = zip_handler_instance.process_files(files)
+        # 修正: has_folderパラメータを追加
+        result, temp_dir = zip_handler_instance.process_files(files, has_folder)
         print(f"process_files result: {result}, type: {type(result)}")  # デバッグ用
         print(f"Number of files: {len(files)}")  # デバッグ用
 
-        if isinstance(result, list):  # 圧縮していない場合
+        if isinstance(result, list):  # フォルダ内のファイル
+            folder_prefix = f"meziro/{id_str}/"  # 管理番号をフォルダ名として使用
+            
             for index, file_path in enumerate(result, start=1):
                 original_filename = os.path.basename(file_path)
                 safe_filename = sanitize_filename(original_filename)
                 
-                # 管理番号とファイル番号を組み合わせた名前
-                numbered_filename = f"{id_str}_{index:03d}_{safe_filename}"
-                s3_key = f"meziro/{numbered_filename}"
+                # 管理番号のフォルダ内にファイルを配置（フォルダ構造を使用）
+                s3_key = f"{folder_prefix}{index:03d}_{safe_filename}"
                 s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)
 
                 with open(file_path, 'rb') as f:
@@ -437,15 +470,13 @@ def meziro_upload():
                         ExtraArgs={'ContentType': 'application/octet-stream'}
                     )
 
-                # 有効期限付きURLを生成
-                presigned_url = s3.generate_presigned_url(
-                    'get_object',
-                    Params={'Bucket': os.getenv('BUCKET_NAME'), 'Key': s3_key},
-                    ExpiresIn=604800
-                )
+                bucket_name = os.getenv("BUCKET_NAME")
+                region = os.getenv("AWS_REGION")
+                public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
 
-                uploaded_urls.append(presigned_url)
+                uploaded_urls.append(public_url)
                 numbered_ids.append(f"{id_str}_{index:03d}")
+
         else:  # 圧縮した場合（zipファイル）の処理
             zip_file_path = result
             print(f"Uploading zip file: {zip_file_path}")  # デバッグ用
@@ -463,29 +494,41 @@ def meziro_upload():
                     ExtraArgs={'ContentType': 'application/zip'}
                 )
 
-            # 有効期限付きURLを生成
-            presigned_url = s3.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': os.getenv('BUCKET_NAME'), 'Key': s3_key},
-                ExpiresIn=604800
-            )
+            bucket_name = os.getenv("BUCKET_NAME")
+            region = os.getenv("AWS_REGION")
+            public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
 
-            uploaded_urls.append(presigned_url)
+            uploaded_urls.append(public_url)
             numbered_ids.append(id_str)
             
-            # 一時ファイルの削除
-            if os.path.exists(zip_file_path):
-                os.remove(zip_file_path)
+        # 一時ファイルの削除
+        if 'zip_file_path' in locals() and os.path.exists(zip_file_path):
+            os.remove(zip_file_path)
 
         # メール本文に署名付きURLを含める
         url_text = "\n".join(uploaded_urls)
         full_message = f"""ユーザーから以下のメッセージが届きました：
 
+【受付番号】No.{id_str}
+【事業者名】{business_name}
+【送信者名】{user_name}
+【メールアドレス】{user_email}
+【患者名】{patient_name}
+【セット希望日時】{appointment_date} {appointment_hour}時
+【製作物】{project_type}
+【クラウン種別】{crown_type}
+【対象部位】{", ".join(teeth)}
+【シェード】{shade}
+【メッセージ】
 {message}
 
-アップロードされたファイル（リンクは1週間有効です）：
+【アップロードされたファイルリンク】
 {url_text}
-"""
+        """
+
+        # DynamoDBエラーがあれば追加
+        if warning_message:
+            full_message += f"\n\n⚠️ システム警告：{warning_message}\n"
 
         msg = Message(
             subject=f"【仕事が来たよ】No.{id_str}",
@@ -507,6 +550,7 @@ def meziro_upload():
         message = "アップロード成功（ファイルはありません）"
 
     return jsonify({'message': message, 'files': uploaded_urls})
+
 
 @bp.route('/meziro/download/<path:key>')
 def meziro_download(key):
@@ -534,33 +578,6 @@ def meziro_download(key):
         flash(f"ファイルのダウンロード中にエラーが発生しました: {str(e)}", "error")
         return redirect(url_for('main.meziro'))
 
-# ファイル削除用ルート
-# @bp.route('/meziro/delete', methods=['POST'])
-# def meziro_delete():
-#     try:
-#         selected_files = request.form.getlist('selected_files')
-        
-#         if not selected_files:
-#             flash("削除するファイルが選択されていません", "warning")
-#             return redirect(url_for('main.meziro'))
-        
-#         deleted_count = 0
-#         for key in selected_files:
-#             # URLデコード
-#             decoded_key = unquote(key)
-            
-#             # S3からファイル削除
-#             s3.delete_object(
-#                 Bucket=BUCKET_NAME,
-#                 Key=decoded_key
-#             )
-#             deleted_count += 1
-        
-#         flash(f"{deleted_count}件のファイルを削除しました", "success")
-#     except Exception as e:
-#         flash(f"削除中にエラーが発生しました: {str(e)}", "danger")
-    
-#     return redirect(url_for('main.meziro'))
 
 # ファイル削除用ルート
 @bp.route('/meziro/delete', methods=['POST'])
@@ -696,16 +713,81 @@ def category_posts(blog_category_id):
 @bp.route('/inquiry', methods=['GET', 'POST'])
 def inquiry():
     form = InquiryForm()
+    inquiry_id = request.args.get("id")
+
+    # if request.method == 'POST':
+    #     print("フォームデータ:", form.data)
+    #     print("バリデーション結果:", form.validate())
+    #     print("バリデーションエラー:", form.errors)
+
     if form.validate_on_submit():
-        inquiry = Inquiry(name=form.name.data,
-                            email=form.email.data,
-                            title=form.title.data,
-                            text=form.text.data)
+        # DB保存
+        inquiry = Inquiry(
+            name=form.name.data,
+            email=form.email.data,
+            title=form.title.data,
+            text=form.text.data
+        )
         db.session.add(inquiry)
         db.session.commit()
-        flash('お問い合わせが送信されました')
+
+        # メール送信（管理者 + 自動返信）
+        try:
+            # 管理者への通知
+            msg = Message(
+                subject=f"【お問い合わせ】{inquiry.title}",
+                sender=os.getenv("MAIL_INQUIRY_SENDER"),
+                recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")]
+            )
+            msg.body = f"""以下の内容でお問い合わせがありました：
+
+■名前: {inquiry.name}
+■メール: {inquiry.email}
+■件名: {inquiry.title}
+■内容:
+{inquiry.text}
+
+■日時: {datetime.now(timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')}
+"""
+            mail.send(msg)
+
+            # 🔹 自動返信メール（ユーザー向け）
+            auto_reply = Message(
+                subject="【渋谷歯科技工所】お問い合わせありがとうございました",
+                sender=os.getenv("MAIL_INQUIRY_SENDER"),
+                recipients=[inquiry.email]
+            )
+            auto_reply.body = f"""{inquiry.name} 様
+
+このたびはお問い合わせいただきありがとうございます。
+以下の内容で受け付けました。
+
+件名: {inquiry.title}
+内容:
+{inquiry.text}
+
+担当者より折り返しご連絡いたします。
+今しばらくお待ちください。
+
+------------------------------------------------------------
+渋谷歯科技工所
+------------------------------------------------------------
+"""
+            mail.send(auto_reply)
+
+        except Exception as e:
+            flash("メール送信中にエラーが発生しました。", "danger")
+            print(f"メール送信エラー: {e}")
+
+        flash("お問い合わせを受け付けました。", "success")
         return redirect(url_for('main.inquiry'))
-    return render_template('main/inquiry.html', form=form)
+    elif request.method == 'POST':
+        # バリデーションエラーをユーザーに表示
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"{getattr(form, field).label.text if hasattr(getattr(form, field), 'label') else field}: {error}", "danger")
+
+    return render_template("main/inquiry.html", form=form, inquiry_id=inquiry_id)
 
 @bp.route('/inquiry_maintenance')
 @login_required
@@ -729,7 +811,7 @@ def display_inquiry(inquiry_id):
 @login_required
 def delete_inquiry(inquiry_id):
     inquiries = Inquiry.query.get_or_404(inquiry_id)
-    if not current_user.is_administrator():
+    if not current_user.is_administrator:
         abort(403)
     db.session.delete(inquiries)
     db.session.commit()

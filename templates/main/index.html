@@ -1,42 +1,7 @@
 {% extends "common/base.html" %}
 {% block content %}     
 
-    <style>
-        h1 {
-        text-align:center; 
-        color: #222222;
-        margin: 25px 0px 0px 0px;
-        padding: 0px;
-        }
-
-        h2 {
-        /* background-color:green; */
-        text-align:center; 
-        color: #222222;
-        margin: 10px 0px 5px 0px;       
-        font-size: 1.6rem; /
-
-        }
-
-        h3 {
-        /* background-color:red; */
-        text-align:center; 
-        color: #222222;
-        margin: 10px 5px;
-        padding: 5px 0px 0px 0px;
-        font-size: 1.2rem; /
-        /* margin: 5px 0px 0px 0px; */
-        /* padding: 5px 0px 0px 0px; */
-        }
-
-        h4 {
-        text-align:center; 
-        color: #333333;
-        font-weight: normal;
-        font-size: 18px;
-        margin: 5px;
-        padding: 5px;
-        }
+    <style>   
     .dental-header {
         display: flex;
         background-color: rgb(243, 244, 245);
@@ -87,6 +52,20 @@
           <div class="english-text">SHIBUYA Dental Laboratory</div>
         </div>
     </section>  
+
+    {% if current_user.is_authenticated and current_user.is_administrator %}
+    <ul>         
+        <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'main.meziro' %}active{% endif %}" href="{{ url_for('main.meziro') }}">MEZIRO</a>
+        </li>
+        <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
+        </li> 
+        <li class="nav-item">
+        <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
+        </li>  
+    </ul>                                    
+    {% endif %}
 
     <div>
         <title>データ送信</title>
@@ -246,6 +225,7 @@
         }
 
 </style>
+
 <style>
   .file-summary {
     padding: 10px;
@@ -273,8 +253,18 @@
 </div>
 
 
-<h2 style="text-align: center;">データ送信</h2>
-<div class="drop-zone" id="dropZone">
+
+    <a class="nav-link {% if request.blueprint == 'stl_board' %}active{% endif %}" href="{{ url_for('main.meziro_upload_index') }}">
+        <h2 style="text-align: center;">データ送信はココをクリック</h2>
+    </a>      
+
+    <a href="{{ url_for('main.meziro_upload_index') }}" class="text-decoration-none">
+  <div class="alert alert-primary text-center shadow-sm" style="cursor: pointer; font-size: 1.5rem; font-weight: bold;">
+    📤 データ送信はこちらをクリックしてください！送信ページに移動します
+  </div>
+</a>
+
+<!-- <div class="drop-zone" id="dropZone">
     <p>
         ここにファイル・フォルダをドラッグ＆ドロップするか、クリックして選択してください
     </p>
@@ -299,15 +289,6 @@
             directory
             style="display: none"
         />
-        <input type="hidden" id="shade" value="A2">
-        <input type="hidden" id="businessName" value="dummy-lab">
-        <input type="hidden" id="userName" value="dummy-user">
-        <input type="hidden" id="userEmail" value="dummy@example.com">
-        <input type="hidden" id="PatientName" value="dummy-patient">
-        <input type="hidden" id="appointmentDate" value="2025-01-01">
-        <input type="hidden" id="appointmentHour" value="09:00">
-        <input type="hidden" id="projectType" value="プロビジョナル">
-
         <button onclick="document.getElementById('fileInput').click()">
             ファイルを選択
         </button>
@@ -328,19 +309,22 @@
 </div>
 
 
-<h2>自家歯牙移植用3Dドナーレプリカ(歯根レプリカ)</h2>
-<div id="fileList" class="file-list"></div>
 
-    <div class="box box1">        
-        <a href="{{ url_for('pages.root_replica') }}" target="_self">
-            <h2>rootreplica</h2>                   
+<div id="fileList" class="file-list"></div> -->
 
-           <div>      
-          <img src="{{ url_for('static', filename='main/top/root_replica003.jpg') }}">
-          <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}">
-          </div>
-          </a>
-    </div>
+    <h2>自家歯牙移植用3Dドナーレプリカ(歯根レプリカ)</h2>
+    <div id="fileList" class="file-list"></div>
+
+        <div class="box box1">        
+            <a href="{{ url_for('pages.root_replica') }}" target="_self">
+                <h2>rootreplica</h2>                   
+
+            <div>      
+            <img src="{{ url_for('static', filename='main/top/root_replica003.jpg') }}">
+            <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}">
+            </div>
+            </a>
+        </div>
 
     <h3>ChatBot:弊社,歯科に関する質問に応答するチャットボットです</h3>
     <!-- 埋め込み用のセクション -->
@@ -349,8 +333,8 @@
     </div>
 
     <div class="box box1">        
-        <a href="{{ url_for('pages.root_replica') }}" target="_self">
-            <h2>PFZ</h2>                    
+        <a href="{{ url_for('pages.zirconia') }}" target="_self">
+            <h2>PFZ Zirconia</h2>                    
 
            <div>      
           <img src="{{ url_for('static', filename='main/top/001.jpg') }}">          
@@ -410,7 +394,7 @@
                     <!--会社情報-->
                     <div class="p-4 mb-2 bg-light">
                         <h4 class="fst-italic">サイト情報</h4>
-                        <p>当サイトは現在テスト運用中です。知り合いメンバー内で書き込みやページの挙動を確認し、改善点を見つけるための協力をお願いします。ご意見やフィードバックをお待ちしております。</p>
+                        <p>当サイトは現在テスト運用中です。</p>
                     </div>
                     <!--最新記事-->
                     <div class="p-4">
@@ -472,9 +456,5 @@
             </nav>
                 </div>
     </div>
-
-    
-    <script src="{{ url_for('static', filename='js/meziro_upload.js') }}" defer></script>
-
 
 {% endblock %}
