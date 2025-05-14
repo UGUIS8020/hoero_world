@@ -681,3 +681,45 @@ document.addEventListener("DOMContentLoaded", function () {
         );
     });
 });
+
+document.getElementById("uploadButton").addEventListener("click", function () {
+    const requiredFields = [
+        "businessName",
+        "userName",
+        "userEmail",
+        "PatientName",
+        "appointmentDate",
+        "appointmentHour",
+        "projectType",
+        "userMessage",
+    ];
+
+    let hasError = false;
+
+    // すべての入力欄をリセット（赤枠を消す）
+    requiredFields.forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.classList.remove("input-error");
+        }
+    });
+
+    // 未入力のものを赤くする
+    requiredFields.forEach((id) => {
+        const element = document.getElementById(id);
+        if (element && !element.value.trim()) {
+            element.classList.add("input-error");
+            hasError = true;
+        }
+    });
+
+    if (hasError) {
+        const status = document.getElementById("status");
+        status.innerHTML = `<div class="error">未入力の項目があります。すべて入力してください。</div>`;
+        window.scrollTo({ top: status.offsetTop - 100, behavior: "smooth" });
+        return;
+    }
+
+    // バリデーション通過後、アップロード処理へ進む（例）
+    uploadFiles(); // ← ここは既存の送信関数に合わせて変更
+});

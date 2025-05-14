@@ -480,8 +480,37 @@ def meziro_upload():
         else:  # 圧縮した場合（zipファイル）の処理
             zip_file_path = result
             print(f"Uploading zip file: {zip_file_path}")  # デバッグ用
-            
-            # 管理番号を含めたzipファイル名
+
+            # ① フォーム内容を文字列に整形
+            form_data_text = f"""【受付番号】No.{id_str}
+        【事業者名】{business_name}
+        【送信者名】{user_name}
+        【メールアドレス】{user_email}
+        【患者名】{patient_name}
+        【セット希望日時】{appointment_date} {appointment_hour}時
+        【製作物】{project_type}
+        【クラウン種別】{crown_type}
+        【対象部位】{", ".join(teeth)}
+        【シェード】{shade}
+        【メッセージ】
+        {message}
+        """
+
+            # ② 一時ファイルとして .txt を保存
+            with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt', encoding='utf-8') as form_file:
+                form_file.write(form_data_text)
+                form_file_path = form_file.name
+
+            # ③ zipファイルに txt を追記
+            import zipfile
+            with zipfile.ZipFile(zip_file_path, 'a') as zipf:
+                zipf.write(form_file_path, arcname=f"{id_str}_info.txt")
+
+            # ④ 一時 .txt を削除
+            if os.path.exists(form_file_path):
+                os.remove(form_file_path)
+
+            # ⑤ ZIPファイルをS3にアップロード（元のまま）
             numbered_filename = f"{id_str}_files.zip"
             s3_key = f"meziro/{numbered_filename}"
             s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)

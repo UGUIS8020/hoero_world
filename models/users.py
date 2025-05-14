@@ -21,7 +21,7 @@ class RegistrationForm(FlaskForm):
     address = StringField('住所')
     building = StringField('建物名・部屋番号')
     
-    password = PasswordField('パスワード', validators=[DataRequired(), EqualTo('pass_confirm', message='パスワードが一致していません')])
+    password = PasswordField('パスワード(8文字以上)', validators=[DataRequired(), EqualTo('pass_confirm', message='パスワードが一致していません')])
     pass_confirm = PasswordField('パスワード(確認)', validators=[DataRequired()])
     submit = SubmitField('登録')
 
@@ -44,7 +44,7 @@ class UpdateUserForm(FlaskForm):
     prefecture = StringField('都道府県')
     address = StringField('住所')
     building = StringField('建物名・部屋番号')
-    password = PasswordField('新パスワード', validators=[])
+    password = PasswordField('新パスワード(8文字以上)', validators=[])
     pass_confirm = PasswordField('新パスワード(確認)', validators=[EqualTo('password', message='パスワードが一致していません')])
     submit = SubmitField('更新')
 

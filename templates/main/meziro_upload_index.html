@@ -118,6 +118,11 @@
         margin-left: 15px;
     }
 
+    .input-error {
+        border-color: #dc3545 !important;
+        background-color: #f8d7da !important;
+    }
+
     </style>    
 
     
@@ -411,10 +416,11 @@
     <select id="projectType" class="form-control" required>
         <option value="" disabled selected>製作物の種類を選択してください</option>
         <option value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
-        <option value="replica">自家歯牙移植用レプリカ(造影剤有)</option>
-        <option value="ZirconiaCrown">ジルコニアグラデーションクラウン</option>
-        <option value="milling">ミリング:CAD/CAM冠</option>
-        <option value="milling">ミリング:ジルコニア</option>        
+        <option value="replica-contrast">自家歯牙移植用レプリカ(造影剤有)</option>
+        <option value="Zirconia_Gradation">ジルコニアグラデーションクラウン</option>
+        <option value="milling_CADCAM">ミリング-CAD/CAM冠</option>
+        <option value="milling_PEEK">ミリング-PEEK冠</option>
+        <option value="milling_Zirconia">ミリング-ジルコニア</option>        
         <option value="other">その他</option>
     </select>
 </div>  
