@@ -1,0 +1,80 @@
+{% extends "common/base.html" %}
+
+{% block title %}{{ post.content[:20] }}... | STL Board{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="timeline-container">
+    <div class="post-item">
+      <!-- 投稿ヘッダー -->
+      <div class="post-header">
+        <strong>{{ post.author.display_name }}</strong>
+        <span>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      </div>
+      
+      <!-- 投稿本文 -->
+      <div class="post-body">
+        {{ post.content or "（本文なし）" }}
+      </div>
+      
+      <!-- モデルビューアー -->
+      {% if post.s3_presigned_url %}
+      <div class="model-viewer-container">
+        <model-viewer src="{{ post.s3_presigned_url }}"
+                      auto-rotate
+                      camera-controls
+                      style="width: 100%; height: 400px; background-color: #fff;">
+        </model-viewer>
+      </div>
+      {% endif %}
+      
+      <!-- アクション -->
+      <div class="post-actions">
+        <form method="POST" action="{{ url_for('stl_board.like_post', post_id=post.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">❤️ {{ post.likes.count() }}</button>
+        </form>
+        <a href="#comments">💬 コメント</a>
+        <button onclick="copyToClipboard(window.location.href)">📋 URLをコピー</button>
+      </div>
+      
+      <!-- コメントセクション -->
+      <h5 class="mt-4" id="comments">コメント</h5>
+      {% for comment in comments %}
+        {% if not comment.parent_comment_id %}
+        <div class="comment-item">
+          <div class="comment-header">
+            {{ comment.author.display_name }} ・ {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}
+          </div>
+          <div>{{ comment.content }}</div>
+        </div>
+        {% endif %}
+      {% endfor %}
+      
+      <!-- コメント投稿フォーム -->
+      {% if current_user.is_authenticated %}
+      <form method="POST" action="{{ url_for('stl_board.add_comment', post_id=post.id) }}"
+            class="comment-form mt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea name="content" rows="2" required placeholder="返信を入力…"></textarea>
+        <button class="btn btn-sm btn-outline-primary" type="submit">返信する</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  
+  <div class="mt-4">
+    <a href="{{ url_for('stl_board.index') }}" class="btn btn-outline-secondary">← タイムラインに戻る</a>
+  </div>
+</div>
+
+<script>
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    alert('URLをコピーしました');
+  }, function() {
+    alert('コピーできませんでした');
+  });
+}
+</script>
+{% endblock %}

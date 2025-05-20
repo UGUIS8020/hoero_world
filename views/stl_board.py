@@ -269,3 +269,16 @@ def delete_post(post_id):
 def download(filename):
     upload_folder = os.path.join(current_app.static_folder, 'uploads', 'stl')
     return send_from_directory(upload_folder, filename)
+
+@bp.route('/post/<int:post_id>')
+def view_post(post_id):
+    post = STLPost.query.get_or_404(post_id)
+    
+    # S3 URLの設定（index関数と同様）
+    if post.stl_file_path:
+        post.s3_presigned_url = f"https://shibuya8020.s3.amazonaws.com/{post.stl_file_path}"
+    
+    comments = STLComment.query.filter_by(post_id=post_id).all()
+    
+    # 'pages/'フォルダ内のテンプレートを指定
+    return render_template('pages/view_STL_post.html', post=post, comments=comments)

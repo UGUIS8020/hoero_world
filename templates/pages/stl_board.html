@@ -170,6 +170,8 @@
           <button type="submit">❤️ {{ post.likes.count() }}</button>
         </form>
         <a href="#comment-content-{{ post.id }}">💬 コメント</a>
+        <!-- 共有リンクを追加 -->
+        <a href="{{ url_for('stl_board.view_post', post_id=post.id) }}" target="_blank">🔗 共有</a>
       </div>
 
       <!-- 👇 削除ボタンをここに追加 -->
