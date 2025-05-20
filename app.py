@@ -15,6 +15,7 @@ csrf = CSRFProtect()
 csrf.init_app(flask_app) 
 
 flask_app.config['DEBUG'] = True
+flask_app.config['MAIL_DEBUG'] = False
 flask_app.config['WTF_CSRF_TIME_LIMIT'] = 10800  # 1時間（3600秒）
 flask_app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024
 flask_app.config['SECRET_KEY'] = 'mysecretkey'

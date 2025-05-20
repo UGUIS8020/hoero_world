@@ -480,21 +480,27 @@ def meziro_upload():
         else:  # 圧縮した場合（zipファイル）の処理
             zip_file_path = result
             print(f"Uploading zip file: {zip_file_path}")  # デバッグ用
-
-            # ① フォーム内容を文字列に整形
+            
+            # ① フォーム内容を文字列に整形（インデントを削除）
             form_data_text = f"""【受付番号】No.{id_str}
-        【事業者名】{business_name}
-        【送信者名】{user_name}
-        【メールアドレス】{user_email}
-        【患者名】{patient_name}
-        【セット希望日時】{appointment_date} {appointment_hour}時
-        【製作物】{project_type}
-        【クラウン種別】{crown_type}
-        【対象部位】{", ".join(teeth)}
-        【シェード】{shade}
-        【メッセージ】
-        {message}
-        """
+
+【事業者名】{business_name}
+【送信者名】{user_name}
+【メールアドレス】{user_email}
+【患者名】{patient_name}
+【セット希望日時】{appointment_date} {appointment_hour}時
+【製作物】{project_type}
+【クラウン種別】{crown_type}
+【対象部位】{", ".join(teeth)}
+【シェード】{shade}
+【メッセージ】
+{message.strip()}
+
+  渋谷歯科技工所
+  〒343-0845
+  埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+  TEL: 048-961-8151
+  email:shibuya8020@gmail.com"""
 
             # ② 一時ファイルとして .txt を保存
             with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt', encoding='utf-8') as form_file:
@@ -800,6 +806,10 @@ def inquiry():
 
 ------------------------------------------------------------
 渋谷歯科技工所
+〒343-0845
+埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+TEL: 048-961-8151
+email:shibuya8020@gmail.com
 ------------------------------------------------------------
 """
             mail.send(auto_reply)
