@@ -21,6 +21,7 @@ import tempfile
 from werkzeug.utils import secure_filename
 import json
 from pytz import timezone
+import requests
 
 JST = timezone('Asia/Tokyo')
 current_time = datetime.now(JST)
@@ -745,6 +746,27 @@ def category_posts(blog_category_id):
 
     return render_template('main/index.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, blog_category=blog_category, form=form)
 
+def verify_recaptcha(response_token):
+    """reCAPTCHAの検証"""
+    secret_key = os.getenv("RECAPTCHA_SECRET_KEY")
+    if not secret_key:
+        return True  # 開発環境などでキーが未設定の場合はスキップ
+    
+    url = "https://www.google.com/recaptcha/api/siteverify"
+    data = {
+        'secret': secret_key,
+        'response': response_token,
+        'remoteip': request.environ.get('REMOTE_ADDR')
+    }
+    
+    try:
+        response = requests.post(url, data=data, timeout=10)
+        result = response.json()
+        return result.get('success', False)
+    except Exception as e:
+        print(f"reCAPTCHA検証エラー: {e}")
+        return False
+
 @bp.route('/inquiry', methods=['GET', 'POST'])
 def inquiry():
     form = InquiryForm()
@@ -756,6 +778,17 @@ def inquiry():
     #     print("バリデーションエラー:", form.errors)
 
     if form.validate_on_submit():
+        # ハニーポットチェック
+        if request.form.get('website'):  # 空であるべき
+            flash('不正な送信が検出されました。', 'danger')
+            return redirect(url_for('main.inquiry'))  # 'main.'を追加
+        
+        # reCAPTCHA検証
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        if not recaptcha_response or not verify_recaptcha(recaptcha_response):
+            flash('reCAPTCHA認証が必要です。', 'danger')  # 'error' → 'danger'
+            return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id)  # パス修正
+
         # DB保存
         inquiry = Inquiry(
             name=form.name.data,
@@ -783,6 +816,7 @@ def inquiry():
 {inquiry.text}
 
 ■日時: {datetime.now(timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')}
+■送信者IP: {request.environ.get('REMOTE_ADDR', 'unknown')}
 """
             mail.send(msg)
 
@@ -820,6 +854,7 @@ email:shibuya8020@gmail.com
 
         flash("お問い合わせを受け付けました。", "success")
         return redirect(url_for('main.inquiry'))
+        
     elif request.method == 'POST':
         # バリデーションエラーをユーザーに表示
         for field, errors in form.errors.items():

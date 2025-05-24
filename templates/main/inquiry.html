@@ -1,6 +1,16 @@
 {% extends "common/base.html" %}
 {% block title %}お問い合わせ{% endblock %}
 
+{% block head %}
+    <!-- reCAPTCHA v2 -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script>
+        function onSubmit(token) {
+            document.getElementById("inquiry-form").submit();
+        }
+    </script>
+{% endblock %}
+
 {% block content %}
 
     <section id="inquiry">
@@ -12,7 +22,7 @@
                             <h4>お問い合わせ(ご意見、ご要望などでも結構です)</h4>
                         </div>
                         <div class="card-body">
-                            <form method="POST">
+                            <form id="inquiry-form" method="POST">
                                 {% if inquiry_id %}
                                 <fieldset disabled>
                                 {% endif %}
@@ -33,10 +43,31 @@
                                     {{ form.text.label(class="form-control-label") }}
                                     {{ render_field(form.text, class="form-control", rows="6") }}
                                 </div>
+                                
+                                <!-- ハニーポット（隠しフィールド） -->
+                                <div style="display: none;">
+                                    <label for="website">Website (Leave blank):</label>
+                                    <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+                                </div>
+                                
                                 <div class="container mb-3">
                                     <div class="row">
-                                        <div class="col-md-3">
+                                        <div class="col-md-6">
                                             {% if not inquiry_id %}
+                                            <!-- reCAPTCHA v2 Checkbox -->
+                                            <div class="g-recaptcha mb-3" data-sitekey="6LddVEcrAAAAAK8JdiV5EEuJ2-4_ByT1bvI7kQAE"></div>
+                                            
+                                            <!-- または reCAPTCHA v3 Invisible -->
+                                            <!--
+                                            <button class="btn btn-success w-100 g-recaptcha" 
+                                                    data-sitekey="YOUR_SITE_KEY_HERE" 
+                                                    data-callback='onSubmit' 
+                                                    data-action='submit'>
+                                                送信
+                                            </button>
+                                            -->
+                                            
+                                            <!-- 通常の送信ボタン（v2 Checkbox使用時） -->
                                             {{ form.submit(class="btn btn-success w-100") }}
                                             {% endif %}
                                         </div>
