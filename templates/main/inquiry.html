@@ -1,14 +1,95 @@
+
 {% extends "common/base.html" %}
 {% block title %}お問い合わせ{% endblock %}
 
 {% block head %}
-    <!-- reCAPTCHA v2 -->
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-    <script>
-        function onSubmit(token) {
-            document.getElementById("inquiry-form").submit();
+<script>
+    let recaptchaReady = false;
+    let isSubmitting = false; // 重複送信防止フラグ
+    
+    function initRecaptcha() {
+        grecaptcha.ready(function () {
+            recaptchaReady = true;
+            // 初期トークン生成
+            generateToken();
+        });
+    }
+    
+    function generateToken() {
+        if (recaptchaReady) {
+            grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'submit'}).then(function (token) {
+                const element = document.getElementById('g-recaptcha-response');
+                if (element) {
+                    element.value = token;
+                    console.log('reCAPTCHA token generated');
+                }
+            }).catch(function(error) {
+                console.error('reCAPTCHA error:', error);
+            });
         }
-    </script>
+    }
+    
+    // DOMContentLoadedで確実に初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        // フォーム送信イベントを追加
+        const form = document.getElementById('inquiry-form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // 既に送信処理中の場合は何もしない
+                if (isSubmitting) {
+                    return;
+                }
+                
+                e.preventDefault(); // デフォルトの送信を停止
+                isSubmitting = true; // 送信フラグを立てる
+                
+                // 送信ボタンを無効化（ユーザビリティ向上）
+                const submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    const originalText = submitBtn.value || submitBtn.textContent;
+                    if (submitBtn.value) {
+                        submitBtn.value = '送信中...';
+                    } else {
+                        submitBtn.textContent = '送信中...';
+                    }
+                }
+                
+                // 送信前に新しいトークンを生成
+                if (recaptchaReady) {
+                    grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'submit'}).then(function(token) {
+                        document.getElementById('g-recaptcha-response').value = token;
+                        // トークン設定後に実際のフォーム送信
+                        submitForm(form);
+                    }).catch(function(error) {
+                        console.error('reCAPTCHA submission error:', error);
+                        // エラーでもフォーム送信
+                        submitForm(form);
+                    });
+                } else {
+                    // reCAPTCHAが準備できていない場合もフォーム送信
+                    submitForm(form);
+                }
+            });
+        }
+        
+        // 既にgrecaptchaが読み込まれている場合の処理
+        if (typeof grecaptcha !== 'undefined') {
+            initRecaptcha();
+        }
+    });
+    
+    // 実際のフォーム送信処理（無限ループを防ぐため）
+    function submitForm(form) {
+        // イベントリスナーを一時的に削除
+        const newForm = form.cloneNode(true);
+        form.parentNode.replaceChild(newForm, form);
+        // 新しいフォームを送信
+        newForm.submit();
+    }
+</script>
+
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}&onload=initRecaptcha" async defer></script>
 {% endblock %}
 
 {% block content %}
@@ -27,6 +108,7 @@
                                 <fieldset disabled>
                                 {% endif %}
                                 {{ form.hidden_tag() }}
+                                <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
                                 <div class="mb-3">
                                     {{ form.name.label(class="form-control-label") }}
                                     {{ render_field(form.name, class="form-control") }}
@@ -53,22 +135,9 @@
                                 <div class="container mb-3">
                                     <div class="row">
                                         <div class="col-md-6">
-                                            {% if not inquiry_id %}
-                                            <!-- reCAPTCHA v2 Checkbox -->
-                                            <div class="g-recaptcha mb-3" data-sitekey="6LddVEcrAAAAAK8JdiV5EEuJ2-4_ByT1bvI7kQAE"></div>
-                                            
-                                            <!-- または reCAPTCHA v3 Invisible -->
-                                            <!--
-                                            <button class="btn btn-success w-100 g-recaptcha" 
-                                                    data-sitekey="YOUR_SITE_KEY_HERE" 
-                                                    data-callback='onSubmit' 
-                                                    data-action='submit'>
-                                                送信
-                                            </button>
-                                            -->
-                                            
-                                            <!-- 通常の送信ボタン（v2 Checkbox使用時） -->
-                                            <!-- {{ form.submit(class="btn btn-success w-100") }} -->
+                                            {% if not inquiry_id %}                                           
+                                            <!-- 通常の送信ボタン -->
+                                            {{ form.submit(class="btn btn-success w-100") }}
                                             {% endif %}
                                         </div>
                                     </div>

@@ -229,6 +229,8 @@ def ugu_box():
 
 zip_handler = ZipHandler()
 
+import traceback  # ← これをファイルの先頭で追加
+
 @bp.route('/ugu_box/upload', methods=['POST'])
 def ugu_box_upload():
     files = request.files.getlist('files[]')
@@ -237,31 +239,19 @@ def ugu_box_upload():
         return jsonify({"status": "error", "message": "ファイルが選択されていません"}), 400
 
     try:
-        result, temp_dir = zip_handler.process_files(files)
+        result, temp_dir = zip_handler.process_files_no_zip(files)
 
-        if isinstance(result, list):
-            # 圧縮していない → 複数ファイル（リスト）アップロード
-            uploaded_keys = []
-            for file_path in result:
-                filename = os.path.basename(file_path)
-                s3_key = f"ugu_box/{filename}"
-                with open(file_path, 'rb') as f:
-                    s3.upload_fileobj(f, BUCKET_NAME, s3_key)
-                uploaded_keys.append(s3_key)
-
-            # 一時ディレクトリ削除
-            if temp_dir and os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
-
-        else:
-            # 圧縮済みのZIPファイルパスが返ってきた
-            zip_filename = os.path.basename(result)
-            s3_key = f"ugu_box/{zip_filename}"
-            with open(result, 'rb') as f:
+        uploaded_keys = []
+        for file_path in result:
+            filename = os.path.basename(file_path)
+            s3_key = f"ugu_box/{filename}"
+            with open(file_path, 'rb') as f:
                 s3.upload_fileobj(f, BUCKET_NAME, s3_key)
-            
-            # 一時ZIPファイル削除（任意）
-            os.remove(result)
+            uploaded_keys.append(s3_key)
+
+        # 一時ディレクトリ削除
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
 
         # zipファイル一覧を返す
         response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix='ugu_box/')
@@ -278,6 +268,7 @@ def ugu_box_upload():
         })
 
     except Exception as e:
+        traceback.print_exc()  # ← ここに追加すると、ターミナルに詳細なエラー情報が表示されます
         return jsonify({"status": "error", "message": str(e)}), 500
 
     
@@ -574,6 +565,32 @@ def meziro_upload():
         mail.send(msg)
         print("メール送信成功")
 
+        # 送信者への確認メール送信
+        confirmation_msg = Message(
+            subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
+            recipients=[user_email],
+            body=f"""{user_name} 様
+
+        この度は技工指示を送信いただき、誠にありがとうございます。
+        以下の内容で受付を完了いたしました。
+
+        【受付番号】No.{id_str}
+        【製作物】{project_type}
+        【セット希望日時】{appointment_date} {appointment_hour}時
+
+        ファイルを確認の上、内容に応じて対応させていただきます。
+        万が一、内容に不備がある場合は別途ご連絡させていただきます。
+
+        --------------------------------
+        渋谷歯科技工所
+        〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+        TEL: 048-961-8151
+        email: shibuya8020@gmail.com
+        """
+        )
+        mail.send(confirmation_msg)
+        print("送信者への確認メール送信成功")
+
     except Exception as mail_error:
         import traceback
         print(f"メール送信失敗: {mail_error}")
@@ -747,22 +764,28 @@ def category_posts(blog_category_id):
     return render_template('main/index.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, blog_category=blog_category, form=form)
 
 def verify_recaptcha(response_token):
-    """reCAPTCHAの検証"""
+    """reCAPTCHAの検証（v3対応）"""
     secret_key = os.getenv("RECAPTCHA_SECRET_KEY")
     if not secret_key:
-        return True  # 開発環境などでキーが未設定の場合はスキップ
-    
+        return True  # 開発環境では検証スキップ
+
     url = "https://www.google.com/recaptcha/api/siteverify"
     data = {
         'secret': secret_key,
         'response': response_token,
         'remoteip': request.environ.get('REMOTE_ADDR')
     }
-    
+
     try:
         response = requests.post(url, data=data, timeout=10)
         result = response.json()
-        return result.get('success', False)
+        
+        # ログ出力（開発時）
+        print("reCAPTCHA応答:", result)
+        
+        # 成功かつスコアが高い場合のみ許可
+        return result.get('success', False) and result.get('score', 0) >= 0.5
+
     except Exception as e:
         print(f"reCAPTCHA検証エラー: {e}")
         return False
@@ -861,7 +884,12 @@ email:shibuya8020@gmail.com
             for error in errors:
                 flash(f"{getattr(form, field).label.text if hasattr(getattr(form, field), 'label') else field}: {error}", "danger")
 
-    return render_template("main/inquiry.html", form=form, inquiry_id=inquiry_id)
+    return render_template(
+    "main/inquiry.html",
+    form=form,
+    inquiry_id=inquiry_id,
+    recaptcha_site_key=os.getenv("RECAPTCHA_SITE_KEY")
+)
 
 @bp.route('/inquiry_maintenance')
 @login_required

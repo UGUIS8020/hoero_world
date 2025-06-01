@@ -7,13 +7,15 @@ import os
 import cv2
 from datetime import datetime
 import time
-from werkzeug.utils import secure_filename
 from PIL import ImageDraw, ImageFont, Image
 from sklearn.cluster import KMeans
 from collections import Counter
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
+import tempfile
 import re
+import uuid
+import unicodedata
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -45,57 +47,6 @@ def get_next_sequence_number():
         warning_msg = f"[WARNING] DynamoDB失敗。代替IDとして {fallback_id} を使用します: {e}"
         print(warning_msg)
         return fallback_id, warning_msg  # ← 2つ返す
-    
-# class ZipHandler:
-#     def __init__(self, upload_folder='uploads', temp_zip_folder='temp_zips'):
-#         self.UPLOAD_FOLDER = upload_folder
-#         self.TEMP_ZIP_FOLDER = temp_zip_folder
-        
-#         # ディレクトリの作成
-#         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
-#         os.makedirs(self.TEMP_ZIP_FOLDER, exist_ok=True)   
-
-#     def process_files(self, files):
-#         """ファイルを処理してZIPファイルを作成"""
-#         if not files:
-#             raise ValueError('ファイルが選択されていません')
-
-#         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-#         temp_dir = os.path.join(self.TEMP_ZIP_FOLDER, timestamp)
-#         os.makedirs(temp_dir, exist_ok=True)
-
-#         try:
-#             if len(files) <= 10:
-#                 print("Saving files without compression")
-#                 saved_files = []
-#                 for file in files:
-#                     filename = secure_filename(file.filename)
-#                     save_path = os.path.join(temp_dir, filename)
-#                     file.save(save_path)
-#                     saved_files.append(save_path)
-#                 # 一時ディレクトリは削除せず、呼び出し元で削除する
-#                 return saved_files, temp_dir
-#             else:
-#                 print("Creating compressed zip")
-#                 zip_path = os.path.join(self.TEMP_ZIP_FOLDER, f'compressed_{timestamp}.zip')
-#                 with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-#                     for file in files:
-#                         print(f"Processing file: {file.filename}")
-#                         filename = secure_filename(file.filename)
-#                         temp_path = os.path.join(temp_dir, filename)
-#                         file.save(temp_path)
-#                         zipf.write(temp_path, filename)
-                
-#                 # ZIPファイル作成後、一時ディレクトリを削除
-#                 if os.path.exists(temp_dir):
-#                     shutil.rmtree(temp_dir, ignore_errors=True)
-                
-#                 return zip_path, None
-#         except Exception as e:
-#             # エラー発生時は一時ディレクトリを削除
-#             if os.path.exists(temp_dir):
-#                 shutil.rmtree(temp_dir, ignore_errors=True)
-#             raise e
         
 class ZipHandler:
     def __init__(self, upload_folder='uploads', temp_zip_folder='temp_zips'):
@@ -122,7 +73,9 @@ class ZipHandler:
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
                 for file in files:
                     print(f"Processing file: {file.filename}")
-                    filename = secure_filename(file.filename)
+                    filename = sanitize_filename(file.filename)
+
+                    
                     
                     # フォルダ構造がある場合はパスを保持
                     if has_folder_structure and hasattr(file, 'webkitRelativePath') and file.webkitRelativePath:
@@ -147,6 +100,20 @@ class ZipHandler:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
             raise e
+    def process_files_no_zip(self, files):
+        if not files:
+            raise ValueError('ファイルが選択されていません')
+
+        temp_dir = tempfile.mkdtemp()
+        file_paths = []
+
+        for file in files:
+            filename = secure_filename(file.filename)
+            save_path = os.path.join(temp_dir, filename)
+            file.save(save_path)
+            file_paths.append(save_path)
+
+        return file_paths, temp_dir
 
 def get_main_color_list_img(img_path):
     """
@@ -309,23 +276,30 @@ def process_image(img_path):
     return result_img, hex_rgb_list
 
 def sanitize_filename(filename, max_length=100):
-    """
-    英数字と記号（-_ .）以外を削除した安全なファイル名を生成（日本語含む全角文字を除去）
-    """
+    # パスの末尾だけを抽出
     filename = os.path.basename(filename)
+
+    # Unicode正規化（日本語や特殊記号対応）
+    filename = unicodedata.normalize('NFKD', filename)
+
+    # 拡張子分離
     name, ext = os.path.splitext(filename)
 
-    # 英数字、アンダースコア、ハイフン、ドットのみ許可
-    name = re.sub(r'[^A-Za-z0-9_.-]', '', name)
+    # 拡張子チェック
+    if not ext or not ext.startswith("."):
+        ext = ".bin"
 
-    if not name:
-        name = "unnamed_file"
+    # 英数字と一部記号だけ残す
+    safe_name = re.sub(r'[^A-Za-z0-9_.-]', '', name)
 
-    # 長さ制限（拡張子含む）
-    max_name_length = max_length - len(ext)
-    name = name[:max_name_length]
+    # 名前部分が空になったらUUIDで補完
+    if not safe_name:
+        safe_name = uuid.uuid4().hex[:12]
 
-    return name + ext
+    # 長さ制限（拡張子込み）
+    safe_name = safe_name[:max_length - len(ext)]
+
+    return safe_name + ext
 
 def get_font(font_size=18):
     font_paths = [

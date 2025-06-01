@@ -26,7 +26,7 @@
 
       <!-- Title -->
     <title>{% block title %}渋谷歯科技工所 | SHIBUYA Dental Laboratory{% endblock %}</title>
-     
+    {% block head %}{% endblock %} 
     {% block head_extras %}{% endblock %}
 
     <!-- Google tag (gtag.js) -->
@@ -75,9 +75,9 @@
                 <a class="nav-link {% if request.endpoint == 'main.info' %}active{% endif %}" href="{{ url_for('main.info') }}">会社情報</a>
               </li>
 
-              <!-- <li class="nav-item">
+              <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.inquiry' %}active{% endif %}" href="{{ url_for('main.inquiry') }}">お問い合わせ</a>
-              </li> -->
+              </li>
               
             </ul>
 
