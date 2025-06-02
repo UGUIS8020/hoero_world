@@ -611,23 +611,6 @@ folderInput.addEventListener("change", (e) => {
         );
     }
 });
-
-// アップロードボタンクリック時
-uploadButton.addEventListener("click", () => {
-    const message = document.getElementById("userMessage").value.trim();
-
-    // ここでメッセージが空かチェックしてアラート表示
-    if (!message) {
-        showStatus("⚠️ メッセージを入力してください。", "error");
-        alert("メッセージが未入力です。入力してからアップロードしてください。");
-        return; // 処理を中止
-    }
-
-    if (selectedFiles.length > 0) {
-        uploadFiles(selectedFiles); // メッセージは uploadFiles 内で取得済みなのでそのままでOK
-    }
-});
-
 // クリアボタンクリック時
 clearButton.addEventListener("click", () => {
     selectedFiles = [];
