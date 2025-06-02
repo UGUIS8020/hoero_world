@@ -790,10 +790,19 @@ def verify_recaptcha(response_token):
         print(f"reCAPTCHA検証エラー: {e}")
         return False
 
+
 @bp.route('/inquiry', methods=['GET', 'POST'])
 def inquiry():
+    # 一時的にフォームを無効化（スパム対策）
+    FORM_TEMPORARILY_DISABLED = True  # ここをFalseにすれば復旧
+    
     form = InquiryForm()
     inquiry_id = request.args.get("id")
+    
+    # フォームが無効化されている場合はPOSTを拒否
+    if FORM_TEMPORARILY_DISABLED and request.method == 'POST':
+        flash('申し訳ございませんが、現在お問い合わせフォームは一時的に停止中です。', 'warning')
+        return redirect(url_for('main.inquiry'))
 
     # if request.method == 'POST':
     #     print("フォームデータ:", form.data)
