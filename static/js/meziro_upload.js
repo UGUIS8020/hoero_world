@@ -704,5 +704,5 @@ document.getElementById("uploadButton").addEventListener("click", function () {
     }
 
     // バリデーション通過後、アップロード処理へ進む（例）
-    uploadFiles(); // ← ここは既存の送信関数に合わせて変更
+    uploadFiles(selectedFiles); // ← ここは既存の送信関数に合わせて変更
 });
