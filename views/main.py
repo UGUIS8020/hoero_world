@@ -131,6 +131,10 @@ def colors():
         return colors_image_upload()
     return render_template('main/colors.html')
 
+@bp.route('/raiden')
+def raiden():    
+    return render_template('main/raiden.html')
+
 def save_resized_upload(file, save_path, max_width=1500):
     """
     アップロードされた画像を最大幅でリサイズして保存。
