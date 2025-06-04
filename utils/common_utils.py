@@ -16,6 +16,7 @@ import tempfile
 import re
 import uuid
 import unicodedata
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 load_dotenv()
