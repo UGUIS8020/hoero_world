@@ -47,7 +47,13 @@
      <section class="dental-header">
         <div class="logo">         
           
-          <img src="{{ url_for('static', filename='main/top/logo02.jpg') }}" alt="ロゴ" class="img-fluid">
+            <img src="{{ url_for('static', filename='main/top/logo02.jpg') }}" 
+            alt="ロゴ" 
+            class="img-fluid"
+            width="157" 
+            height="157"
+            loading="eager"
+            decoding="sync">
         </div>
         <div class="text-content">
           <div class="japanese-text">渋谷歯科技工所</div>
@@ -272,13 +278,34 @@
     <h2>自家歯牙移植用3Dドナーレプリカ(歯根レプリカ)</h2>
     <div id="fileList" class="file-list"></div>
 
-        <div class="box box1">        
+        <!-- <div class="box box1">        
             <a href="{{ url_for('pages.root_replica') }}" target="_self">
                 <h2>rootreplica</h2>                   
 
             <div>      
             <img src="{{ url_for('static', filename='main/top/root_replica003.jpg') }}">
             <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}">
+            </div>
+            </a>
+        </div> -->
+
+        <div class="box box1">        
+            <a href="{{ url_for('pages.root_replica') }}" target="_self">
+                <h2>rootreplica</h2>                   
+
+            <div>      
+                <img src="{{ url_for('static', filename='main/top/root_replica003.jpg') }}"
+                alt="歯根レプリカ003"
+                width="300" 
+                height="225"
+                loading="lazy"
+                decoding="async">
+                <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}"
+                alt="歯根レプリカ003"
+                width="300" 
+                height="225"
+                loading="lazy"
+                decoding="async">
             </div>
             </a>
         </div>
@@ -290,7 +317,12 @@
                 <h2>PFZ Zirconia</h2>                    
     
                <div>      
-              <img src="{{ url_for('static', filename='main/top/001.jpg') }}">          
+                <img src="{{ url_for('static', filename='main/top/001.jpg') }}"
+                alt="ジルコニア001"
+                width="600" 
+                height="306"
+                loading="lazy"
+                decoding="async">         
               </div>
               </a>
         </div>
