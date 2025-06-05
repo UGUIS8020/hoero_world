@@ -6,6 +6,7 @@ from extensions import db, migrate, login_manager, mail
 from dotenv import load_dotenv
 from utils.common_utils import setup_scheduled_cleanup
 from flask_wtf.csrf import CSRFProtect
+from views.sub_account import bp as sub_account_bp
 
 load_dotenv()
 
@@ -83,6 +84,7 @@ flask_app.register_blueprint(users_bp)
 flask_app.register_blueprint(error_bp)
 flask_app.register_blueprint(pages_bp)
 flask_app.register_blueprint(stl_board_bp)
+flask_app.register_blueprint(sub_account_bp)
 
 if __name__ == '__main__':
     flask_app.run(debug=True)
