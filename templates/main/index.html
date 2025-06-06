@@ -53,7 +53,8 @@
             width="157" 
             height="157"
             loading="eager"
-            decoding="sync">
+            decoding="async"
+            fetchpriority="high">
         </div>
         <div class="text-content">
           <div class="japanese-text">渋谷歯科技工所</div>
@@ -298,14 +299,17 @@
                 alt="歯根レプリカ003"
                 width="300" 
                 height="225"
-                loading="lazy"
-                decoding="async">
-                <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}"
-                alt="歯根レプリカ003"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high">
+
+            <img src="{{ url_for('static', filename='main/top/root_replica004.jpg') }}"
+                alt="歯根レプリカ004"
                 width="300" 
                 height="225"
-                loading="lazy"
-                decoding="async">
+                loading="eager"
+                decoding="async"
+                fetchpriority="high">
             </div>
             </a>
         </div>
@@ -321,8 +325,9 @@
                 alt="ジルコニア001"
                 width="600" 
                 height="306"
-                loading="lazy"
-                decoding="async">         
+                loading="eager"
+                decoding="async"
+                fetchpriority="high">         
               </div>
               </a>
         </div>
