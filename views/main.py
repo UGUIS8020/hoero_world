@@ -51,7 +51,8 @@ def index():
     blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
 
     # 最新記事の取得
-    recent_blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).limit(5).all()
+    # recent_blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).limit(5).all()
+    recent_blog_posts = blog_posts.items[:5]
 
     # カテゴリの取得
     blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
