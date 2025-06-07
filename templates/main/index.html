@@ -357,8 +357,14 @@
                                 <div class="card-body">
                                     {% if post.featured_image %}
                                     <div class="mb-3" style="text-align: center;">
-                                        <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid card-img-top" style="width: 250px; height: 250px; object-fit: scale-down;">
-                                        
+                                        <!-- <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid card-img-top" style="width: 250px; height: 250px; object-fit: scale-down;"> -->
+                                        <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}"
+                                        class="img-fluid"
+                                        width="250"
+                                        height="250"
+                                        style="object-fit: scale-down;"
+                                        loading="lazy"
+                                        decoding="async">
                                     </div>
 
 
