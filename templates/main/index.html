@@ -376,7 +376,7 @@
                                     </h3>
                                     <p>{{ post.date.strftime('%Y-%m-%d') }} by: {{ post.author.username | truncate(10) }}</p>
                                     <p class="card-text">{{ post.summary | truncate(40) }}</p>
-                                    <a href="{{ url_for('main.blog_post', blog_post_id=post.id) }}" class="btn btn-dark">続きを読む…</a>
+                                    <a href="{{ url_for('main.blog_post', blog_post_id=post.id) }}" class="btn btn-Light">続きを読む…</a>
                                 </div>
                             </div>
                         </div>

@@ -34,14 +34,25 @@
                                 <div class="mb-3">
                                     {{ form.picture.label(class="form-control-label") }}
                                     <br>
-                                    {% if form.picture.data %}
-                                    <div style="text-align: left;">
-                                        <img src="{{ url_for('static', filename='main/featured_image/' + form.picture.data) }}">
-                                    </div>
+                                    
+                                    <!-- 既存画像の表示 -->
+                                    {% if form.picture.object_data %}
+                                        <div style="text-align: left;" id="existing-image">
+                                            <img src="{{ url_for('static', filename='main/featured_image/' + form.picture.object_data) }}" class="img-fluid" style="max-width: 300px;">
+                                            <p><small class="text-muted">現在の画像</small></p>
+                                        </div>
                                     {% endif %}
+                                    
+                                    <!-- 新しい画像のプレビュー -->
+                                    <div id="image-preview" style="display: none; text-align: left;">
+                                        <img id="preview-img" src="" class="img-fluid" style="max-width: 300px;">
+                                        <p><small class="text-muted">プレビュー</small></p>
+                                    </div>
+                                    
                                     <br>
-                                    {{ render_field(form.picture, class="form-control-file") }}
-                                </div>                                           <div class="container mb-3">
+                                    {{ render_field(form.picture, class="form-control-file", onchange="previewImage(this)") }}
+                                </div>                                         
+                                 <div class="container mb-3">
                                     <div class="row">
                                         <div class="col-md-3">
                                             {{ form.submit(class="btn btn-success w-100") }}
@@ -55,5 +66,26 @@
             </div>
         </div>
     </section>
+
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('image-preview');
+            const previewImg = document.getElementById('preview-img');
+            const existingImage = document.getElementById('existing-image');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    preview.style.display = 'block';
+                    if (existingImage) existingImage.style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.style.display = 'none';
+                if (existingImage) existingImage.style.display = 'block';
+            }
+        }
+        </script>
     
 {% endblock %}

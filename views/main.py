@@ -108,22 +108,55 @@ def delete_category(blog_category_id):
 def create_post():
     form = BlogPostForm()
     if form.validate_on_submit():
-        if form.picture.data:
-            pic = add_featured_image(form.picture.data)
-        else:
-            pic = ''
-        blog_post = BlogPost(title=form.title.data, text=form.text.data, featured_image=pic, user_id=current_user.id, category_id=form.category.data, summary=form.summary.data)
-        db.session.add(blog_post)
-        db.session.commit()
-        flash('ブログ投稿が作成されました')
-        return redirect(url_for('main.blog_maintenance'))
+        try:
+            print("フォーム検証成功")
+            print(f"タイトル: {form.title.data}")
+            print(f"カテゴリー: {form.category.data}")
+            print(f"ユーザーID: {current_user.id}")
+            
+            if form.picture.data:
+                pic = add_featured_image(form.picture.data)
+                print(f"画像保存: {pic}")
+            else:
+                pic = ''
+                print("画像なし")
+            
+            blog_post = BlogPost(
+                title=form.title.data, 
+                text=form.text.data, 
+                featured_image=pic, 
+                user_id=current_user.id, 
+                category_id=form.category.data, 
+                summary=form.summary.data
+            )
+            
+            print("BlogPostオブジェクト作成成功")
+            db.session.add(blog_post)
+            print("セッションに追加")
+            db.session.commit()
+            print("コミット成功")
+            
+            flash('ブログ投稿が作成されました', 'success')
+            return redirect(url_for('main.blog_maintenance'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"エラー発生: {e}")
+            flash(f'エラーが発生しました: {str(e)}', 'danger')
+    else:
+        print("フォーム検証失敗")
+        print(f"エラー: {form.errors}")
+    
     return render_template('main/create_post.html', form=form)
 
 @bp.route('/blog_maintenance')
 @login_required
 def blog_maintenance():
     page = request.args.get('page', 1, type=int)
-    blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
+    # authorリレーションを使用してeager loading
+    blog_posts = BlogPost.query.options(
+        db.joinedload(BlogPost.author)
+    ).order_by(BlogPost.date.desc()).paginate(page=page, per_page=10)
     return render_template('main/blog_maintenance.html', blog_posts=blog_posts)
 
 @bp.route('/colors', methods=['GET', 'POST'])
@@ -199,8 +232,8 @@ def colors_image_upload():
 
 @bp.route('/ugu_box')
 def ugu_box():
-    page = request.args.get('page', 1, type=int)
-    blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
+    # page = request.args.get('page', 1, type=int)
+    # blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
 
     s3_files = []
     try:

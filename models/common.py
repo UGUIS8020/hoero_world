@@ -27,7 +27,7 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(256))  # ハッシュ長を増やす
     administrator = db.Column(db.Boolean, default=False)
 
-    post = db.relationship('BlogPost', backref='author', lazy='dynamic')
+    post = db.relationship('BlogPost', backref='author', lazy='dynamic')    
 
     def __init__(self, display_name, sender_name, full_name, phone, email, 
                  postal_code, prefecture, address, building, 
@@ -89,6 +89,8 @@ class BlogPost(db.Model):
     text = db.Column(db.Text)
     summary = db.Column(db.String(140))
     featured_image = db.Column(db.String(140))
+ 
+    category = db.relationship('BlogCategory', backref='blog_posts')
 
     def __init__(self, title, text, featured_image, user_id, category_id, summary):
         self.title = title

@@ -46,7 +46,7 @@
                                         <td>{{ post.id }}</td>
                                         <td>{{ post.title | truncate(20) }}</td>
                                         <td>{{ post.date.strftime('%Y-%m-%d') }}</td>
-                                        <td>{{ post.author.username | truncate(10) }}</td>
+                                        <td>{{ post.author.display_name | truncate(10) if post.author else 'Unknown' }}</td>
                                         <td><a href="{{ url_for('main.blog_post', blog_post_id=post.id) }}" class="btn btn-secondary">
                                             詳細
                                         </a></td>

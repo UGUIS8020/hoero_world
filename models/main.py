@@ -27,15 +27,24 @@ class UpdateCategoryForm(FlaskForm):
 
 class BlogPostForm(FlaskForm):
     title = StringField('タイトル', validators=[DataRequired()])
-    category = SelectField('カテゴリ', coerce=int)
-    summary = StringField('要約', validators=[DataRequired()])
+    category = SelectField('カテゴリ', coerce=int, validators=[DataRequired()])
+    summary = StringField('要約')  
     text = TextAreaField('本文', validators=[DataRequired()])
-    picture = FileField('アイキャッチ画像', validators=[FileAllowed(['jpg', 'png'])])
+    picture = FileField('アイキャッチ画像', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'gif'])])
     submit = SubmitField('投稿')
 
     def _set_category(self):
-        blog_categories = BlogCategory.query.all()
-        self.category.choices = [(blog_category.id, blog_category.category) for blog_category in blog_categories]
+        try:
+            blog_categories = BlogCategory.query.all()
+            if blog_categories:
+                self.category.choices = [(blog_category.id, blog_category.category) for blog_category in blog_categories]
+                if not self.category.data:
+                    self.category.data = blog_categories[0].id
+            else:
+                self.category.choices = []
+        except Exception as e:
+            print(f"カテゴリー取得エラー: {e}")
+            self.category.choices = []
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
