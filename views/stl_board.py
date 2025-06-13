@@ -41,7 +41,7 @@ class STLPostForm(FlaskForm):
     ])
     submit = SubmitField('投稿する')
 
-# STLサイズ軽量化関数（ログ付き）
+# STLサイズ軽量化関数（ログ付き） TODO Lambdaに移植予定
 def reduce_stl_size(input_file_path, output_file_path, target_faces=50000):
     """
     STLファイルを読み込んで、三角形数を削減して保存する関数
