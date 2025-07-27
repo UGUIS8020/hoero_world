@@ -28,9 +28,15 @@
   flex-basis: 100%; /* フレックスボックス内での幅 */
   margin: 0px 0px 0px 0px; 
 }
+.price-info {
+  min-height: 120px;  /* 実際の高さに応じて調整 */
+}
+.alert-primary {
+  min-height: 80px;
+}
 </style>
 
-<div class="text-center">
+<div class="text-center price-info">
   <h1>自家歯牙移植用ドナーレプリカ</h1>  
   <h2>移植歯シミュレーションモデル</h2>
   <h2>CBCT画像(CTデータ)から歯牙歯根モデルの作製。</h2>
@@ -38,7 +44,7 @@
 
 <img src="{{ url_for('static', filename='pages/root_replica/032_02.jpg') }}" class="d-block mx-auto" fetchpriority="high" alt="自家歯牙移植用レプリカTOP画像" width="700" height="350">
 
-<div class="text-center">
+<div class="text-center price-info">
   <h2>3Dレプリカ 1歯8500円</h2>
   <h2>3Dレプリカ(造影剤有) 1歯9000円</h2>
   <h2>移植歯比較シミュレーション5000円</h2>
@@ -47,7 +53,7 @@
   <div class="data_reception">
     <a href="{{ url_for('main.meziro_upload_index') }}" class="text-decoration-none">
   <div class="alert alert-primary text-center shadow-sm" style="cursor: pointer; font-size: 1.5rem; font-weight: bold;">
-    📤 データ送信はこちらをクリックしてください！送信ページに移動します
+  データ送信はこちらをクリックしてください！送信ページに移動します
   </a></div>   
 
   <div class="text-center">
@@ -56,8 +62,7 @@
     <h2><a href = "tel:0489618151">Tel 048-961-8151</a></h2>
     <h3>E-mail shibuya8020@gmail.com</h3>
     <h3>CTデータはメールでは受送信できませんので大容量ファイル転送サービスをご利用ください↓</h3>
-    <a href="https://gigafile.nu/" target="_blank">
-    <h3><b>ギガファイル便</b></a></h3>
+    <h3><a href="https://gigafile.nu/" target="_blank"><b>ギガファイル便</b></a></h3>
     <h3>または郵送にてUSB、SDカードなどでデータをお送りください</h3>
   </div>
 
