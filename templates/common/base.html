@@ -35,14 +35,22 @@
     {% block head %}{% endblock %} 
     {% block head_extras %}{% endblock %}
 
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7MRMSYX9Q5"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
-      gtag('config', 'G-7MRMSYX9Q5');      
+      
+      // 非必須パラメータを最小限に
+      gtag('config', 'G-7MRMSYX9Q5', {
+        'send_page_view': false,  // 自動ページビューを無効化
+        'transport_type': 'beacon' // ページ離脱時のデータ送信を保証
+      });
+      
+      // ページが完全に読み込まれた後にページビュー送信
+      window.addEventListener('load', function() {
+        gtag('event', 'page_view');
+      });
     </script>
 
     <script>
