@@ -6,7 +6,7 @@ from models.main import BlogCategoryForm, UpdateCategoryForm, BlogPostForm, Blog
 from extensions import db
 import boto3
 import shutil
-import os
+import os, tempfile, json, zipfile
 from datetime import timezone, timedelta, datetime
 from dotenv import load_dotenv
 from PIL import Image
@@ -16,10 +16,6 @@ import io
 import base64
 from extensions import mail
 from utils.common_utils import get_next_sequence_number, process_image, sanitize_filename, ZipHandler, cleanup_temp_files
-from utils.stl_reducer import reduce_stl_size
-import tempfile
-from werkzeug.utils import secure_filename
-import json
 from pytz import timezone
 import requests
 
@@ -423,154 +419,402 @@ def meziro_upload_index():
     return render_template('main/meziro_upload_index.html')
 
 
-@bp.route('/meziro_upload', methods=['POST'])
-def meziro_upload():   
+# @bp.route('/meziro_upload', methods=['POST'])
+# def meziro_upload():   
 
-    business_name = request.form.get('businessName', '')
-    user_name = request.form.get('userName', '')
-    user_email = request.form.get('userEmail', '')
-    patient_name = request.form.get('PatientName', '')
+#     business_name = request.form.get('businessName', '')
+#     user_name = request.form.get('userName', '')
+#     user_email = request.form.get('userEmail', '')
+#     patient_name = request.form.get('PatientName', '')
+#     appointment_date = request.form.get('appointmentDate', '')
+#     appointment_hour = request.form.get('appointmentHour', '')
+#     project_type = request.form.get('projectType', '')
+#     crown_type = request.form.get('crown_type', '')
+#     teeth_raw = request.form.get('teeth', '[]')
+#     shade = request.form.get('shade', '')
+#     try:
+#         teeth = json.loads(teeth_raw)
+#     except json.JSONDecodeError:
+#         teeth = []
+#     message = request.form.get('userMessage', '')
+
+#      # 必須フィールドの検証
+#     if not message:
+#         return jsonify({'error': 'メッセージが入力されていません'}), 400
+    
+#     if not business_name:
+#         return jsonify({'error': '事業者名が入力されていません'}), 400
+        
+#     if not user_name:
+#         return jsonify({'error': '送信者名が入力されていません'}), 400
+        
+#     if not user_email:
+#         return jsonify({'error': 'メールアドレスが入力されていません'}), 400
+        
+#     if not project_type:
+#         return jsonify({'error': '製作物が選択されていません'}), 400
+
+#     if 'files[]' not in request.files:
+#         return jsonify({'error': 'ファイルが選択されていません'}), 400
+
+#     files = request.files.getlist('files[]')
+#     if not files or files[0].filename == '':
+#         return jsonify({'error': 'ファイルが選択されていません'}), 400
+
+#     uploaded_urls = []
+#     numbered_ids = []
+
+#     # フォルダ構造の情報を取得
+#     has_folder = request.form.get('has_folder_structure', 'false').lower() == 'true'
+#     print(f"フォルダ構造の有無: {has_folder}")  # デバッグ用
+
+#     session_id, warning_message = get_next_sequence_number()
+#     id_str = f"{session_id:05d}"  # 管理番号として6桁のゼロ埋め形式に   
+
+#     try:
+#         # 修正: has_folderパラメータを追加
+#         result, temp_dir = zip_handler_instance.process_files(files, has_folder)
+#         print(f"process_files result: {result}, type: {type(result)}")  # デバッグ用
+#         print(f"Number of files: {len(files)}")  # デバッグ用
+
+#         if isinstance(result, list):  # フォルダ内のファイル
+#             folder_prefix = f"meziro/{id_str}/"  # 管理番号をフォルダ名として使用
+            
+#             for index, file_path in enumerate(result, start=1):
+#                 original_filename = os.path.basename(file_path)
+#                 safe_filename = sanitize_filename(original_filename)
+                
+#                 # 管理番号のフォルダ内にファイルを配置（フォルダ構造を使用）
+#                 s3_key = f"{folder_prefix}{index:03d}_{safe_filename}"
+#                 s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)
+
+#                 with open(file_path, 'rb') as f:
+#                     s3.upload_fileobj(
+#                         f,
+#                         os.getenv('BUCKET_NAME'),
+#                         s3_key,
+#                         ExtraArgs={'ContentType': 'application/octet-stream'}
+#                     )
+
+#                 bucket_name = os.getenv("BUCKET_NAME")
+#                 region = os.getenv("AWS_REGION")
+#                 public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+
+#                 uploaded_urls.append(public_url)
+#                 numbered_ids.append(f"{id_str}_{index:03d}")
+
+#         else:  # 圧縮した場合（zipファイル）の処理
+#             zip_file_path = result
+#             print(f"Uploading zip file: {zip_file_path}")  # デバッグ用
+            
+#             # ① フォーム内容を文字列に整形（インデントを削除）
+#             form_data_text = f"""【受付番号】No.{id_str}
+
+# 【事業者名】{business_name}
+# 【送信者名】{user_name}
+# 【メールアドレス】{user_email}
+# 【患者名】{patient_name}
+# 【セット希望日時】{appointment_date} {appointment_hour}時
+# 【製作物】{project_type}
+# 【クラウン種別】{crown_type}
+# 【対象部位】{", ".join(teeth)}
+# 【シェード】{shade}
+# 【メッセージ】
+# {message.strip()}
+
+#   渋谷歯科技工所
+#   〒343-0845
+#   埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+#   TEL: 048-961-8151
+#   email:shibuya8020@gmail.com"""
+
+#             # ② 一時ファイルとして .txt を保存
+#             with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt', encoding='utf-8') as form_file:
+#                 form_file.write(form_data_text)
+#                 form_file_path = form_file.name
+
+#             # ③ zipファイルに txt を追記
+#             import zipfile
+#             with zipfile.ZipFile(zip_file_path, 'a') as zipf:
+#                 zipf.write(form_file_path, arcname=f"{id_str}_info.txt")
+
+#             # ④ 一時 .txt を削除
+#             if os.path.exists(form_file_path):
+#                 os.remove(form_file_path)
+
+#             # ⑤ ZIPファイルをS3にアップロード（元のまま）
+#             numbered_filename = f"{id_str}_files.zip"
+#             s3_key = f"meziro/{numbered_filename}"
+#             s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)
+
+#             with open(zip_file_path, 'rb') as f:
+#                 s3.upload_fileobj(
+#                     f,
+#                     os.getenv('BUCKET_NAME'),
+#                     s3_key,
+#                     ExtraArgs={'ContentType': 'application/zip'}
+#                 )
+
+#             bucket_name = os.getenv("BUCKET_NAME")
+#             region = os.getenv("AWS_REGION")
+#             public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+
+#             uploaded_urls.append(public_url)
+#             numbered_ids.append(id_str)
+            
+#         # 一時ファイルの削除
+#         if 'zip_file_path' in locals() and os.path.exists(zip_file_path):
+#             os.remove(zip_file_path)
+
+#         # メール本文に署名付きURLを含める
+#         url_text = "\n".join(uploaded_urls)
+#         full_message = f"""ユーザーから以下のメッセージが届きました：
+
+# 【受付番号】No.{id_str}
+# 【事業者名】{business_name}
+# 【送信者名】{user_name}
+# 【メールアドレス】{user_email}
+# 【患者名】{patient_name}
+# 【セット希望日時】{appointment_date} {appointment_hour}時
+# 【製作物】{project_type}
+# 【クラウン種別】{crown_type}
+# 【対象部位】{", ".join(teeth)}
+# 【シェード】{shade}
+# 【メッセージ】
+# {message}
+
+# 【アップロードされたファイルリンク】
+# {url_text}
+#         """
+
+#         # DynamoDBエラーがあれば追加
+#         if warning_message:
+#             full_message += f"\n\n⚠️ システム警告：{warning_message}\n"
+
+#         msg = Message(
+#             subject=f"【仕事が来たよ】No.{id_str}",
+#             recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")],
+#             body=full_message
+#         )
+#         mail.send(msg)
+#         print("メール送信成功")
+
+#         # 送信者への確認メール送信
+#         confirmation_msg = Message(
+#             subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
+#             recipients=[user_email],
+#             body=f"""{user_name} 様
+
+#         この度は技工指示を送信いただき、誠にありがとうございます。
+#         以下の内容で受付を完了いたしました。
+
+#         【受付番号】No.{id_str}
+#         【製作物】{project_type}
+#         【セット希望日時】{appointment_date} {appointment_hour}時
+
+#         ファイルを確認の上、内容に応じて対応させていただきます。
+#         万が一、内容に不備がある場合は別途ご連絡させていただきます。
+
+#         --------------------------------
+#         渋谷歯科技工所
+#         〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+#         TEL: 048-961-8151
+#         email: shibuya8020@gmail.com
+#         """
+#         )
+#         mail.send(confirmation_msg)
+#         print("送信者への確認メール送信成功")
+
+#     except Exception as mail_error:
+#         import traceback
+#         print(f"メール送信失敗: {mail_error}")
+#         print(traceback.format_exc())  # スタックトレースを出力
+
+#     # 受付番号を表示
+#     if numbered_ids:
+#         message = f"アップロード完了 受付No.{id_str}"
+#     else:
+#         message = "アップロード成功（ファイルはありません）"
+
+#     return jsonify({'message': message, 'files': uploaded_urls})
+
+@bp.route('/meziro_upload', methods=['POST'])
+def meziro_upload():
+    log = current_app.logger
+    log.info("=== /meziro_upload START === ip=%s ua=%s", request.remote_addr, request.headers.get("User-Agent"))
+
+    # 受信フォーム値
+    business_name    = request.form.get('businessName', '')
+    user_name        = request.form.get('userName', '')
+    user_email       = request.form.get('userEmail', '')
+    patient_name     = request.form.get('patientName', '') or request.form.get('PatientName', '')  # どちらか来る想定なら保険
     appointment_date = request.form.get('appointmentDate', '')
     appointment_hour = request.form.get('appointmentHour', '')
-    project_type = request.form.get('projectType', '')
-    crown_type = request.form.get('crown_type', '')
-    teeth_raw = request.form.get('teeth', '[]')
-    shade = request.form.get('shade', '')
+    project_type     = request.form.get('projectType', '')
+    crown_type       = request.form.get('crown_type', '')
+    teeth_raw        = request.form.get('teeth', '[]')
+    shade            = request.form.get('shade', '')
+    message          = request.form.get('userMessage', '')
+
+    # teeth のJSONパース
     try:
         teeth = json.loads(teeth_raw)
-    except json.JSONDecodeError:
+        if not isinstance(teeth, list):
+            raise ValueError("teeth is not list")
+    except Exception as e:
+        log.warning("teeth のJSONパース失敗: raw=%s err=%s", teeth_raw[:200], e)
         teeth = []
-    message = request.form.get('userMessage', '')
 
-     # 必須フィールドの検証
+    # フォーム要約ログ（個人情報は最低限に）
+    log.info(
+        "Form summary: business=%s, user=%s, email=%s, project=%s, crown=%s, shade=%s, teeth_count=%d",
+        business_name, user_name, user_email, project_type, crown_type, shade, len(teeth)
+    )
+
+    # 必須チェック（warning で記録）
     if not message:
+        log.warning("必須エラー: message が空")
         return jsonify({'error': 'メッセージが入力されていません'}), 400
-    
     if not business_name:
+        log.warning("必須エラー: business_name が空")
         return jsonify({'error': '事業者名が入力されていません'}), 400
-        
     if not user_name:
+        log.warning("必須エラー: user_name が空")
         return jsonify({'error': '送信者名が入力されていません'}), 400
-        
     if not user_email:
+        log.warning("必須エラー: user_email が空")
         return jsonify({'error': 'メールアドレスが入力されていません'}), 400
-        
     if not project_type:
+        log.warning("必須エラー: project_type が空")
         return jsonify({'error': '製作物が選択されていません'}), 400
 
     if 'files[]' not in request.files:
+        log.warning("必須エラー: files[] フィールドが存在しない")
         return jsonify({'error': 'ファイルが選択されていません'}), 400
 
     files = request.files.getlist('files[]')
     if not files or files[0].filename == '':
+        log.warning("必須エラー: files[] が空またはファイル名が空")
         return jsonify({'error': 'ファイルが選択されていません'}), 400
 
+    log.info("受信ファイル数: %d (例: %s)", len(files), files[0].filename)
+
     uploaded_urls = []
-    numbered_ids = []
+    numbered_ids  = []
 
-    # フォルダ構造の情報を取得
+    # フォルダ構造の有無
     has_folder = request.form.get('has_folder_structure', 'false').lower() == 'true'
-    print(f"フォルダ構造の有無: {has_folder}")  # デバッグ用
+    log.info("フォルダ構造フラグ: %s", has_folder)
 
+    # 受付番号の採番
     session_id, warning_message = get_next_sequence_number()
-    id_str = f"{session_id:05d}"  # 管理番号として6桁のゼロ埋め形式に   
+    id_str = f"{session_id:05d}"  # 6桁ゼロ埋め（元コード準拠）
+    log.info("発行受付番号: No.%s", id_str)
+
+    # S3 バケット/リージョン
+    bucket_name = os.getenv("BUCKET_NAME")
+    region      = os.getenv("AWS_REGION")
+    log.info("S3 config: bucket=%s region=%s", bucket_name, region)
 
     try:
-        # 修正: has_folderパラメータを追加
+        # ファイル加工（ZIP or 展開）
         result, temp_dir = zip_handler_instance.process_files(files, has_folder)
-        print(f"process_files result: {result}, type: {type(result)}")  # デバッグ用
-        print(f"Number of files: {len(files)}")  # デバッグ用
+        log.info("process_files 完了: type=%s temp_dir=%s", type(result).__name__, temp_dir)
 
-        if isinstance(result, list):  # フォルダ内のファイル
-            folder_prefix = f"meziro/{id_str}/"  # 管理番号をフォルダ名として使用
-            
+        if isinstance(result, list):
+            # フォルダ構造のまま個別アップロード
+            folder_prefix = f"meziro/{id_str}/"
+            log.info("個別アップロード開始: prefix=%s, 件数=%d", folder_prefix, len(result))
+
             for index, file_path in enumerate(result, start=1):
                 original_filename = os.path.basename(file_path)
-                safe_filename = sanitize_filename(original_filename)
-                
-                # 管理番号のフォルダ内にファイルを配置（フォルダ構造を使用）
-                s3_key = f"{folder_prefix}{index:03d}_{safe_filename}"
-                s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)
+                safe_filename     = sanitize_filename(original_filename)
+                s3_key            = f"{folder_prefix}{index:03d}_{safe_filename}"
+                s3_key            = get_unique_filename(bucket_name, s3_key)
+
+                file_size = 0
+                try:
+                    file_size = os.path.getsize(file_path)
+                except Exception:
+                    pass
 
                 with open(file_path, 'rb') as f:
                     s3.upload_fileobj(
-                        f,
-                        os.getenv('BUCKET_NAME'),
-                        s3_key,
+                        f, bucket_name, s3_key,
                         ExtraArgs={'ContentType': 'application/octet-stream'}
                     )
 
-                bucket_name = os.getenv("BUCKET_NAME")
-                region = os.getenv("AWS_REGION")
                 public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
-
                 uploaded_urls.append(public_url)
                 numbered_ids.append(f"{id_str}_{index:03d}")
 
-        else:  # 圧縮した場合（zipファイル）の処理
+                log.info("S3アップロードOK: key=%s size=%d", s3_key, file_size)
+
+        else:
+            # ZIP アップロード
             zip_file_path = result
-            print(f"Uploading zip file: {zip_file_path}")  # デバッグ用
-            
-            # ① フォーム内容を文字列に整形（インデントを削除）
-            form_data_text = f"""【受付番号】No.{id_str}
+            try:
+                zip_size = os.path.getsize(zip_file_path)
+            except Exception:
+                zip_size = -1
+            log.info("ZIPアップロード準備: path=%s size=%d", zip_file_path, zip_size)
 
-【事業者名】{business_name}
-【送信者名】{user_name}
-【メールアドレス】{user_email}
-【患者名】{patient_name}
-【セット希望日時】{appointment_date} {appointment_hour}時
-【製作物】{project_type}
-【クラウン種別】{crown_type}
-【対象部位】{", ".join(teeth)}
-【シェード】{shade}
-【メッセージ】
-{message.strip()}
+            # 受付内容のテキストを zip に同梱
+            form_data_text = (
+                f"【受付番号】No.{id_str}\n\n"
+                f"【事業者名】{business_name}\n"
+                f"【送信者名】{user_name}\n"
+                f"【メールアドレス】{user_email}\n"
+                f"【患者名】{patient_name}\n"
+                f"【セット希望日時】{appointment_date} {appointment_hour}時\n"
+                f"【製作物】{project_type}\n"
+                f"【クラウン種別】{crown_type}\n"
+                f"【対象部位】{', '.join(teeth)}\n"
+                f"【シェード】{shade}\n"
+                f"【メッセージ】\n{message.strip()}\n\n"
+                "  渋谷歯科技工所\n"
+                "  〒343-0845\n"
+                "  埼玉県越谷市南越谷4-9-6 新越谷プラザビル203\n"
+                "  TEL: 048-961-8151\n"
+                "  email:shibuya8020@gmail.com"
+            )
 
-  渋谷歯科技工所
-  〒343-0845
-  埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
-  TEL: 048-961-8151
-  email:shibuya8020@gmail.com"""
-
-            # ② 一時ファイルとして .txt を保存
             with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt', encoding='utf-8') as form_file:
                 form_file.write(form_data_text)
                 form_file_path = form_file.name
 
-            # ③ zipファイルに txt を追記
-            import zipfile
             with zipfile.ZipFile(zip_file_path, 'a') as zipf:
-                zipf.write(form_file_path, arcname=f"{id_str}_info.txt")
+                arcname = f"{id_str}_info.txt"
+                zipf.write(form_file_path, arcname=arcname)
+                log.info("ZIPへ info 追記: %s", arcname)
 
-            # ④ 一時 .txt を削除
             if os.path.exists(form_file_path):
                 os.remove(form_file_path)
 
-            # ⑤ ZIPファイルをS3にアップロード（元のまま）
             numbered_filename = f"{id_str}_files.zip"
             s3_key = f"meziro/{numbered_filename}"
-            s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)
+            s3_key = get_unique_filename(bucket_name, s3_key)
 
             with open(zip_file_path, 'rb') as f:
                 s3.upload_fileobj(
-                    f,
-                    os.getenv('BUCKET_NAME'),
-                    s3_key,
+                    f, bucket_name, s3_key,
                     ExtraArgs={'ContentType': 'application/zip'}
                 )
 
-            bucket_name = os.getenv("BUCKET_NAME")
-            region = os.getenv("AWS_REGION")
             public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
-
             uploaded_urls.append(public_url)
             numbered_ids.append(id_str)
-            
-        # 一時ファイルの削除
-        if 'zip_file_path' in locals() and os.path.exists(zip_file_path):
-            os.remove(zip_file_path)
+            log.info("ZIPのS3アップロードOK: key=%s size=%d", s3_key, zip_size)
 
-        # メール本文に署名付きURLを含める
+        # 一時ZIPがあれば削除
+        if 'zip_file_path' in locals() and os.path.exists(zip_file_path):
+            try:
+                os.remove(zip_file_path)
+                log.info("一時ZIP削除: %s", zip_file_path)
+            except Exception as e:
+                log.warning("一時ZIP削除失敗: %s err=%s", zip_file_path, e)
+
+        # メール本文
         url_text = "\n".join(uploaded_urls)
         full_message = f"""ユーザーから以下のメッセージが届きました：
 
@@ -589,58 +833,64 @@ def meziro_upload():
 
 【アップロードされたファイルリンク】
 {url_text}
-        """
-
-        # DynamoDBエラーがあれば追加
+"""
         if warning_message:
             full_message += f"\n\n⚠️ システム警告：{warning_message}\n"
+            log.warning("採番時警告: %s", warning_message)
 
-        msg = Message(
-            subject=f"【仕事が来たよ】No.{id_str}",
-            recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")],
-            body=full_message
-        )
-        mail.send(msg)
-        print("メール送信成功")
+        # 管理者へ
+        try:
+            msg = Message(
+                subject=f"【仕事が来たよ】No.{id_str}",
+                recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")],
+                body=full_message
+            )
+            mail.send(msg)
+            log.info("メール送信成功（管理者）")
+        except Exception as e:
+            log.error("メール送信失敗（管理者）: %s", e, exc_info=True)
 
-        # 送信者への確認メール送信
-        confirmation_msg = Message(
-            subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
-            recipients=[user_email],
-            body=f"""{user_name} 様
+        # 送信者へ
+        try:
+            confirmation_msg = Message(
+                subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
+                recipients=[user_email],
+                body=f"""{user_name} 様
 
-        この度は技工指示を送信いただき、誠にありがとうございます。
-        以下の内容で受付を完了いたしました。
+この度は技工指示を送信いただき、誠にありがとうございます。
+以下の内容で受付を完了いたしました。
 
-        【受付番号】No.{id_str}
-        【製作物】{project_type}
-        【セット希望日時】{appointment_date} {appointment_hour}時
+【受付番号】No.{id_str}
+【製作物】{project_type}
+【セット希望日時】{appointment_date} {appointment_hour}時
 
-        ファイルを確認の上、内容に応じて対応させていただきます。
-        万が一、内容に不備がある場合は別途ご連絡させていただきます。
+ファイルを確認の上、内容に応じて対応させていただきます。
+万が一、内容に不備がある場合は別途ご連絡させていただきます。
 
-        --------------------------------
-        渋谷歯科技工所
-        〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
-        TEL: 048-961-8151
-        email: shibuya8020@gmail.com
-        """
-        )
-        mail.send(confirmation_msg)
-        print("送信者への確認メール送信成功")
+--------------------------------
+渋谷歯科技工所
+〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+TEL: 048-961-8151
+email: shibuya8020@gmail.com
+"""
+            )
+            mail.send(confirmation_msg)
+            log.info("送信者への確認メール送信成功")
+        except Exception as e:
+            log.error("送信者への確認メール送信失敗: %s", e, exc_info=True)
 
-    except Exception as mail_error:
-        import traceback
-        print(f"メール送信失敗: {mail_error}")
-        print(traceback.format_exc())  # スタックトレースを出力
+    except Exception as e:
+        # ルート全体の最後の砦
+        log.error("アップロード処理中に未捕捉エラー: %s", e, exc_info=True)
 
-    # 受付番号を表示
+    # レスポンス
     if numbered_ids:
-        message = f"アップロード完了 受付No.{id_str}"
+        resp_message = f"アップロード完了 受付No.{id_str}"
     else:
-        message = "アップロード成功（ファイルはありません）"
+        resp_message = "アップロード成功（ファイルはありません）"
 
-    return jsonify({'message': message, 'files': uploaded_urls})
+    log.info("=== /meziro_upload END No.%s files=%d ===", id_str, len(uploaded_urls))
+    return jsonify({'message': resp_message, 'files': uploaded_urls})
 
 
 @bp.route('/meziro/download/<path:key>')
