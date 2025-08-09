@@ -1,7 +1,6 @@
 import os
 import sys
 from flask import Flask
-from flask_migrate import Migrate
 from extensions import db, migrate, login_manager, mail
 from dotenv import load_dotenv
 from utils.common_utils import setup_scheduled_cleanup
