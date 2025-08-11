@@ -94,6 +94,9 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.root_replica' %}active{% endif %}" href="{{ url_for('pages.root_replica') }}">自家歯牙移植用レプリカ</a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'pages.root_replica_info' %}active{% endif %}" href="{{ url_for('pages.root_replica_info') }}">自家歯牙移植とは</a>
+              </li>
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.colors' %}active{% endif %}" href="{{ url_for('main.colors') }}">色分析</a>
