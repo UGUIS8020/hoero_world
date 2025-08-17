@@ -1,0 +1,466 @@
+{% extends "common/base.html" %}
+{% block title %}自家歯牙移植Q&A｜よくある質問と専門回答｜渋谷歯科技工所{% endblock %}
+
+{% block meta_description %}
+<meta name="description" content="自家歯牙移植に関するよくある質問と専門的な回答を掲載。治療法、成功率、費用、インプラントとの比較など、患者様と歯科医師の疑問にお答えします。">
+<meta property="og:description" content="自家歯牙移植のQ&A集。治療法、成功率、費用について専門的にお答えします。">
+{% endblock %}
+
+{% block og_title %}
+<meta property="og:title" content="自家歯牙移植Q&A｜よくある質問と専門回答｜渋谷歯科技工所">
+{% endblock %}
+
+{% block og_url %}
+<meta property="og:url" content="https://shibuya8020.com/faq/">
+{% endblock %}
+
+{% block head_extras %}
+<!-- パンくず構造化データ -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "ホーム",
+            "item": "https://shibuya8020.com/"
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "自家歯牙移植Q&A",
+            "item": "https://shibuya8020.com/faq/"
+        }
+    ]
+}
+</script>
+
+<!-- FAQ構造化データ -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "自家歯牙移植とは何ですか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "自家歯牙移植は、患者自身の口腔内から健康な歯を取り出し、別の部位に移植する治療法です。特にインプラントや義歯、ブリッジに比べて審美性や機能性の回復が期待できる場合があります。"
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "成功率はどの程度ですか？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "抜歯窩への移植では成功率が95%に達します。非抜歯窩への移植では60%、年齢により39歳以下では75%、40歳以上では49%となります。"
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "インプラントと比較したメリット・デメリットは？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "メリット：生物学的適合性、低コスト、矯正治療可能、若年者に適応。デメリット：手技の複雑さ、ドナー歯が必要、外科的侵襲があります。"
+            }
+        }
+    ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<style>
+    .faq-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+    
+    .breadcrumb-nav {
+        background-color: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-bottom: 30px;
+    }
+    
+    .qa-section {
+        margin-bottom: 40px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .qa-header {
+        background-color: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .qa-item {
+        padding: 25px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .qa-item:last-child {
+        border-bottom: none;
+    }
+    
+    .qa-question {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        padding-left: 25px;
+        position: relative;
+    }
+    
+    .qa-question:before {
+        content: "Q";
+        position: absolute;
+        left: 0;
+        top: 0;
+        background-color: #007bff;
+        color: white;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .qa-answer {
+        padding-left: 25px;
+        position: relative;
+        line-height: 1.7;
+        color: #495057;
+    }
+    
+    .qa-answer:before {
+        content: "A";
+        position: absolute;
+        left: 0;
+        top: 0;
+        background-color: #28a745;
+        color: white;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: left;
+    }
+    
+    .comparison-table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+    
+    .latest-qa-section {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 25px;
+        margin-top: 40px;
+    }
+    
+    .latest-qa-item {
+        background-color: white;
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .qa-date {
+        font-size: 12px;
+        color: #6c757d;
+        margin-bottom: 10px;
+    }
+    
+    .raiden-link {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 20px;
+        margin: 30px 0;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    .search-box {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+    }
+    
+    .tag-container {
+        margin-top: 15px;
+    }
+    
+    .tag {
+        display: inline-block;
+        background-color: #6c757d;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        margin-right: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .tag:hover {
+        background-color: #495057;
+    }
+    
+    .tag-treatment { background-color: #007bff; }
+    .tag-cost { background-color: #28a745; }
+    .tag-risk { background-color: #dc3545; }
+    .tag-procedure { background-color: #ffc107; color: #212529; }
+</style>
+
+<div class="faq-container">
+    <!-- パンくずナビ -->
+    <nav class="breadcrumb-nav" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+            <li class="breadcrumb-item active" aria-current="page">自家歯牙移植Q&A</li>
+        </ol>
+    </nav>
+
+    <!-- ページヘッダー -->
+    <div class="text-center mb-5">
+        <h1>自家歯牙移植Q&A</h1>
+        <p class="lead">よくある質問と専門的な回答</p>
+        <p>自家歯牙移植に関する患者様と歯科医療従事者からの質問にお答えします</p>
+    </div>
+
+    <!-- 検索ボックス -->
+    <div class="search-box">
+        <h3>Q&A検索</h3>
+        <input type="text" class="search-input" placeholder="キーワードを入力してください（例：費用、痛み、成功率など）" id="qa-search">
+        <div class="tag-container">
+            <span class="tag tag-treatment">治療法</span>
+            <span class="tag tag-cost">費用</span>
+            <span class="tag tag-risk">リスク</span>
+            <span class="tag tag-procedure">手術</span>
+        </div>
+    </div>
+
+    <!-- AIチャットボットへのリンク -->
+    <div class="raiden-link">
+        <h4>💬 さらに詳しい相談をご希望の方へ</h4>
+        <p>自家歯牙移植専門AI「raiden」が24時間いつでもお答えします。下記のページで無料相談をご利用ください。</p>
+        <a href="/dental-consultation/" class="btn btn-primary">AI相談「raiden」で質問する</a>
+    </div>
+
+    <!-- 基本的なQ&A -->
+    <section class="qa-section">
+        <div class="qa-header">
+            <h2>基本的な質問</h2>
+        </div>
+        
+        <div class="qa-item">
+            <div class="qa-question">自家歯牙移植とは何ですか？</div>
+            <div class="qa-answer">
+                自家歯牙移植は、患者自身の口腔内から健康な歯を取り出し、別の部位に移植する治療法です。この方法は、特にインプラントや義歯、ブリッジに比べて審美性や機能性の回復が期待できる場合があります。移植に適したドナー歯がある場合、天然歯特有の利点を活かし、早期に審美性と機能性を回復することが可能です。
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">移植と再植の違いは何ですか？</div>
+            <div class="qa-answer">
+                <p><strong>再植</strong>: 外傷や事故で抜けた歯を元の場所に戻す処置、または意図的に抜歯した歯を同じ場所に戻す手法です。</p>
+                <p><strong>移植</strong>: 別の部位の歯を、失った歯の場所に移す処置です。例えば、親知らずを抜いて、それを別の場所に移植することがあります。</p>
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">どのような場合に自家歯牙移植が適用されますか？</div>
+            <div class="qa-answer">
+                自家歯牙移植が適用される条件として、移植する歯と受容部の骨の幅が適切に合っていることが重要です。移植歯の歯根形態が円錐形で単純であることが望ましく、抜歯と同時に移植を行うことで治癒が早まります。一般的に、若年者（40歳以下）が望ましく、特に歯根が未完成の歯の移植は有用とされています。
+            </div>
+        </div>
+    </section>
+
+    <!-- 治療について -->
+    <section class="qa-section">
+        <div class="qa-header">
+            <h2>治療について</h2>
+        </div>
+        
+        <div class="qa-item">
+            <div class="qa-question">移植に使える歯はどのような歯ですか？</div>
+            <div class="qa-answer">
+                移植に使える歯は、機能に参加していない歯で、根形態が適正であるものが適しています。理想的な歯根の形態は、凹凸が少ないやや先細りの単根歯です。歯頸部より根尖部が太い歯や、歯根が分岐している歯、根尖が湾曲している歯は適応しにくいとされています。
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">成功率はどの程度ですか？</div>
+            <div class="qa-answer">
+                移植の成功率は条件によって異なります：
+                <ul>
+                    <li><strong>抜歯窩への移植</strong>: 95%</li>
+                    <li><strong>非抜歯窩への移植</strong>: 60%</li>
+                    <li><strong>39歳以下の非抜歯窩移植</strong>: 75%</li>
+                    <li><strong>40歳以上の非抜歯窩移植</strong>: 49%</li>
+                </ul>
+                年齢や受容側の条件が成功率に大きく影響します。
+            </div>
+        </div>
+
+        <div class="qa-item">
+            <div class="qa-question">移植後の注意点は何ですか？</div>
+            <div class="qa-answer">
+                移植後は以下の点に注意が必要です：
+                <ul>
+                    <li>固定は強固すぎないようにし、適切な時期に根管治療を開始</li>
+                    <li>術後1週間はブラッシングを禁止し、抜糸後にソフトな歯ブラシを使用</li>
+                    <li>硬い食物を避け、定期的な経過観察を実施</li>
+                    <li>移植後3週間目から根管治療を開始</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 比較・選択について -->
+    <section class="qa-section">
+        <div class="qa-header">
+            <h2>他の治療法との比較</h2>
+        </div>
+        
+        <div class="qa-item">
+            <div class="qa-question">インプラントと比較した場合のメリット・デメリットは？</div>
+            <div class="qa-answer">
+                <table class="comparison-table">
+                    <tr>
+                        <th></th>
+                        <th>自家歯牙移植</th>
+                        <th>インプラント</th>
+                    </tr>
+                    <tr>
+                        <td><strong>材料</strong></td>
+                        <td>自分の歯を使用</td>
+                        <td>人工物（チタンなど）</td>
+                    </tr>
+                    <tr>
+                        <td><strong>感覚</strong></td>
+                        <td>自然な咬合感覚</td>
+                        <td>異物感を感じることがある</td>
+                    </tr>
+                    <tr>
+                        <td><strong>矯正治療</strong></td>
+                        <td>移動可能</td>
+                        <td>移動不可</td>
+                    </tr>
+                    <tr>
+                        <td><strong>費用</strong></td>
+                        <td>比較的安価</td>
+                        <td>高額</td>
+                    </tr>
+                    <tr>
+                        <td><strong>適用</strong></td>
+                        <td>ドナー歯が必要</td>
+                        <td>広範囲に適用可能</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 最新のQ&A（動的に更新される部分） -->
+    <section class="latest-qa-section">
+        <h2>最新の質問と回答</h2>
+        <p class="text-muted">AI「raiden」に実際に寄せられた最新の質問をご紹介します</p>
+        
+        <div class="latest-qa-item">
+            <div class="qa-date">2025年8月17日</div>
+            <div class="qa-question">上顎前歯の自家移植は可能ですか？</div>
+            <div class="qa-answer">
+                上顎前歯への自家移植は条件により可能です。ドナー歯の形態や受容部位の骨の状態、審美性の要求などを総合的に判断する必要があります。特に前歯部では審美性が重要なため、慎重な計画が必要です。
+            </div>
+        </div>
+
+        <div class="latest-qa-item">
+            <div class="qa-date">2025年8月16日</div>
+            <div class="qa-question">3Dレプリカを使用する理由は？</div>
+            <div class="qa-answer">
+                3Dレプリカを使用することで、移植前に移植床を正確に形成でき、移植歯の抜歯後短時間で適切に植立できます。これにより歯根膜へのダメージを最小限に抑え、成功率を大幅に向上させることができます。
+            </div>
+        </div>
+    </section>
+
+    <!-- フッター -->
+    <div class="raiden-link">
+        <h4>🤖 個別のご質問について</h4>
+        <p>上記にない質問や、より詳しい相談については、自家歯牙移植専門AI「raiden」をご利用ください。</p>
+        <a href="/dental-consultation/" class="btn btn-primary">AI相談で質問する</a>
+    </div>
+</div>
+
+<!-- 検索機能のJavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('qa-search');
+    const qaItems = document.querySelectorAll('.qa-item');
+    
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        qaItems.forEach(function(item) {
+            const question = item.querySelector('.qa-question').textContent.toLowerCase();
+            const answer = item.querySelector('.qa-answer').textContent.toLowerCase();
+            
+            if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = searchTerm === '' ? 'block' : 'none';
+            }
+        });
+    });
+    
+    // タグクリック機能
+    const tags = document.querySelectorAll('.tag');
+    tags.forEach(function(tag) {
+        tag.addEventListener('click', function() {
+            const tagText = this.textContent;
+            searchInput.value = tagText;
+            searchInput.dispatchEvent(new Event('input'));
+        });
+    });
+});
+</script>
+
+{% endblock %}

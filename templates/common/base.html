@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="all">
-    <meta name="keywords" content="歯科技工所,埼玉県,越谷市,新越谷,南越谷,IOSデータ,自家歯牙移植,3Dプリント,デジタルデンティストリー,バイオブロック,矯正装置,口腔内スキャナー">
+    <meta name="keywords" content="歯科技工所,埼玉県,越谷市,新越谷,南越谷,IOSデータ,自家歯牙移植,3Dプリント,デジタルデンティストリー,バイオブロック,矯正装置,口腔内スキャナー,AI,チャットボット,歯科相談">
     <meta name="author" content="渋谷歯科技工所">
 
     <!-- Open Graph Tags -->
@@ -30,10 +30,50 @@
     <link rel="canonical" href="{{ request.url }}">
     {% endblock %}
 
-      <!-- Title -->
+          <!-- Title -->
     <title>{% block title %}渋谷歯科技工所 | SHIBUYA Dental Laboratory{% endblock %}</title>
     {% block head %}{% endblock %} 
     {% block head_extras %}{% endblock %}
+
+    <!-- 組織情報の構造化データ -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "渋谷歯科技工所",
+        "alternateName": "SHIBUYA Dental Laboratory",
+        "description": "自家歯牙移植専門の歯科技工所",
+        "url": "https://shibuya8020.com/",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "南越谷4-9-6 新越谷プラザビル203",
+            "addressLocality": "越谷市",
+            "addressRegion": "埼玉県",
+            "postalCode": "343-0845",
+            "addressCountry": "JP"
+        },
+        "telephone": "+81-48-961-8151",
+        "email": "shibuya8020@gmail.com",
+        "openingHours": "Mo-Sa 09:00-21:00",
+        "specialties": ["自家歯牙移植", "3Dレプリカ", "AIチャットボット"],
+        "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "歯科技工サービス",
+            "itemListElement": [
+                {
+                    "@type": "Offer",
+                    "name": "自家歯牙移植用3Dレプリカ",
+                    "description": "CT画像から精密な移植歯レプリカを作成"
+                },
+                {
+                    "@type": "Offer",
+                    "name": "AIチャットボット相談",
+                    "description": "自家歯牙移植専門AI「raiden」による24時間相談サービス"
+                }
+            ]
+        }
+    }
+    </script>
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7MRMSYX9Q5"></script>
@@ -96,6 +136,9 @@
               </li>
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.root_replica_info' %}active{% endif %}" href="{{ url_for('pages.root_replica_info') }}">自家歯牙移植とは</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'pages.root_replica_info' %}active{% endif %}" href="{{ url_for('pages.root_replica_qa') }}">自家歯牙移植Q&A</a>
               </li>
 
               <li class="nav-item">
