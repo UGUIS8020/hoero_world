@@ -128,7 +128,7 @@
             <br>
             <ul class="navbar-nav ms-auto"> 
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'pages.root_replica' %}active{% endif %}" href="{{ url_for('main.raiden') }}">歯科相談</a>
+                <a class="nav-link {% if request.endpoint == 'main.raiden' %}active{% endif %}" href="{{ url_for('main.raiden') }}">歯科相談</a>
               </li>            
 
               <li class="nav-item">
@@ -137,8 +137,9 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.root_replica_info' %}active{% endif %}" href="{{ url_for('pages.root_replica_info') }}">自家歯牙移植とは</a>
               </li>
+
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'pages.root_replica_info' %}active{% endif %}" href="{{ url_for('pages.root_replica_qa') }}">自家歯牙移植Q&A</a>
+                <a class="nav-link {% if request.endpoint == 'pages.root_replica_qa' %}active{% endif %}" href="{{ url_for('pages.root_replica_qa') }}">自家歯牙移植Q&A</a>
               </li>
 
               <li class="nav-item">
