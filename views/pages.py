@@ -17,6 +17,11 @@ def root_replica_info():
     
     return render_template('pages/root_replica_info.html')
 
+@bp.route('/root_replica_qa')
+def root_replica_qa():
+    
+    return render_template('pages/root_replica_qa.html')
+
 @bp.route('/zirconia')
 def zirconia():
     

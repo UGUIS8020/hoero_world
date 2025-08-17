@@ -5,6 +5,61 @@
 <meta property="og:description" content="自家歯牙移植とは何ですか？他の歯科治療法（インプラント、義歯など）と比較したメリット・デメリットは何ですか？。治療法、適応症、予後、技術的な手順について詳しく解説し、歯科医療従事者の診療をサポートします。"> 
 {% endblock %}
 
+{% block head_extras %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "raiden - 自家歯牙移植専門AI",
+    "description": "自家歯牙移植と再植に関する専門的な質問にお答えするAIチャットボット",
+    "applicationCategory": "MedicalApplication",
+    "operatingSystem": "Web Browser",
+    "url": "https://shibuya8020.com/dental-consultation/",
+    "provider": {
+        "@type": "Organization",
+        "name": "渋谷歯科技工所",
+        "url": "https://shibuya8020.com/"
+    },
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "JPY"
+    }
+}
+</script>
+
+<!-- パンくず構造化データを追加 -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "ホーム",
+            "item": "https://shibuya8020.com/"
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "歯科相談",
+            "item": "https://shibuya8020.com/dental-consultation/"
+        }
+    ]
+}
+</script>
+{% endblock %}
+
+{% block og_title %}
+<meta property="og:title" content="自家歯牙移植AI相談 | 渋谷歯科技工所">
+{% endblock %}
+
+{% block og_url %}
+<meta property="og:url" content="https://shibuya8020.com/dental-consultation/">
+{% endblock %}
+
+
 {% block content %}
     
 
@@ -47,70 +102,18 @@
         font-size: 24px; /* 英語テキストのフォントサイズを変更 */
         }
 
-    </style>    
-
-     <section class="dental-header">
-        <div class="logo">         
-          
-          <img src="{{ url_for('static', filename='main/top/logo02.jpg') }}" alt="ロゴ" class="img-fluid">
-        </div>
-        <div class="text-content">
-          <div class="japanese-text">渋谷歯科技工所</div>
-          <div class="english-text">SHIBUYA Dental Laboratory</div>
-        </div>
-    </section>  
+    </style>   
+    <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+        <li class="breadcrumb-item active" aria-current="page">歯科相談</li>
+    </ol>
+    </nav> 
 
     
     
         
-<style>
-    a:link { color: #8b0000; text-decoration:none }
-    a:visited { color: #b22222; text-decoration:none }
-    a:hover { color: #b22222; text-decoration:none }
-    a:active { color: #b22222; text-decoration:none }
-    .drop-zone {
-        border: 2px dashed #ccc;
-        padding: 20px;
-        text-align: center;
-        margin: 20px auto;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        max-width: 800px;
-    }
-    .drop-zone.active {
-        border-color: #007bff;
-        background-color: #e8f4ff;
-    }
-    .file-list {
-        margin-top: 10px;
-        max-width: 800px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    .file-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px;
-        background-color: #f8f9fa;
-        margin-bottom: 5px;
-        border-radius: 4px;
-    }
-    .folder-item {
-        background-color: #e8f4ff;
-        font-weight: bold;
-    }
-    .file-path {
-        color: #666;
-        font-size: 0.8em;
-        display: block;
-        word-break: break-all;
-    }
-    .file-remove {
-        color: red;
-        cursor: pointer;
-        padding: 0 10px;
-    }
+<style>    
     #status {
         margin-top: 20px;
         padding: 10px;
@@ -236,11 +239,23 @@
     border-left: 3px solid #ddd;
   }
 </style>
+
     <h1 class="mt-3 mb-2">自家歯牙移植とは? 歯牙再植とは?</h1>
-    <h2 class="mt-3 mb-2">なんでも答えます。ご質問ください</h2>
-    <!-- 埋め込み用のセクション -->
-    <div class="iframe-container">
-        <iframe src="https://raiden.shibuya8020.com/" allowfullscreen></iframe>
-    </div>
+<h2 class="mt-3 mb-2">なんでも答えます。ご質問ください</h2>
+
+<!-- 説明文を追加 -->
+<div class="ai-description mb-4 p-3" style="background-color: #f8f9fa; border-left: 4px solid #007bff;">
+    <p><strong>「raiden」は自家歯牙移植専門のAIチャットボットです。</strong></p>
+    <ul class="mb-0">
+        <li>治療法・適応症・予後について専門的な回答</li>
+        <li>患者様から歯科医療従事者まで幅広く対応</li>
+        <li>24時間いつでも無料でご相談いただけます</li>
+    </ul>
+</div>
+
+<!-- 埋め込み用のセクション -->
+<div class="iframe-container">
+    <iframe src="https://raiden.shibuya8020.com/" allowfullscreen></iframe>
+</div>
   
 {% endblock %}
