@@ -31,7 +31,7 @@
             "@type": "ListItem",
             "position": 2,
             "name": "自家歯牙移植Q&A",
-            "item": "https://shibuya8020.com/faq/"
+            "item": "https://shibuya8020.com/pages/root_replica_qa"
         }
     ]
 }
@@ -81,12 +81,7 @@
         padding: 0 15px;
     }
     
-    .breadcrumb-nav {
-        background-color: #f8f9fa;
-        padding: 10px 15px;
-        border-radius: 5px;
-        margin-bottom: 30px;
-    }
+
     
     .qa-section {
         margin-bottom: 40px;
@@ -215,12 +210,66 @@
         margin-bottom: 30px;
     }
     
-    .search-input {
+    .qa-input-container {
+        position: relative;
+    }
+    
+    .qa-input {
         width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
+        padding: 15px;
+        border: 2px solid #007bff;
+        border-radius: 8px;
         font-size: 16px;
+        resize: vertical;
+        min-height: 80px;
+    }
+    
+    .qa-input:focus {
+        outline: none;
+        border-color: #0056b3;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .raiden-response {
+        background-color: white;
+        border: 2px solid #28a745;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 15px;
+        animation: fadeIn 0.5s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .response-header {
+        font-weight: bold;
+        color: #28a745;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 10px;
+    }
+    
+    .response-content {
+        line-height: 1.7;
+        color: #495057;
+    }
+    
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
     
     .tag-container {
@@ -250,14 +299,16 @@
     .tag-procedure { background-color: #ffc107; color: #212529; }
 </style>
 
-<div class="faq-container">
-    <!-- パンくずナビ -->
     <nav class="breadcrumb-nav" aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">ホーム</a></li>
             <li class="breadcrumb-item active" aria-current="page">自家歯牙移植Q&A</li>
         </ol>
     </nav>
+
+<div class="faq-container">
+    <!-- パンくずナビ -->
+    
 
     <!-- ページヘッダー -->
     <div class="text-center mb-5">
@@ -266,24 +317,29 @@
         <p>自家歯牙移植に関する患者様と歯科医療従事者からの質問にお答えします</p>
     </div>
 
-    <!-- 検索ボックス -->
+    <!-- AI質問ボックス -->
     <div class="search-box">
-        <h3>Q&A検索</h3>
-        <input type="text" class="search-input" placeholder="キーワードを入力してください（例：費用、痛み、成功率など）" id="qa-search">
-        <div class="tag-container">
-            <span class="tag tag-treatment">治療法</span>
-            <span class="tag tag-cost">費用</span>
-            <span class="tag tag-risk">リスク</span>
-            <span class="tag tag-procedure">手術</span>
+        <h3>raidenに直接質問する</h3>
+        <p class="mb-3">下記に質問を入力すると、自家歯牙移植専門AI「raiden」が即座にお答えします</p>
+        <div class="qa-input-container">
+            <textarea class="qa-input" placeholder="質問を入力してください（例：「40歳でも自家歯牙移植は可能ですか？」「費用はどのくらいかかりますか？」）" id="raiden-question" rows="3"></textarea>
+            <button class="btn btn-primary mt-2" id="ask-raiden">raidenに質問する</button>
         </div>
-    </div>
-
-    <!-- AIチャットボットへのリンク -->
-    <div class="raiden-link">
-        <h4>💬 さらに詳しい相談をご希望の方へ</h4>
-        <p>自家歯牙移植専門AI「raiden」が24時間いつでもお答えします。下記のページで無料相談をご利用ください。</p>
-        <a href="/dental-consultation/" class="btn btn-primary">AI相談「raiden」で質問する</a>
-    </div>
+        <div id="raiden-response" class="raiden-response" style="display: none;">
+            <div class="response-header">
+                <strong>raidenの回答:</strong>
+                <button class="btn btn-sm btn-outline-secondary float-end" id="save-qa">この回答をQ&Aに追加</button>
+            </div>
+            <div class="response-content" id="response-text"></div>
+        </div>
+        <div class="tag-container">
+            <p class="small text-muted">よくある質問例：</p>
+            <span class="tag tag-treatment" data-question="自家歯牙移植とインプラントはどちらが良いですか？">治療法比較</span>
+            <span class="tag tag-cost" data-question="自家歯牙移植の費用はどのくらいかかりますか？">費用について</span>
+            <span class="tag tag-risk" data-question="自家歯牙移植にはどのようなリスクがありますか？">リスク</span>
+            <span class="tag tag-procedure" data-question="手術はどのような流れで行われますか？">手術の流れ</span>
+        </div>
+    </div>   
 
     <!-- 基本的なQ&A -->
     <section class="qa-section">
@@ -404,6 +460,20 @@
     <section class="latest-qa-section">
         <h2>最新の質問と回答</h2>
         <p class="text-muted">AI「raiden」に実際に寄せられた最新の質問をご紹介します</p>
+
+        <div class="latest-qa-item">
+            <div class="qa-date">2025年8月18日</div>
+            <div class="qa-question">破骨細胞による骨吸収はどのような仕組みで行われますか？波状縁の役割も含めて説明してください。</div>
+            <div class="qa-answer">
+                破骨細胞による骨吸収の仕組みは、以下のように進行します。<br>
+            1. 破骨細胞の形成: 破骨細胞は、骨髄幹細胞から分化した単球系細胞（破骨細胞前駆体）が化学走化性によって血管外に遊出し、融合・分化して多核の破骨細胞となります。<br>
+            2. 骨吸収の実行: 成熟した破骨細胞は、骨表面に付着し、特殊な構造を形成します。この構造の一部が「波状縁（ruffled border）」と呼ばれます。<br>
+            3. 波状縁の役割: 波状縁は、破骨細胞が骨に接する部分で、複雑に折りたたまれた膜構造を持っています。この部分から酸とリソソーム酵素が分泌されます。酸は骨の無機成分（主にカルシウム）を溶解し、リソソーム酵素は有機成分（主にコラーゲン）を分解します。<br>
+            4. 吸収窩の形成: これらの作用により、骨組織に「吸収窩」と呼ばれるくぼみが形成され、骨の吸収が進行します。<br>
+            このように、波状縁は破骨細胞が骨を吸収する際に重要な役割を果たし、骨の脱灰と有機質の分解を効率的に行うための構造です。<br>
+                
+            </div>
+        </div>
         
         <div class="latest-qa-item">
             <div class="qa-date">2025年8月17日</div>
@@ -419,7 +489,7 @@
             <div class="qa-answer">
                 3Dレプリカを使用することで、移植前に移植床を正確に形成でき、移植歯の抜歯後短時間で適切に植立できます。これにより歯根膜へのダメージを最小限に抑え、成功率を大幅に向上させることができます。
             </div>
-        </div>
+        </div>        
     </section>
 
     <!-- フッター -->
@@ -430,35 +500,99 @@
     </div>
 </div>
 
-<!-- 検索機能のJavaScript -->
+<!-- raiden連携機能のJavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('qa-search');
-    const qaItems = document.querySelectorAll('.qa-item');
+    const questionInput = document.getElementById('raiden-question');
+    const askButton = document.getElementById('ask-raiden');
+    const responseDiv = document.getElementById('raiden-response');
+    const responseText = document.getElementById('response-text');
+    const saveButton = document.getElementById('save-qa');
     
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
+    // raiden iframe (隠しiframe)
+    let raidenIframe = null;
+    
+    // raiden質問機能
+    askButton.addEventListener('click', async function() {
+        const question = questionInput.value.trim();
+        if (!question) {
+            alert('質問を入力してください。');
+            return;
+        }
         
-        qaItems.forEach(function(item) {
-            const question = item.querySelector('.qa-question').textContent.toLowerCase();
-            const answer = item.querySelector('.qa-answer').textContent.toLowerCase();
+        // ローディング表示
+        askButton.innerHTML = '<span class="loading-spinner"></span> 回答中...';
+        askButton.disabled = true;
+        responseDiv.style.display = 'none';
+        
+        try {
+            // 実際の実装では、raidenのAPIを呼び出す
+            // ここではデモ用の模擬回答
+            setTimeout(() => {
+                const mockResponse = generateMockResponse(question);
+                displayResponse(mockResponse);
+                
+                askButton.innerHTML = 'raidenに質問する';
+                askButton.disabled = false;
+            }, 2000);
             
-            if (question.includes(searchTerm) || answer.includes(searchTerm)) {
-                item.style.display = 'block';
-            } else {
-                item.style.display = searchTerm === '' ? 'block' : 'none';
+        } catch (error) {
+            console.error('Error:', error);
+            askButton.innerHTML = 'raidenに質問する';
+            askButton.disabled = false;
+            alert('回答の取得に失敗しました。もう一度お試しください。');
+        }
+    });
+    
+    // 回答を表示
+    function displayResponse(response) {
+        responseText.innerHTML = response;
+        responseDiv.style.display = 'block';
+        responseDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // デモ用の模擬回答生成
+    function generateMockResponse(question) {
+        const responses = {
+            '費用': '自家歯牙移植の費用は保険適用の場合、3割負担で約1-3万円程度です。ただし、3Dレプリカの作成費用や術前検査費用が別途必要な場合があります。',
+            '痛み': '自家歯牙移植後の痛みは個人差がありますが、通常の抜歯程度の痛みが数日続きます。適切な痛み止めの服用で管理可能です。',
+            '成功率': '自家歯牙移植の成功率は、抜歯窩への移植で約95%、非抜歯窩への移植で約60%です。年齢や歯根の形態により変動します。',
+            '年齢': '40歳以下での成功率が高いとされていますが、70歳での成功例もあります。重要なのは全身状態と口腔内の条件です。'
+        };
+        
+        for (let key in responses) {
+            if (question.includes(key)) {
+                return responses[key];
             }
+        }
+        
+        return '申し訳ございませんが、より詳しい回答については、下記のAI相談ページでraidenと直接対話していただくか、お電話にてお問い合わせください。<br><br><a href="/dental-consultation/" class="btn btn-sm btn-primary">AI相談ページへ</a>';
+    }
+    
+    // Q&Aに保存機能
+    saveButton.addEventListener('click', function() {
+        const question = questionInput.value.trim();
+        const answer = responseText.textContent;
+        
+        // ここで実際にはサーバーにデータを送信
+        alert('この質問と回答をQ&Aに追加しました。管理者による確認後、公開されます。');
+    });
+    
+    // サンプル質問タグのクリック機能
+    const tags = document.querySelectorAll('.tag[data-question]');
+    tags.forEach(function(tag) {
+        tag.addEventListener('click', function() {
+            const sampleQuestion = this.getAttribute('data-question');
+            questionInput.value = sampleQuestion;
+            questionInput.focus();
         });
     });
     
-    // タグクリック機能
-    const tags = document.querySelectorAll('.tag');
-    tags.forEach(function(tag) {
-        tag.addEventListener('click', function() {
-            const tagText = this.textContent;
-            searchInput.value = tagText;
-            searchInput.dispatchEvent(new Event('input'));
-        });
+    // Enterキーで質問実行
+    questionInput.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            askButton.click();
+        }
     });
 });
 </script>
