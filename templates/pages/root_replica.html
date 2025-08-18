@@ -7,6 +7,47 @@
 <meta property="og:description" content="歯牙移植用の3Dレプリカモデル製作サービス。CTデータから正確な歯根形状を再現し、自家歯牙移植の成功率を向上させます。短時間での移植と歯根膜の保護を実現。 / 3D dental replica service for tooth autotransplantation. Creates accurate root models from CT data to improve transplant success rates by reducing surgery time and protecting periodontal ligaments.">
 {% endblock %}
 
+{% block head_extras %}
+<!-- パンくず構造化データ -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "ホーム",
+            "item": "https://shibuya8020.com/"
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "自家歯牙移植用レプリカ",
+            "item": "https://shibuya8020.com/pages/root_replica"
+        }
+    ]
+}
+</script>
+
+<!-- サービス情報構造化データ（オプション） -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "name": "自家歯牙移植用レプリカ",
+    "description": "CTデータから正確な歯根形状を再現し、自家歯牙移植の成功率を向上させる3Dレプリカモデル製作サービス",
+    "provider": {
+        "@type": "MedicalOrganization",
+        "name": "渋谷歯科技工所",
+        "url": "https://shibuya8020.com/"
+    },
+    "serviceType": "歯科医療サービス",
+    "areaServed": "日本"
+}
+</script>
+{% endblock %}
+
 {% block content %}
 
 <style> 
@@ -38,6 +79,13 @@
 
 
 </style>
+<!-- パンくずナビ -->
+    <nav class="breadcrumb-nav" aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+            <li class="breadcrumb-item active" aria-current="page">自家歯牙移植用レプリカ</li>
+        </ol>
+    </nav>
 
 <div class="text-center">
   <h1>レプリカを用いた自家歯牙移植</h1>  
