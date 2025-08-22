@@ -688,7 +688,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // raidenの稼働状況をチェックする関数
     async function checkRaidenStatus() {
         try {
-            const response = await fetch('http://127.0.0.1:7860/api/health');
+            const response = await fetch('https://raiden.shibuya8020.com/api/question');
             const data = await response.json();
             
             if (data.status === 'healthy') {
