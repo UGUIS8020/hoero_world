@@ -100,6 +100,25 @@
         align-items: center;
         justify-content: center;
     }
+    .qa-input-container {
+        position: relative;
+    }
+    
+    .qa-input {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        font-size: 16px;
+        resize: vertical;
+        min-height: 80px;
+    }
+    
+    .qa-input:focus {
+        outline: none;
+        border-color: #0056b3;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
 </style>
 
 <nav class="breadcrumb-nav" aria-label="breadcrumb">
@@ -370,13 +389,226 @@
               
     </section>
 
-    <!-- フッター -->
-    <div class="raiden-link">
-        <h4>🤖 個別のご質問について</h4>
-        <p>上記にない質問や、より詳しい相談については、自家歯牙移植専門AI「raiden」をご利用ください。</p>
-        <a href="/dental-consultation/" class="btn btn-primary">AI相談で質問する</a>
-    </div>
-</div>
+    <!-- AI質問ボックス -->
+    <div class="search-box mt-4">
+        <h3>上記にご希望の質問が見つからなかった場合、ご質問ください</h3>
+        <p class="mb-3">自家歯牙移植専門AI「raiden」がお答えします(患者様向けの応答)</p>
+        <div class="qa-input-container">
+            <textarea class="qa-input" placeholder="質問を入力してください（例：「40歳でも自家歯牙移植は可能ですか？」「費用はどのくらいかかりますか？」）" id="raiden-question" rows="3"></textarea>
+            <button class="btn btn-primary mt-2" id="ask-raiden">raidenに質問する</button>
+        </div>
+        <div id="raiden-response" class="raiden-response" style="display: none;">
+            <div class="response-header">
+                <strong>raidenの回答:</strong>
+                <button class="btn btn-sm btn-outline-secondary float-end" id="save-qa">この回答をQ&Aに追加</button>
+            </div>
+            <div class="response-content" id="response-text"></div>
+        </div>
+
+<!-- raiden連携機能のJavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionInput = document.getElementById('raiden-question');
+    const askButton = document.getElementById('ask-raiden');
+    const responseDiv = document.getElementById('raiden-response');
+    const responseText = document.getElementById('response-text');
+    const saveQAButton = document.getElementById('save-qa');
+
+    // 患者様向けプロンプト設定
+    const PATIENT_PROMPT = `
+あなたは自家歯牙移植専門の歯科医師として、患者様に分かりやすく説明する役割です。
+以下のガイドラインに従って回答してください：
+
+1. 患者様にとって理解しやすい言葉を使用する
+2. 専門用語は必ず分かりやすく説明を加える
+3. 不安や心配を和らげる、優しく親しみやすい口調で回答する
+4. 具体的で実用的な情報を提供する
+5. 必要に応じて、「歯科医師にご相談ください」という文言を含める
+6. 医療行為に関する断定的な表現は避け、「一般的には」「多くの場合」などの表現を使う
+7. 費用や期間については目安を示し、個人差があることを説明する
+
+患者様からの質問: `;
+
+    // raidenに質問を送信する関数
+    async function askRaiden(question) {
+        try {
+            // ローディング表示
+            askButton.disabled = true;
+            askButton.textContent = '回答生成中...';
+            
+            // 患者様向けプロンプトを質問に追加
+            const promptedQuestion = PATIENT_PROMPT + question;
+            
+            const response = await fetch('https://raiden.shibuya8020.com/api/question', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    question: promptedQuestion,
+                    // 追加のパラメータで患者向けであることを明示
+                    context: {
+                        audience: 'patient',
+                        tone: 'friendly',
+                        language_level: 'beginner'
+                    }
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // 回答を表示
+                responseText.innerHTML = formatResponse(data.answer);
+                responseDiv.style.display = 'block';
+                
+                // 回答をスムーズにスクロール
+                responseDiv.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+                
+                return data.answer;
+            } else {
+                throw new Error(data.error || '不明なエラーが発生しました');
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            
+            // エラーメッセージを表示
+            responseText.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>エラー:</strong> ${error.message}
+                    <br><small>raidenサーバーが起動しているか確認してください。</small>
+                </div>
+            `;
+            responseDiv.style.display = 'block';
+            
+        } finally {
+            // ボタンの状態を復元
+            askButton.disabled = false;
+            askButton.textContent = 'raidenに質問する';
+        }
+    }
+
+    // 回答をHTML形式でフォーマットする関数（患者様向けに調整）
+    function formatResponse(response) {
+        // Markdownライクなフォーマットを患者様向けHTMLに変換
+        let formatted = response
+            // **太字** を <strong> に変換
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // 改行を <br> に変換
+            .replace(/\n/g, '<br>')
+            // リスト項目（- で始まる行）を患者様向けに整理
+            .replace(/^- (.+)/gm, '<div class="patient-list-item">• $1</div>')
+            // 数字付きリスト
+            .replace(/^\d+\. (.+)/gm, '<div class="patient-numbered-item">$&</div>')            
+        
+        return `
+            <div class="response-content patient-friendly">
+                ${formatted}
+                <hr>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    この回答は一般的な情報提供を目的としています。
+                    具体的な治療については、必ず歯科医師にご相談ください。
+                </small>
+            </div>
+        `;
+    }
+
+    // 質問ボタンのクリックイベント
+    askButton.addEventListener('click', async function() {
+        const question = questionInput.value.trim();
+        
+        if (!question) {
+            alert('質問を入力してください。');
+            return;
+        }
+
+        await askRaiden(question);
+    });
+
+    // Enterキーでの送信（Shift+Enterは改行）
+    questionInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            askButton.click();
+        }
+    });
+
+    // Q&Aに追加するボタンのイベント
+    saveQAButton.addEventListener('click', function() {
+        const question = questionInput.value.trim();
+        const answer = responseText.textContent || responseText.innerText;
+        
+        if (question && answer) {
+            // 患者様向け回答として保存
+            saveToQASystem(question, answer);
+        }
+    });
+
+    // Q&Aシステムへの保存（患者様向けフラグ付き）
+    function saveToQASystem(question, answer) {
+        fetch('/admin/api/save-qa', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                question: question,
+                answer: answer,
+                source: 'raiden',
+                audience: 'patient', // 患者様向けフラグ
+                timestamp: new Date().toISOString()
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('患者様向けQ&Aに追加されました！');
+            } else {
+                alert('保存に失敗しました。');
+            }
+        })
+        .catch(error => {
+            console.error('Save error:', error);
+            alert('保存中にエラーが発生しました。');
+        });
+    }
+
+    // raidenの稼働状況をチェックする関数
+    async function checkRaidenStatus() {
+        try {
+            const response = await fetch('https://raiden.shibuya8020.com/api/health');
+            const data = await response.json();
+            
+            if (data.status === 'healthy') {
+                console.log('Raiden is running properly');
+                return true;
+            }
+        } catch (error) {
+            console.warn('Raiden health check failed:', error);
+            return false;
+        }
+    }
+
+    // 初期化時にraidenの状態をチェック
+    checkRaidenStatus().then(isHealthy => {
+        if (!isHealthy) {
+            // raidenが起動していない場合の警告表示
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'alert alert-warning';
+            warningDiv.innerHTML = `
+                <strong>注意:</strong> raidenサーバーに接続できません。
+                <br><small>サーバーが起動していることを確認してください。</small>
+            `;
+            document.querySelector('.search-box').insertBefore(warningDiv, document.querySelector('.qa-input-container'));
+        }
+    });
+});
+</script>
 
 
 {% endblock %}
