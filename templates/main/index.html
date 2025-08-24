@@ -55,6 +55,7 @@
             loading="eager"
             decoding="async"
             fetchpriority="high">
+            
         </div>
         <div class="text-content">
           <div class="japanese-text">渋谷歯科技工所</div>
@@ -317,31 +318,217 @@
         </div>
 
     <h2>ジルコニア</h2>
-    <div id="fileList" class="file-list"></div>
+        <div id="fileList" class="file-list"></div>
+
         <div class="box box1">        
+        <h2>
             <a href="{{ url_for('pages.zirconia') }}" target="_self">
-                <h2>PFZ Zirconia</h2>                    
-    
-               <div>      
-                <img src="{{ url_for('static', filename='main/top/001.webp') }}"
+            PFZ Zirconia
+            </a>
+        </h2>
+
+        <div class="img-wrap">      
+            <a href="{{ url_for('pages.zirconia') }}" target="_self">
+            <img src="{{ url_for('static', filename='main/top/002.webp') }}"
                 alt="ジルコニア001"
-                width="600" 
-                height="306"
+                width="300" 
+                height="300"
                 loading="eager"
                 decoding="async"
-                fetchpriority="high">         
-              </div>
-              </a>
+                fetchpriority="high">
+            </a>
+
+            <a href="{{ url_for('pages.zirconia') }}" target="_self">
+            <img src="{{ url_for('static', filename='main/top/003.webp') }}"
+                alt="ジルコニア002"
+                width="300" 
+                height="300"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high">
+            </a>
+        </div>
         </div>
 
-    <h2 class="mt-3 mb-2">ChatBot:自家歯牙移植、歯牙再植について自動応答します</h2>  
-    <div class="iframe-container">
-        <iframe src="https://raiden.shibuya8020.com/" 
-                allowfullscreen 
-                loading="lazy"
-                title="自家歯牙移植・歯牙再植チャットボット">
-        </iframe>
+    <div class="mainbox00">  
+
+   <style>  
+   h1 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    .lead {
+      margin: 0 0 24px;
+      color: #555;
+    }
+
+    /* レスポンシブ2カラム（幅が狭い時は1カラム） */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--gap);
+    }
+    @media (min-width: 880px) {
+      .grid {
+        grid-template-columns: 1.2fr 1fr;
+      }
+    }
+
+    section {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    section h2 {
+      margin: 0 0 12px;
+      font-size: 1.2rem;
+    }
+
+    /* 動画：アスペクト比を保ってレスポンシブ */
+    .video {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9; /* 対応しないブラウザ向けフォールバック */
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 8px 0 20px;
+    }
+    .video iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    /* リンクリスト */
+    .link-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 8px;
+    }
+    .link-list li {
+      margin: 8px 0;
+    }
+    .link-list a {
+      text-decoration: none;
+      color: #0a58ca;
+    }
+    .link-list a:hover {
+      text-decoration: underline;
+    }
+
+    /* 画像カード */
+    .card {
+      display: block;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      background: #fff;
+      transition: box-shadow .15s ease-in-out, transform .06s ease-in-out;
+    }
+    .card:hover {
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      transform: translateY(-1px);
+    }
+    .card img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .card .card-body {
+      padding: 10px 12px;
+      font-size: .95rem;
+    }
+
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--gap);
+    }
+    @media (min-width: 640px) {
+      .thumb-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>index</h1>
+      <p class="lead">歯科技工士の仕事や実験・製作手順の資料です。</p>
+    </header>
+
+    <div class="grid">
+      <!-- 左カラム：テキスト＋動画＋手順リンク -->
+      <section aria-labelledby="work-title">
+        <h2 id="work-title">歯科技工士の仕事</h2>
+        <p>仕事を知っていただくための動画です（音量にご注意ください）。</p>
+
+        <div class="video" aria-label="歯科技工士の仕事 動画">
+          <iframe
+            src="https://www.youtube.com/embed/8Ca6YuMNXyQ"
+            title="歯科技工士の仕事"
+            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </div>
+
+        <h2>石膏の注ぎ方</h2>
+        <div class="video" aria-label="石膏の注ぎ方 動画">
+          <iframe
+            src="https://www.youtube.com/embed/4r6pxVJDpZs"
+            title="石膏の注ぎ方"
+            allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </div>
+
+        <h2>技工物の製作手順</h2>
+        <ul class="link-list">
+          <!-- Flask で静的ファイル配下なら url_for('static', filename='shibuya/mokei001.html') ではなく
+               これらはテンプレ or 別ルートにした方が良いです。現状の相対HTMLを尊重してリンクします。 -->
+          <li><a href="{{ url_for('pages.mokei001') if false else 'shibuya/mokei001.html' }}" target="_self">模型作り</a></li>
+          <li><a href="{{ url_for('pages.mokei002') if false else 'shibuya/mokei002.html' }}" target="_self">ワックスアップ、埋没</a></li>
+          <li><a href="{{ url_for('pages.mokei_cast') if false else 'shibuya/mokei.cast.html' }}" target="_self">鋳造</a></li>
+          <li><a href="{{ url_for('pages.mokei_kenma') if false else 'shibuya/mokei.kennma.html' }}" target="_self">調整・研磨</a></li>
+          <li><a href="{{ url_for('pages.tekigo') if false else 'shibuya/tekigo.html' }}" target="_self">臨床模型上での適合</a></li>
+        </ul>
+      </section>
+
+      <!-- 右カラム：サムネイルリンク -->
+      <section aria-labelledby="exp-title">
+        <h2 id="exp-title">実験・資料</h2>
+        <div class="thumb-grid">
+          <a class="card" href="{{ url_for('pages.cadcamcore') if false else 'shibuya/cadcamcore.html' }}" target="_self" aria-label="CADCAMメタルコア">
+            <img src="{{ url_for('static', filename='shibuya/index/cadcamcore.jpg') if true else 'shibuya/index/cadcamcore.jpg' }}" alt="CADCAMメタルコア">
+            <div class="card-body">CADCAMメタルコア</div>
+          </a>
+
+          <a class="card" href="{{ url_for('pages.cadcam') if false else 'shibuya/cadcam.html' }}" target="_self" aria-label="CADCAM冠破壊実験">
+            <img src="{{ url_for('static', filename='shibuya/index/cadcam.jpg') if true else 'shibuya/index/cadcam.jpg' }}" alt="CADCAM冠破壊実験">
+            <div class="card-body">CADCAM冠破壊実験</div>
+          </a>
+
+          <a class="card" href="{{ url_for('pages.primer') if false else 'shibuya/primer.html' }}" target="_self" aria-label="プライマー実験">
+            <img src="{{ url_for('static', filename='shibuya/index/primer.jpg') if true else 'shibuya/index/primer.jpg' }}" alt="プライマー実験">
+            <div class="card-body">プライマー実験</div>
+          </a>
+
+          <a class="card" href="{{ url_for('pages.shitubako') if false else 'shibuya/shitubako.html' }}" target="_self" aria-label="湿箱実験">
+            <img src="{{ url_for('static', filename='shibuya/index/shitubako.jpg') if true else 'shibuya/index/shitubako.jpg' }}" alt="湿箱実験">
+            <div class="card-body">湿箱実験</div>
+          </a>
+        </div>
+      </section>
     </div>
+  </div>
    
 
     <!--ページ明細-->
