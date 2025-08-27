@@ -447,15 +447,28 @@
     }
 
     .thumb-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--gap);
+    display: flex;           /* グリッドではなく、内容幅で並べる */
+    flex-wrap: wrap;
+    gap: var(--gap);
+    align-items: flex-start;
+  }
+  .thumb-grid .card{
+    width: auto;             /* 画像の実寸に合わせる */
+    display: inline-block;
+  }
+  .thumb-grid .card img{
+    width: auto;             /* 100%で拡大しない */
+    height: auto;
+    max-width: none !important; /* 全体の img{max-width:100%} を打ち消す保険 */
+  }
+
+  /* 小画面だけははみ出さないように収めたい場合（任意） */
+  @media (max-width: 576px){
+    .thumb-grid .card img{
+      max-width: 100% !important;
+      height: auto;
     }
-    @media (min-width: 640px) {
-      .thumb-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
+  }
   </style>
 </head>
 <body>
@@ -507,22 +520,22 @@
         <h2 id="exp-title">実験・資料</h2>
         <div class="thumb-grid">
           <a class="card" href="{{ url_for('pages.cadcamcore') if false else 'shibuya/cadcamcore.html' }}" target="_self" aria-label="CADCAMメタルコア">
-            <img src="{{ url_for('static', filename='shibuya/index/cadcamcore.jpg') if true else 'shibuya/index/cadcamcore.jpg' }}" alt="CADCAMメタルコア">
+            <img src="{{ url_for('static', filename='pages/index/cadcamcore.jpg') if true else 'pages//index/cadcamcore.jpg' }}" alt="CADCAMメタルコア">
             <div class="card-body">CADCAMメタルコア</div>
           </a>
 
           <a class="card" href="{{ url_for('pages.cadcam') if false else 'shibuya/cadcam.html' }}" target="_self" aria-label="CADCAM冠破壊実験">
-            <img src="{{ url_for('static', filename='shibuya/index/cadcam.jpg') if true else 'shibuya/index/cadcam.jpg' }}" alt="CADCAM冠破壊実験">
+            <img src="{{ url_for('static', filename='pages/index/cadcam.jpg') if true else 'pages/index/cadcam.jpg' }}" alt="CADCAM冠破壊実験">
             <div class="card-body">CADCAM冠破壊実験</div>
           </a>
 
           <a class="card" href="{{ url_for('pages.primer') if false else 'shibuya/primer.html' }}" target="_self" aria-label="プライマー実験">
-            <img src="{{ url_for('static', filename='shibuya/index/primer.jpg') if true else 'shibuya/index/primer.jpg' }}" alt="プライマー実験">
+            <img src="{{ url_for('static', filename='pages/index/primer.jpg') if true else 'pages/index/primer.jpg' }}" alt="プライマー実験">
             <div class="card-body">プライマー実験</div>
           </a>
 
           <a class="card" href="{{ url_for('pages.shitubako') if false else 'shibuya/shitubako.html' }}" target="_self" aria-label="湿箱実験">
-            <img src="{{ url_for('static', filename='shibuya/index/shitubako.jpg') if true else 'shibuya/index/shitubako.jpg' }}" alt="湿箱実験">
+            <img src="{{ url_for('static', filename='pages/index/shitubako.jpg') if true else 'pages/index/shitubako.jpg' }}" alt="湿箱実験">
             <div class="card-body">湿箱実験</div>
           </a>
         </div>
