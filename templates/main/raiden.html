@@ -1,69 +1,86 @@
 {% extends "common/base.html" %}
-{% block title %}歯科相談{% endblock %}
-{% block meta_description %} 
-<meta name="description" content="自家歯牙移植と再植に関する専門的な質問にお答えするAIチャットボットです。治療法、適応症、予後、技術的な手順について詳しく解説し、歯科医療従事者の診療をサポートします。"> 
-<meta property="og:description" content="自家歯牙移植とは何ですか？他の歯科治療法（インプラント、義歯など）と比較したメリット・デメリットは何ですか？。治療法、適応症、予後、技術的な手順について詳しく解説し、歯科医療従事者の診療をサポートします。"> 
+
+{# SEO最適化 #}
+{% block title %}歯科相談｜自家歯牙移植AI「raiden」｜渋谷歯科技工所{% endblock %}
+{% block description %}自家歯牙移植と再植に関する専門的な質問にお答えするAIチャットボット「raiden」。治療法、適応症、予後、技術的な手順について詳しく解説し、歯科医療従事者の診療をサポートします。{% endblock %}
+{% block keywords %}歯科相談,自家歯牙移植,歯牙再植,AIチャットボット,raiden,治療法,適応症,予後,歯科医療,埼玉県,越谷市,渋谷歯科技工所{% endblock %}
+
+{% block og_type %}website{% endblock %}
+{% block og_description %}自家歯牙移植専門AI「raiden」による24時間無料歯科相談。治療法、適応症、予後について専門的にお答えします。{% endblock %}
+
+{% block extra_meta %}
+  {# Twitter Card専用設定 #}
+  <meta name="twitter:title" content="歯科相談｜自家歯牙移植AI「raiden」">
+  <meta name="twitter:description" content="自家歯牙移植の専門的な質問にAIがお答えします。24時間無料で歯科相談が可能です。">
+
+  {# パンくず構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+          {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "ホーム",
+              "item": "https://shibuya8020.com/"
+          },
+          {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "歯科相談",
+              "item": "https://shibuya8020.com/main/raiden"
+          }
+      ]
+  }
+  </script>
+
+  {# AIアプリケーション構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "raiden - 自家歯牙移植専門AI",
+      "description": "自家歯牙移植と再植に関する専門的な質問にお答えするAIチャットボット",
+      "applicationCategory": "MedicalApplication",
+      "operatingSystem": "Web Browser",
+      "url": "https://shibuya8020.com/main/raiden",
+      "provider": {
+          "@type": "MedicalOrganization",
+          "name": "渋谷歯科技工所",
+          "url": "https://shibuya8020.com/",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "南越谷4-9-6 新越谷プラザビル203",
+            "addressLocality": "越谷市",
+            "addressRegion": "埼玉県",
+            "addressCountry": "JP"
+          }
+      },
+      "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "JPY"
+      },
+      "featureList": [
+        "自家歯牙移植に関する専門相談",
+        "24時間対応AI",
+        "治療法・適応症の解説",
+        "歯科医療従事者サポート"
+      ],
+      "audience": {
+        "@type": "MedicalAudience",
+        "audienceType": ["患者", "歯科医師", "歯科技工士"]
+      }
+  }
+  </script>
+
+  {# 医療免責事項 #}
+  <meta name="medical-disclaimer" content="本AIは情報提供を目的としており、医学的診断や治療の代替ではありません。具体的な治療については必ず歯科医師にご相談ください。">
 {% endblock %}
-
-{% block head_extras %}
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "raiden - 自家歯牙移植専門AI",
-    "description": "自家歯牙移植と再植に関する専門的な質問にお答えするAIチャットボット",
-    "applicationCategory": "MedicalApplication",
-    "operatingSystem": "Web Browser",
-    "url": "https://shibuya8020.com/dental-consultation/",
-    "provider": {
-        "@type": "Organization",
-        "name": "渋谷歯科技工所",
-        "url": "https://shibuya8020.com/"
-    },
-    "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "JPY"
-    }
-}
-</script>
-
-<!-- パンくず構造化データを追加 -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-        {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "ホーム",
-            "item": "https://shibuya8020.com/"
-        },
-        {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "歯科相談",
-            "item": "https://shibuya8020.com/dental-consultation/"
-        }
-    ]
-}
-</script>
-{% endblock %}
-
-{% block og_title %}
-<meta property="og:title" content="自家歯牙移植AI相談 | 渋谷歯科技工所">
-{% endblock %}
-
-{% block og_url %}
-<meta property="og:url" content="https://shibuya8020.com/dental-consultation/">
-{% endblock %}
-
 
 {% block content %}
-    
-
-    <style>   
+<style>   
     .dental-header {
         display: flex;
         background-color: rgb(243, 244, 245);
@@ -71,21 +88,20 @@
         margin: 0 auto;
         padding: 20px;
         width: 100%;
-        
         color: #7c1820;
         justify-content: center;
-        }
+    }
 
     .logo img {
         max-width: 100%;
         height: auto;
-        margin-right: 20px; /* 画像と文字の間隔 */
-        }
+        margin-right: 20px;
+    }
 
     .text-content {
         display: flex;
         flex-direction: column;
-        }
+    }
 
     .japanese-text {
         font-weight: normal;
@@ -96,24 +112,12 @@
                     "Meiryo", "メイリオ", 
                     "MS PGothic", "ＭＳ Ｐゴシック", 
                     sans-serif;
-        }
+    }
 
     section .english-text {
-        font-size: 24px; /* 英語テキストのフォントサイズを変更 */
-        }
+        font-size: 24px;
+    }
 
-    </style>   
-    <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/">ホーム</a></li>
-        <li class="breadcrumb-item active" aria-current="page">歯科相談</li>
-    </ol>
-    </nav> 
-
-    
-    
-        
-<style>    
     #status {
         margin-top: 20px;
         padding: 10px;
@@ -122,6 +126,7 @@
         margin-left: auto;
         margin-right: auto;
     }
+    
     .processing {
         background-color: #e2e3e5;
         color: #383d41;
@@ -130,17 +135,13 @@
         border-radius: 4px;
         animation: pulse 2s infinite;
     }
+    
     @keyframes pulse {
-        0% {
-            opacity: 0.6;
-        }
-        50% {
-            opacity: 1;
-        }
-        100% {
-            opacity: 0.6;
-        }
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
     }
+    
     .error {
         background-color: #f8d7da;
         color: #721c24;
@@ -148,6 +149,7 @@
         border-radius: 4px;
         margin-top: 10px;
     }
+    
     .success {
         background-color: #d4edda;
         color: #155724;
@@ -155,6 +157,7 @@
         border-radius: 4px;
         margin-top: 10px;
     }
+    
     .info {
         background-color: #d1ecf1;
         color: #0c5460;
@@ -162,12 +165,14 @@
         border-radius: 4px;
         margin-top: 10px;
     }
+    
     .progress-container {
         width: 100%;
         background-color: #f1f1f1;
         border-radius: 4px;
         margin-top: 10px;
     }
+    
     .progress-bar {
         height: 20px;
         background-color: #4caf50;
@@ -178,9 +183,11 @@
         line-height: 20px;
         color: white;
     }
+    
     .button-group {
         margin-top: 15px;
     }
+    
     button {
         padding: 8px 16px;
         margin: 0 5px;
@@ -190,60 +197,69 @@
         color: white;
         cursor: pointer;
     }
+    
     button:hover {
         background-color: #0069d9;
     }
+    
     button:disabled {
         background-color: #6c757d;
         cursor: not-allowed;
     }
 
     .iframe-container {
-          background-color: #f4f4f4;
-          position: relative;
-          width: 100%;
-          height: 800px;  /* 固定の高さを設定 */          
-          margin:0 auto;
-          overflow: hidden;
-        }
-        .iframe-container iframe {
-          width: 100%;
-          height: 100%;   
-          margin: 0 auto;
-        }
+        background-color: #f4f4f4;
+        position: relative;
+        width: 100%;
+        height: 800px;
+        margin: 0 auto;
+        overflow: hidden;
+    }
+    
+    .iframe-container iframe {
+        width: 100%;
+        height: 100%;   
+        margin: 0 auto;
+    }
 
-        .box1 {
+    .box1 {
         border: solid 1px orange;
         margin: 10px auto;   
         padding: 10px;     
-        }
-        .box1 div {
-        text-align: center; /* 画像を囲むdiv内で中央揃え */
-        }
+    }
+    
+    .box1 div {
+        text-align: center;
+    }
 
+    .file-summary {
+        padding: 10px;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+
+    .folder-summary {
+        padding: 8px;
+        margin: 5px 0;
+        background-color: #f8f8f8;
+        border-left: 3px solid #ddd;
+    }
 </style>
 
-<style>
-  .file-summary {
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-radius: 5px;
-    margin-bottom: 10px;
-    font-weight: bold;
-  }
+<!-- パンくずナビ（ユーザー表示用） -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+        <li class="breadcrumb-item active" aria-current="page">歯科相談</li>
+    </ol>
+</nav>
 
-  .folder-summary {
-    padding: 8px;
-    margin: 5px 0;
-    background-color: #f8f8f8;
-    border-left: 3px solid #ddd;
-  }
-</style>
-
-    <h1 class="mt-3 mb-2">自家歯牙移植とは? 歯牙再植とは?</h1>
+<h1 class="mt-3 mb-2">自家歯牙移植とは? 歯牙再植とは?</h1>
 <h2 class="mt-3 mb-2">なんでも答えます。ご質問ください</h2>
 
-<!-- 説明文を追加 -->
+<!-- 説明文 -->
 <div class="ai-description mb-4 p-3" style="background-color: #f8f9fa; border-left: 4px solid #007bff;">
     <p><strong>「raiden」は自家歯牙移植専門のAIチャットボットです。</strong></p>
     <ul class="mb-0">
@@ -257,5 +273,5 @@
 <div class="iframe-container">
     <iframe src="https://raiden.shibuya8020.com/" allowfullscreen></iframe>
 </div>
-  
+
 {% endblock %}

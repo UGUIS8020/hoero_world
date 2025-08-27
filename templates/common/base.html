@@ -151,24 +151,13 @@
                 <a class="nav-link {% if request.endpoint == 'pages.combination_checker' %}active{% endif %}" href="{{ url_for('pages.combination_checker') }}">MTN</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.missing_teeth_nation') }}">MTN-V2.0</a>
+                <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.missing_teeth_nation') }}">MTN-V2</a>
               </li>
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'stl_board.index' %}active{% endif %}" href="{{ url_for('stl_board.index') }}">STL</a>
-              </li>
+              </li>          
               
-              <!-- {% if current_user.is_authenticated and current_user.is_administrator %}
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
-              </li> 
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.meziro' %}active{% endif %}" href="{{ url_for('main.meziro') }}">MEZIRO</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
-              </li>                                       
-              {% endif %} -->
 
               {% if current_user.is_authenticated %}
               <li class="nav-item">
