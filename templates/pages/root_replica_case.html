@@ -1,47 +1,54 @@
 {% extends "common/base.html" %}
-{% block title %}レプリカを用いた自家歯牙移植症例{% endblock %}
 
-{% block meta_description %}
-<meta name="description" content="レプリカを使用した自家歯牙移植の症例。CTデータから精密な歯根モデルを作成し、移植時間の短縮と歯根膜保護により治療成功率を向上。天然歯を活かした理想的な歯の回復を実現します。 / Case studies of tooth autotransplantation using replicas. Creating precise root models from CT data improves treatment success rates by reducing transplantation time and protecting periodontal ligaments. Achieves ideal dental restoration by utilizing the patient's natural teeth.">
-<meta property="og:description" content="レプリカを使用した自家歯牙移植の症例。CTデータから精密な歯根モデルを作成し、移植時間の短縮と歯根膜保護により治療成功率を向上。天然歯を活かした理想的な歯の回復を実現します。 / Case studies of tooth autotransplantation using replicas. Creating precise root models from CT data improves treatment success rates by reducing transplantation time and protecting periodontal ligaments. Achieves ideal dental restoration by utilizing the patient's natural teeth.">
-{% endblock %}
+{# SEO最適化 #}
+{% block title %}レプリカを用いた自家歯牙移植症例｜渋谷歯科技工所{% endblock %}
+{% block description %}3Dレプリカを使用した自家歯牙移植の実症例を紹介。CTデータから精密な歯根モデルを作成し、移植時間短縮と成功率向上を実現した治療例を詳しく解説します。{% endblock %}
+{% block keywords %}自家歯牙移植,症例,3Dレプリカ,CT,歯根モデル,移植手術,成功率,歯根膜保護,埼玉県,越谷市,渋谷歯科技工所{% endblock %}
 
+{% block og_type %}article{% endblock %}
+{% block og_description %}3Dレプリカを活用した自家歯牙移植の実症例。移植時間の短縮と高い成功率を実現した治療例を専門的に解説します。{% endblock %}
 
+{% block extra_meta %}
+  {# Twitter Card 専用設定 #}
+  <meta name="twitter:title" content="自家歯牙移植症例｜3Dレプリカ活用事例">
+  <meta name="twitter:description" content="CTデータから作成した精密レプリカによる自家歯牙移植の成功症例を詳しく紹介します。">
 
-{% block head_extras %}
-<!-- パンくず構造化データ -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-        {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "ホーム",
-            "item": "https://shibuya8020.com/"
-        },
-        {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "レプリカを使用した自家歯牙移植症例",
-            "item": "https://shibuya8020.com/pages/root_replica_case"
-        }
-    ]
-}
-</script>
+  {# パンくず構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+          {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "ホーム",
+              "item": "https://shibuya8020.com/"
+          },
+          {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "自家歯牙移植用レプリカ",
+              "item": "https://shibuya8020.com/pages/root_replica"
+          },
+          {
+              "@type": "ListItem",
+              "position": 3,
+              "name": "症例紹介",
+              "item": "https://shibuya8020.com/pages/root_replica_case"
+          }
+      ]
+  }
+  </script>
 
-<!-- 症例記事構造化データ（症例ページ用） -->
-<script type="application/ld+json">
-{
+  {# 症例記事構造化データ #}
+  <script type="application/ld+json">
+  {
     "@context": "https://schema.org",
     "@type": "MedicalWebPage",
     "name": "レプリカを使用した自家歯牙移植症例",
-    "description": "3Dレプリカを使用した自家歯牙移植の実際の症例紹介。手術時間の短縮と成功率向上の実例を解説",
-    "mainContentOfPage": {
-        "@type": "WebPageElement",
-        "cssSelector": "main"
-    },
+    "description": "3Dレプリカを使用した自家歯牙移植の実際の症例紹介と治療成果",
+    "url": "https://shibuya8020.com/pages/root_replica_case",
     "specialty": "歯科",
     "audience": {
         "@type": "MedicalAudience",
@@ -50,10 +57,37 @@
     "author": {
         "@type": "MedicalOrganization",
         "name": "渋谷歯科技工所",
-        "url": "https://shibuya8020.com/"
-    }
-}
-</script>
+        "url": "https://shibuya8020.com/",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "南越谷4-9-6 新越谷プラザビル203",
+          "addressLocality": "越谷市",
+          "addressRegion": "埼玉県",
+          "addressCountry": "JP"
+        }
+    },
+    "publisher": {
+        "@type": "Organization",
+        "name": "渋谷歯科技工所",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://shibuya8020.com/images/logo02.jpg"
+        }
+    },
+    "mainEntity": {
+      "@type": "MedicalProcedure",
+      "name": "3Dレプリカを使用した自家歯牙移植",
+      "description": "CTデータから作成した精密な3Dレプリカを用いて移植窩を事前準備し、移植時間を短縮する治療法",
+      "procedureType": "歯科外科手術",
+      "followup": "術後経過観察と定期検診"
+    },
+    "datePublished": "2024-01-01T09:00:00+09:00",
+    "dateModified": "2024-08-27T10:00:00+09:00"
+  }
+  </script>
+
+  {# 医療免責事項 #}
+  <meta name="medical-disclaimer" content="症例は個別の治療結果であり、すべての患者様に同様の結果を保証するものではありません。治療については必ず歯科医師にご相談ください。">
 {% endblock %}
 
 

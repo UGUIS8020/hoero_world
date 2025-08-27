@@ -1,9 +1,96 @@
 {% extends "common/base.html" %}
-{% block title %}Zirconia{% endblock %}
 
-{% block meta_description %}
-<meta name="description" content="Zirconia">
-<meta property="og:description" content="Zirconia">
+{# SEO最適化 #}
+{% block title %}ジルコニア修復物製作｜グラデーションジルコニア｜渋谷歯科技工所{% endblock %}
+{% block description %}高品質なジルコニア修復物の製作サービス。グラデーションジルコニアをはじめとした審美性と耐久性を兼ね備えた技工物を提供しています。{% endblock %}
+{% block keywords %}ジルコニア,グラデーションジルコニア,歯科修復物,審美歯科,セラミック,クラウン,ブリッジ,歯科技工,CAD/CAM,デジタル技工{% endblock %}
+
+{% block og_type %}service{% endblock %}
+{% block og_description %}高品質なジルコニア修復物の製作サービス。審美性と耐久性を兼ね備えたグラデーションジルコニアなど多様な技工物を提供。{% endblock %}
+
+{% block extra_meta %}
+  {# Twitter Card専用設定 #}
+  <meta name="twitter:title" content="ジルコニア修復物製作｜グラデーションジルコニア">
+  <meta name="twitter:description" content="審美性と耐久性を兼ね備えた高品質なジルコニア修復物の製作サービスです。">
+
+  {# パンくず構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+          {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "ホーム",
+              "item": "https://shibuya8020.com/"
+          },
+          {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "ジルコニア修復物",
+              "item": "https://shibuya8020.com/pages/zirconia"
+          }
+      ]
+  }
+  </script>
+
+  {# サービス構造化データ #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "MedicalService",
+    "name": "ジルコニア修復物製作サービス",
+    "description": "高品質なジルコニア修復物の製作。グラデーションジルコニアをはじめとした審美性と耐久性を兼ね備えた歯科技工サービス",
+    "url": "https://shibuya8020.com/pages/zirconia",
+    "provider": {
+      "@type": "MedicalOrganization",
+      "name": "渋谷歯科技工所",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "南越谷4-9-6 新越谷プラザビル203",
+        "addressLocality": "越谷市",
+        "addressRegion": "埼玉県",
+        "addressCountry": "JP"
+      }
+    },
+    "serviceType": "歯科技工サービス",
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "ジルコニア製品ラインナップ",
+      "itemListElement": [
+        {
+          "@type": "Offer",
+          "name": "グラデーションジルコニアクラウン",
+          "description": "自然な色調変化を再現したジルコニアクラウン"
+        },
+        {
+          "@type": "Offer", 
+          "name": "ジルコニアブリッジ",
+          "description": "高強度で審美性に優れたジルコニアブリッジ"
+        }
+      ]
+    }
+  }
+  </script>
+
+  {# 製品ギャラリー用の構造化データ #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ImageGallery",
+    "name": "グラデーションジルコニア症例ギャラリー",
+    "description": "当技工所で製作したグラデーションジルコニア修復物の症例写真集",
+    "image": [
+      "https://shibuya8020.com/static/pages/zirconia/001.jpg",
+      "https://shibuya8020.com/static/pages/zirconia/002.jpg",
+      "https://shibuya8020.com/static/pages/zirconia/003.jpg",
+      "https://shibuya8020.com/static/pages/zirconia/004.jpg",
+      "https://shibuya8020.com/static/pages/zirconia/007.jpg",
+      "https://shibuya8020.com/static/pages/zirconia/008.jpg"
+    ]
+  }
+  </script>
 {% endblock %}
 
 {% block content %}
