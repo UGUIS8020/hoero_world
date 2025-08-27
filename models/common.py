@@ -82,15 +82,22 @@ class User(db.Model, UserMixin):
 class BlogPost(db.Model):
     __tablename__ = 'blog_post'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    category_id = db.Column(db.Integer, db.ForeignKey('blog_category.id'))
-    date = db.Column(db.DateTime, default=datetime.now(timezone('Asia/Tokyo')))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('blog_category.id'), index=True, nullable=False)
+
+    # ⚠ ここは「評価時刻固定」にならないよう callable にする
+    date = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(ZoneInfo('Asia/Tokyo')))
+
     title = db.Column(db.String(140))
     text = db.Column(db.Text)
     summary = db.Column(db.String(140))
     featured_image = db.Column(db.String(140))
- 
-    category = db.relationship('BlogCategory', backref='blog_posts')
+
+    # ← 唯一の関係として統一。backref は使わず back_populates を採用
+    category = db.relationship('BlogCategory', back_populates='posts', lazy='joined')
+
+    # （必要なら）
+    # user = db.relationship('User', back_populates='posts')
 
     def __init__(self, title, text, featured_image, user_id, category_id, summary):
         self.title = title
@@ -101,22 +108,28 @@ class BlogPost(db.Model):
         self.summary = summary
 
     def __repr__(self):
-        return f"PostID: {self.id}, Title: {self.title}, Author: {self.author} \n"
+        return f"<BlogPost id={self.id} title={self.title!r}>"
 
 class BlogCategory(db.Model):
     __tablename__ = 'blog_category'
     id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(140))
-    posts = db.relationship('BlogPost', backref='blogcategory', lazy='dynamic')
+    name = db.Column('category', db.String(140))  # 列名はcategoryのまま、属性名はnameに変更すると衝突が減ります
 
-    def __init__(self, category):
-        self.category = category
-    
+    # 片側は posts、相手側プロパティは category に統一
+    posts = db.relationship(
+        'BlogPost',
+        back_populates='category',
+        lazy='selectin',                 # or 'dynamic' が必要なら後述
+        cascade='all, delete-orphan'
+    )
+
     def __repr__(self):
-        return f"CategoryID: {self.id}, CategoryName: {self.category} \n"
+        return f"<BlogCategory id={self.id} name={self.name!r}>"
 
-    def count_posts(self, id):
-        return BlogPost.query.filter_by(category_id=id).count()
+    # インスタンスメソッドなら id を引数に取らず self.id を使う
+    def count_posts(self):
+        # lazy='dynamic' の場合は self.posts.count()
+        return db.session.query(BlogPost.id).filter_by(category_id=self.id).count()
 
 class Inquiry(db.Model):
     __tablename__ = 'inquiry'

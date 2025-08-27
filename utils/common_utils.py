@@ -401,3 +401,5 @@ def setup_scheduled_cleanup(app):
     # アプリケーション終了時にスケジューラを停止
     import atexit
     atexit.register(lambda: scheduler.shutdown())
+
+
