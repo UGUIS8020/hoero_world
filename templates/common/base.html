@@ -103,13 +103,33 @@
 
     <!-- ページ固有の追加設定 -->
     {% block extra_meta %}{% endblock %}
+
+    <style>
+    /* fixed-top / fixed-bottom があるので本文の上下に余白を確保（値はお好みで調整） */
+    body { padding-top: 4rem; padding-bottom: 3.5rem; }
+
+    /* 長い日本語メニュー名での折返し防止（“外側にずれる”見え方を回避） */
+    .navbar .nav-link { white-space: nowrap; }
+
+    /* 念のため、ナビの active に余計な装飾が乗らないように固定 */
+    .navbar .nav-link,
+    .navbar .nav-link.active {
+      border: 0 !important;
+      margin: 0 !important;
+      transform: none !important;
+      box-shadow: none !important;
+      text-decoration: none;
+    }
+  </style>
+
 </head>
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
         <div class="container">
           <a class="navbar-brand fst-italic" href="{{ url_for('main.index') }}">Home.</a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                  aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
 
@@ -120,13 +140,10 @@
                 <a class="nav-link {% if request.endpoint == 'main.info' %}active{% endif %}" href="{{ url_for('main.info') }}">会社情報</a>
               </li>
 
-              <!-- <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.inquiry' %}active{% endif %}" href="{{ url_for('main.inquiry') }}">お問い合わせ</a>
-              </li> -->
+             
               
             </ul>
-
-            <br>
+            
             <ul class="navbar-nav ms-auto"> 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.raiden' %}active{% endif %}" href="{{ url_for('main.raiden') }}">歯科相談</a>
@@ -150,25 +167,15 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.combination_checker' %}active{% endif %}" href="{{ url_for('pages.combination_checker') }}">MTN</a>
               </li>
+
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.missing_teeth_nation') }}">MTN-V2.0</a>
+                <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.missing_teeth_nation') }}">MTN-V2</a>
               </li>
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'stl_board.index' %}active{% endif %}" href="{{ url_for('stl_board.index') }}">STL</a>
-              </li>
+              </li>          
               
-              <!-- {% if current_user.is_authenticated and current_user.is_administrator %}
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
-              </li> 
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.meziro' %}active{% endif %}" href="{{ url_for('main.meziro') }}">MEZIRO</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
-              </li>                                       
-              {% endif %} -->
 
               {% if current_user.is_authenticated %}
               <li class="nav-item">
@@ -188,10 +195,12 @@
                 <a class="nav-link" href="{{ url_for('users.logout') }}">ログアウト</a>
               </li> 
 
+              <li class="nav-item">
               <a href="{{ url_for('users.account', user_id=current_user.id) }}"
                 class="navbar-text ms-3 no-underline {% if current_user.administrator %}admin-name{% else %}user-name{% endif %}">
                 {{ current_user.display_name[:10] }}
               </a>
+              </li>
 
               {% else %}
               <li class="nav-item">
@@ -229,5 +238,67 @@
           </div>
         </div>
       </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.navbar').forEach(function (navbar) {
+        const toggler = navbar.querySelector('.navbar-toggler');
+        if (!toggler) return;
+
+        const targetSelector = toggler.getAttribute('data-bs-target') || ('#' + (toggler.getAttribute('aria-controls') || ''));
+        const menu = targetSelector ? document.querySelector(targetSelector) : null;
+        if (!menu) return;
+
+        const MQ_WIDTH = 992;
+        const mq = window.matchMedia('(min-width: ' + MQ_WIDTH + 'px)');
+
+        function syncByWidth(e) {
+          if (e.matches) {
+            menu.classList.add('show');            // デスクトップ：常時展開
+            toggler.setAttribute('aria-expanded', 'true');
+          } else {
+            menu.classList.remove('show');         // モバイル：閉
+            toggler.setAttribute('aria-expanded', 'false');
+          }
+        }
+        (mq.addEventListener || mq.addListener).call(mq, 'change', syncByWidth);
+        syncByWidth(mq);
+
+        toggler.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          const isOpen = menu.classList.toggle('show');
+          toggler.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        // モバイル時：リンククリックで閉じる
+        menu.addEventListener('click', function (e) {
+          if (window.innerWidth >= MQ_WIDTH) return;
+          if (e.target.closest('.nav-link')) {
+            menu.classList.remove('show');
+            toggler.setAttribute('aria-expanded', 'false');
+          }
+        });
+
+        // モバイル時：外側クリックで閉じる（このナビの外のみ）
+        document.addEventListener('click', function (e) {
+          if (window.innerWidth >= MQ_WIDTH) return;
+          const insideThisNavbar = e.target.closest('.navbar') === navbar;
+          if (!insideThisNavbar && menu.classList.contains('show')) {
+            menu.classList.remove('show');
+            toggler.setAttribute('aria-expanded', 'false');
+          }
+        });
+
+        // モバイル時：Escキーで閉じる
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && window.innerWidth < MQ_WIDTH && menu.classList.contains('show')) {
+            menu.classList.remove('show');
+            toggler.setAttribute('aria-expanded', 'false');
+          }
+        });
+      });
+    });
+    </script>
+
 </body>
 </html>
