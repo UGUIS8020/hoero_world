@@ -389,12 +389,12 @@
     /* 動画：アスペクト比を保ってレスポンシブ */
     .video {
       position: relative;
-      width: 100%;
+      width: 500px;
       aspect-ratio: 16/9; /* 対応しないブラウザ向けフォールバック */
       background: #000;
       border-radius: 8px;
       overflow: hidden;
-      margin: 8px 0 20px;
+      margin: 8px auto 20px;
     }
     .video iframe {
       position: absolute;
@@ -469,7 +469,7 @@
       <!-- 左カラム：テキスト＋動画＋手順リンク -->
       <section aria-labelledby="work-title">
         <h2 id="work-title">歯科技工士の仕事</h2>
-        <p>仕事を知っていただくための動画です（音量にご注意ください）。</p>
+        <p>仕事を知っていただくための動画です。</p>
 
         <div class="video" aria-label="歯科技工士の仕事 動画">
           <iframe

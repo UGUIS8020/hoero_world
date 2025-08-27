@@ -34,6 +34,7 @@ s3 = boto3.client(
     region_name=os.getenv("AWS_REGION")
 )
 
+PREFIX = 'meziro/'
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 
 # ZIPハンドラーのインスタンス作成
@@ -382,261 +383,60 @@ def list_uploaded_files():
 def meziro():
     s3_files = []
     try:
-        # 'meziro/' フォルダのオブジェクト一覧を取得
-        response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix='meziro/')
-        # LastModifiedでソートするためにリストに変換
-        contents = response.get('Contents', [])
-        # LastModifiedの降順（新しい順）でソート
-        contents.sort(key=lambda x: x['LastModified'], reverse=True)
-        
-        for obj in contents:
-            key = obj['Key']
-            filename = os.path.basename(key)
-            if filename:  # フォルダ名を除外
-                # 署名付きURLを生成（1週間有効）
+        # ページング対応で 'meziro/' 配下を全取得
+        kwargs = dict(Bucket=BUCKET_NAME, Prefix='meziro/', MaxKeys=1000)
+        while True:
+            resp = s3.list_objects_v2(**kwargs)
+            for obj in resp.get('Contents', []):
+                key = obj['Key']
+                filename = os.path.basename(key)
+                if not filename:  # フォルダ疑似キーはスキップ
+                    continue
+
+                # completed タグ取得（失敗時は False）
+                completed = False
+                try:
+                    tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
+                    tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
+                    completed = (tags.get('completed') == 'true')
+                except Exception as e:
+                    # 権限/一時エラーはログだけ残して未完了扱い
+                    current_app.logger.warning(f"[MEZIRO] get_object_tagging failed key={key}: {e}")
+
+                # 署名付きURL（必要なら）
                 file_url = s3.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': BUCKET_NAME, 'Key': key},
-                    ExpiresIn=604800  # 1週間（604800秒）有効
+                    ExpiresIn=604800  # 7日
                 )
+
                 s3_files.append({
-                    'filename': filename, 
-                    'url': file_url,                    
-                    'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
-                    'key': key  # 削除時に使用するため保存
+                    'key': key,
+                    'filename': filename,
+                    'last_modified_dt': obj['LastModified'],  # まずはdatetimeで保持（後で整形）
+                    'url': file_url,
+                    'completed': completed,
                 })
-        
+
+            if resp.get('IsTruncated'):
+                kwargs['ContinuationToken'] = resp.get('NextContinuationToken')
+            else:
+                break
+
+        # 新しい順に並べ替え → 表示用にJST文字列へ整形
+        s3_files.sort(key=lambda x: x['last_modified_dt'], reverse=True)
+        for f in s3_files:
+            f['last_modified'] = f['last_modified_dt'].astimezone(JST).strftime('%Y-%m-%d %H:%M')
+            del f['last_modified_dt']
 
     except Exception as e:
         flash(f"S3ファイル一覧取得中にエラー: {str(e)}", "error")
 
-    return render_template(
-        'main/meziro.html',  # MEZIROオリジナルのテンプレートを使用
-        s3_files=s3_files
-    )
+    return render_template('main/meziro.html', s3_files=s3_files)
+
 @bp.route('/meziro_upload_index', methods=['GET'])
 def meziro_upload_index():
     return render_template('main/meziro_upload_index.html')
-
-
-# @bp.route('/meziro_upload', methods=['POST'])
-# def meziro_upload():   
-
-#     business_name = request.form.get('businessName', '')
-#     user_name = request.form.get('userName', '')
-#     user_email = request.form.get('userEmail', '')
-#     patient_name = request.form.get('PatientName', '')
-#     appointment_date = request.form.get('appointmentDate', '')
-#     appointment_hour = request.form.get('appointmentHour', '')
-#     project_type = request.form.get('projectType', '')
-#     crown_type = request.form.get('crown_type', '')
-#     teeth_raw = request.form.get('teeth', '[]')
-#     shade = request.form.get('shade', '')
-#     try:
-#         teeth = json.loads(teeth_raw)
-#     except json.JSONDecodeError:
-#         teeth = []
-#     message = request.form.get('userMessage', '')
-
-#      # 必須フィールドの検証
-#     if not message:
-#         return jsonify({'error': 'メッセージが入力されていません'}), 400
-    
-#     if not business_name:
-#         return jsonify({'error': '事業者名が入力されていません'}), 400
-        
-#     if not user_name:
-#         return jsonify({'error': '送信者名が入力されていません'}), 400
-        
-#     if not user_email:
-#         return jsonify({'error': 'メールアドレスが入力されていません'}), 400
-        
-#     if not project_type:
-#         return jsonify({'error': '製作物が選択されていません'}), 400
-
-#     if 'files[]' not in request.files:
-#         return jsonify({'error': 'ファイルが選択されていません'}), 400
-
-#     files = request.files.getlist('files[]')
-#     if not files or files[0].filename == '':
-#         return jsonify({'error': 'ファイルが選択されていません'}), 400
-
-#     uploaded_urls = []
-#     numbered_ids = []
-
-#     # フォルダ構造の情報を取得
-#     has_folder = request.form.get('has_folder_structure', 'false').lower() == 'true'
-#     print(f"フォルダ構造の有無: {has_folder}")  # デバッグ用
-
-#     session_id, warning_message = get_next_sequence_number()
-#     id_str = f"{session_id:05d}"  # 管理番号として6桁のゼロ埋め形式に   
-
-#     try:
-#         # 修正: has_folderパラメータを追加
-#         result, temp_dir = zip_handler_instance.process_files(files, has_folder)
-#         print(f"process_files result: {result}, type: {type(result)}")  # デバッグ用
-#         print(f"Number of files: {len(files)}")  # デバッグ用
-
-#         if isinstance(result, list):  # フォルダ内のファイル
-#             folder_prefix = f"meziro/{id_str}/"  # 管理番号をフォルダ名として使用
-            
-#             for index, file_path in enumerate(result, start=1):
-#                 original_filename = os.path.basename(file_path)
-#                 safe_filename = sanitize_filename(original_filename)
-                
-#                 # 管理番号のフォルダ内にファイルを配置（フォルダ構造を使用）
-#                 s3_key = f"{folder_prefix}{index:03d}_{safe_filename}"
-#                 s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)
-
-#                 with open(file_path, 'rb') as f:
-#                     s3.upload_fileobj(
-#                         f,
-#                         os.getenv('BUCKET_NAME'),
-#                         s3_key,
-#                         ExtraArgs={'ContentType': 'application/octet-stream'}
-#                     )
-
-#                 bucket_name = os.getenv("BUCKET_NAME")
-#                 region = os.getenv("AWS_REGION")
-#                 public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
-
-#                 uploaded_urls.append(public_url)
-#                 numbered_ids.append(f"{id_str}_{index:03d}")
-
-#         else:  # 圧縮した場合（zipファイル）の処理
-#             zip_file_path = result
-#             print(f"Uploading zip file: {zip_file_path}")  # デバッグ用
-            
-#             # ① フォーム内容を文字列に整形（インデントを削除）
-#             form_data_text = f"""【受付番号】No.{id_str}
-
-# 【事業者名】{business_name}
-# 【送信者名】{user_name}
-# 【メールアドレス】{user_email}
-# 【患者名】{patient_name}
-# 【セット希望日時】{appointment_date} {appointment_hour}時
-# 【製作物】{project_type}
-# 【クラウン種別】{crown_type}
-# 【対象部位】{", ".join(teeth)}
-# 【シェード】{shade}
-# 【メッセージ】
-# {message.strip()}
-
-#   渋谷歯科技工所
-#   〒343-0845
-#   埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
-#   TEL: 048-961-8151
-#   email:shibuya8020@gmail.com"""
-
-#             # ② 一時ファイルとして .txt を保存
-#             with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt', encoding='utf-8') as form_file:
-#                 form_file.write(form_data_text)
-#                 form_file_path = form_file.name
-
-#             # ③ zipファイルに txt を追記
-#             import zipfile
-#             with zipfile.ZipFile(zip_file_path, 'a') as zipf:
-#                 zipf.write(form_file_path, arcname=f"{id_str}_info.txt")
-
-#             # ④ 一時 .txt を削除
-#             if os.path.exists(form_file_path):
-#                 os.remove(form_file_path)
-
-#             # ⑤ ZIPファイルをS3にアップロード（元のまま）
-#             numbered_filename = f"{id_str}_files.zip"
-#             s3_key = f"meziro/{numbered_filename}"
-#             s3_key = get_unique_filename(os.getenv("BUCKET_NAME"), s3_key)
-
-#             with open(zip_file_path, 'rb') as f:
-#                 s3.upload_fileobj(
-#                     f,
-#                     os.getenv('BUCKET_NAME'),
-#                     s3_key,
-#                     ExtraArgs={'ContentType': 'application/zip'}
-#                 )
-
-#             bucket_name = os.getenv("BUCKET_NAME")
-#             region = os.getenv("AWS_REGION")
-#             public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
-
-#             uploaded_urls.append(public_url)
-#             numbered_ids.append(id_str)
-            
-#         # 一時ファイルの削除
-#         if 'zip_file_path' in locals() and os.path.exists(zip_file_path):
-#             os.remove(zip_file_path)
-
-#         # メール本文に署名付きURLを含める
-#         url_text = "\n".join(uploaded_urls)
-#         full_message = f"""ユーザーから以下のメッセージが届きました：
-
-# 【受付番号】No.{id_str}
-# 【事業者名】{business_name}
-# 【送信者名】{user_name}
-# 【メールアドレス】{user_email}
-# 【患者名】{patient_name}
-# 【セット希望日時】{appointment_date} {appointment_hour}時
-# 【製作物】{project_type}
-# 【クラウン種別】{crown_type}
-# 【対象部位】{", ".join(teeth)}
-# 【シェード】{shade}
-# 【メッセージ】
-# {message}
-
-# 【アップロードされたファイルリンク】
-# {url_text}
-#         """
-
-#         # DynamoDBエラーがあれば追加
-#         if warning_message:
-#             full_message += f"\n\n⚠️ システム警告：{warning_message}\n"
-
-#         msg = Message(
-#             subject=f"【仕事が来たよ】No.{id_str}",
-#             recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")],
-#             body=full_message
-#         )
-#         mail.send(msg)
-#         print("メール送信成功")
-
-#         # 送信者への確認メール送信
-#         confirmation_msg = Message(
-#             subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
-#             recipients=[user_email],
-#             body=f"""{user_name} 様
-
-#         この度は技工指示を送信いただき、誠にありがとうございます。
-#         以下の内容で受付を完了いたしました。
-
-#         【受付番号】No.{id_str}
-#         【製作物】{project_type}
-#         【セット希望日時】{appointment_date} {appointment_hour}時
-
-#         ファイルを確認の上、内容に応じて対応させていただきます。
-#         万が一、内容に不備がある場合は別途ご連絡させていただきます。
-
-#         --------------------------------
-#         渋谷歯科技工所
-#         〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
-#         TEL: 048-961-8151
-#         email: shibuya8020@gmail.com
-#         """
-#         )
-#         mail.send(confirmation_msg)
-#         print("送信者への確認メール送信成功")
-
-#     except Exception as mail_error:
-#         import traceback
-#         print(f"メール送信失敗: {mail_error}")
-#         print(traceback.format_exc())  # スタックトレースを出力
-
-#     # 受付番号を表示
-#     if numbered_ids:
-#         message = f"アップロード完了 受付No.{id_str}"
-#     else:
-#         message = "アップロード成功（ファイルはありません）"
-
-#     return jsonify({'message': message, 'files': uploaded_urls})
 
 @bp.route('/meziro_upload', methods=['POST'])
 def meziro_upload():
@@ -962,6 +762,50 @@ def meziro_delete():
         flash(f"削除中にエラーが発生しました: {str(e)}", "danger")
     
     return redirect(url_for('main.meziro'))
+
+def list_files_with_completed():
+    resp = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix=PREFIX)
+    files = []
+    for obj in resp.get('Contents', []):
+        key = obj['Key']
+        # ディレクトリエントリ避け
+        if key.endswith('/'):
+            continue
+
+        tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
+        tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
+        completed = (tags.get('completed') == 'true')
+
+        files.append({
+            'key': key,
+            'filename': key.split('/')[-1],
+            'last_modified': obj['LastModified'],  # テンプレ側で表示整形OK
+            'completed': completed,
+        })
+    return files
+
+@bp.route('/meziro/mark-complete', methods=['POST'])
+def meziro_mark_complete():
+    data = request.get_json(silent=True) or {}
+    key = data.get('key')
+    completed = data.get('completed')
+
+    if key is None or completed is None:
+        return jsonify(success=False, message='パラメータ不足'), 400
+
+    try:
+        # 既存タグ維持＋completed上書き
+        current = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
+        tagset = {t['Key']: t['Value'] for t in current.get('TagSet', [])}
+        tagset['completed'] = 'true' if completed else 'false'
+        new_tagset = [{'Key': k, 'Value': v} for k, v in tagset.items()]
+        s3.put_object_tagging(Bucket=BUCKET_NAME, Key=key, Tagging={'TagSet': new_tagset})
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, message=f'タグ更新失敗: {e}'), 500
+
+
+
 
 
 @bp.route('/<int:blog_post_id>/blog_post')

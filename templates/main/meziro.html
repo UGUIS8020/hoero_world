@@ -2,7 +2,10 @@
 {% block content %}
 <div class="container mt-4" style="max-width: 900px;">
     <h1>MEZIRO ファイル管理</h1>
-    
+
+    {# ← 追加: AJAX用のCSRFトークンをmetaで渡す #}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -25,12 +28,15 @@
             {% if s3_files %}
                 <form id="deleteForm" method="POST" action="{{ url_for('main.meziro_delete') }}">
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        {# ← 変更: align-middle を追加してスイッチを縦中央に #}
+                        <table class="table table-striped align-middle">
                             <thead>
                                 <tr>
                                     <th width="50">選択</th>
                                     <th>ファイル名</th>
                                     <th>アップロード日時</th>
+                                    {# ← 追加: 作業完了列 #}
+                                    <th width="140">作業完了</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
@@ -44,6 +50,24 @@
                                         </td>
                                         <td>{{ file.filename }}</td>
                                         <td>{{ file.last_modified }}</td>
+
+                                        {# ← 追加: 完了トグル（file.completed はサーバ側で付与） #}
+                                        <td>
+                                            <div class="form-check form-switch mb-0">
+                                                <input
+                                                    class="form-check-input complete-toggle"
+                                                    type="checkbox"
+                                                    role="switch"
+                                                    id="complete-{{ loop.index }}"
+                                                    data-key="{{ file.key }}"
+                                                    {% if file.completed %}checked{% endif %}
+                                                >
+                                                <label class="form-check-label small" for="complete-{{ loop.index }}">
+                                                    {{ '完了' if file.completed else '未完了' }}
+                                                </label>
+                                            </div>
+                                        </td>
+
                                         <td>                                            
                                             <a href="{{ url_for('main.meziro_download', key=file.key) }}" class="btn btn-sm btn-success">ダウンロード</a>
                                             <form method="POST" action="{{ url_for('main.meziro_delete', key=file.key) }}" class="d-inline">
@@ -78,17 +102,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const checkedCount = document.querySelectorAll('.file-checkbox:checked').length;
         deleteSelectedBtn.disabled = checkedCount === 0;
     }
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateButtonState);
-    });
+    checkboxes.forEach(checkbox => checkbox.addEventListener('change', updateButtonState));
     
     // すべて選択/解除ボタン
     selectAllBtn.addEventListener('click', function() {
         const isAllSelected = document.querySelectorAll('.file-checkbox:checked').length === checkboxes.length;
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = !isAllSelected;
-        });
+        checkboxes.forEach(checkbox => { checkbox.checked = !isAllSelected; });
         updateButtonState();
     });
     
@@ -98,6 +117,41 @@ document.addEventListener('DOMContentLoaded', function() {
         if (confirm(`選択した${checkedCount}件のファイルを削除してもよろしいですか？`)) {
             deleteForm.submit();
         }
+    });
+
+    // ← 追加: 作業完了トグルの即時保存
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    document.querySelectorAll('.complete-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async (e) => {
+            const el = e.target;
+            const key = el.dataset.key;
+            const completed = el.checked;
+
+            // ラベル即時反映
+            const label = el.closest('.form-check').querySelector('.form-check-label');
+            label.textContent = completed ? '完了' : '未完了';
+
+            el.disabled = true;
+            try {
+                const res = await fetch('{{ url_for("main.meziro_mark_complete") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ key, completed })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.message || '保存に失敗しました');
+            } catch (err) {
+                // 失敗したら元に戻す
+                el.checked = !completed;
+                label.textContent = el.checked ? '完了' : '未完了';
+                alert(err.message);
+            } finally {
+                el.disabled = false;
+            }
+        });
     });
 });
 </script>
