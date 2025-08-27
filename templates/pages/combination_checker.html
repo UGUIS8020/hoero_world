@@ -1,11 +1,74 @@
-
 {% extends "common/base.html" %}
-{% block title %}Dental Defect Combination Checker{% endblock %}
 
-{% block meta_description %}
-<meta name="description" content="上下顎28本の歯の欠損パターン組み合わせを計算するツールです。欠損本数を入力すると可能な組み合わせ数を表示します。">
-<meta name="description" content="Calculator tool that shows the number of possible combinations when teeth are missing from a total of 28 teeth in upper and lower jaws." lang="en">
-<meta property="og:description" content="歯科の欠損パターン計算ツール：上下顎28本の歯から欠損した場合の組み合わせ数を即時計算します。Dental defect calculator: Instantly computes possible missing teeth pattern combinations.">
+{# SEO最適化 #}
+{% block title %}欠損歯組み合わせ計算ツール｜歯科診断支援｜渋谷歯科技工所{% endblock %}
+{% block description %}上下顎28本の歯から指定本数が欠損した場合の組み合わせパターン数を計算するツール。歯科診断・治療計画立案の参考データとして活用できます。{% endblock %}
+{% block keywords %}欠損歯,組み合わせ計算,歯科診断,治療計画,二項係数,欠損パターン,歯科数学,診断ツール,歯科技工所{% endblock %}
+
+{% block og_type %}website{% endblock %}
+{% block og_description %}歯の欠損パターン数を瞬時に計算する歯科診断支援ツール。治療計画立案に役立つ数理データを提供します。{% endblock %}
+
+{% block extra_meta %}
+  {# Twitter Card専用設定 #}
+  <meta name="twitter:title" content="欠損歯組み合わせ計算ツール｜歯科診断支援">
+  <meta name="twitter:description" content="指定本数の欠損歯パターン数を瞬時に計算。歯科診断・治療計画立案を数理的にサポートします。">
+
+  {# パンくず構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+          {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "ホーム",
+              "item": "https://shibuya8020.com/"
+          },
+          {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "欠損歯組み合わせ計算ツール",
+              "item": "https://shibuya8020.com/pages/combination_checker"
+          }
+      ]
+  }
+  </script>
+
+  {# 計算ツール構造化データ #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "欠損歯組み合わせ計算ツール",
+    "description": "指定した本数の歯が欠損した場合の組み合わせパターン数を二項係数で計算する歯科診断支援ツール",
+    "url": "https://shibuya8020.com/pages/combination_checker",
+    "applicationCategory": "Medical Calculator",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "JPY"
+    },
+    "provider": {
+      "@type": "MedicalOrganization",
+      "name": "渋谷歯科技工所"
+    },
+    "featureList": [
+      "欠損歯組み合わせ数の即時計算",
+      "スライダーによる直感的操作",
+      "二項係数による数理計算",
+      "診断・治療計画支援"
+    ],
+    "audience": {
+      "@type": "MedicalAudience",
+      "audienceType": ["歯科医師", "歯科技工士", "歯科学生"]
+    }
+  }
+  </script>
+
+  {# 医療免責事項 #}
+  <meta name="medical-disclaimer" content="本ツールは教育・参考目的の計算ツールです。医学的診断や治療方針の決定には使用しないでください。">
 {% endblock %}
 
 {% block content %}

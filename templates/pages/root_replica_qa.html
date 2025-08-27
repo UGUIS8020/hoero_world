@@ -1,75 +1,86 @@
+
 {% extends "common/base.html" %}
+
+{# SEO最適化 #}
 {% block title %}自家歯牙移植Q&A｜よくある質問と専門回答｜渋谷歯科技工所{% endblock %}
+{% block description %}自家歯牙移植に関するよくある質問と専門的な回答を掲載。治療法、成功率、費用、インプラントとの比較など、患者様と歯科医師の疑問にお答えします。{% endblock %}
+{% block keywords %}自家歯牙移植,Q&A,よくある質問,治療法,成功率,費用,インプラント比較,歯科治療,埼玉県,越谷市,渋谷歯科技工所{% endblock %}
 
-{% block meta_description %}
-<meta name="description" content="自家歯牙移植に関するよくある質問と専門的な回答を掲載。治療法、成功率、費用、インプラントとの比較など、患者様と歯科医師の疑問にお答えします。">
-<meta property="og:description" content="自家歯牙移植のQ&A集。治療法、成功率、費用について専門的にお答えします。">
-{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_description %}自家歯牙移植のQ&A集。治療法、成功率、費用について専門的にお答えします。{% endblock %}
+{% block og_url %}https://shibuya8020.com/pages/root_replica_qa{% endblock %}
 
-{% block og_title %}
-<meta property="og:title" content="自家歯牙移植Q&A｜よくある質問と専門回答｜渋谷歯科技工所">
-{% endblock %}
+{% block extra_meta %}
+  {# Twitter Card 固有設定 #}
+  <meta name="twitter:title" content="自家歯牙移植Q&A｜専門回答集">
+  <meta name="twitter:description" content="自家歯牙移植の疑問に専門的にお答えします。治療法・成功率・費用など詳しく解説。">
 
-{% block og_url %}
-<meta property="og:url" content="https://shibuya8020.com/faq/">
-{% endblock %}
+  {# パンくず構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+          {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "ホーム",
+              "item": "https://shibuya8020.com/"
+          },
+          {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "自家歯牙移植Q&A",
+              "item": "https://shibuya8020.com/pages/root_replica_qa"
+          }
+      ]
+  }
+  </script>
 
-{% block head_extras %}
-<!-- パンくず構造化データ -->
-<script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-        {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "ホーム",
-            "item": "https://shibuya8020.com/"
-        },
-        {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "自家歯牙移植Q&A",
-            "item": "https://shibuya8020.com/pages/root_replica_qa"
-        }
-    ]
-}
-</script>
-
-<!-- FAQ構造化データ -->
-<script type="application/ld+json">
-{
+  {# FAQ構造化データ #}
+  <script type="application/ld+json">
+  {
     "@context": "https://schema.org",
     "@type": "FAQPage",
+    "name": "自家歯牙移植Q&A",
+    "description": "自家歯牙移植に関するよくある質問と専門的な回答集",
+    "url": "https://shibuya8020.com/pages/root_replica_qa",
+    "author": {
+      "@type": "Organization",
+      "name": "渋谷歯科技工所",
+      "url": "https://shibuya8020.com/"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "渋谷歯科技工所",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://shibuya8020.com/images/logo02.jpg"
+      }
+    },
     "mainEntity": [
-        {
-            "@type": "Question",
-            "name": "自家歯牙移植とは何ですか？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "自家歯牙移植は、患者自身の口腔内から健康な歯を取り出し、別の部位に移植する治療法です。特にインプラントや義歯、ブリッジに比べて審美性や機能性の回復が期待できる場合があります。"
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "成功率はどの程度ですか？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "抜歯窩への移植では成功率が95%に達します。非抜歯窩への移植では60%、年齢により39歳以下では75%、40歳以上では49%となります。"
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "インプラントと比較したメリット・デメリットは？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "メリット：生物学的適合性、低コスト、矯正治療可能、若年者に適応。デメリット：手技の複雑さ、ドナー歯が必要、外科的侵襲があります。"
-            }
+      {
+        "@type": "Question",
+        "name": "自家歯牙移植の成功率はどのくらいですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "適切な条件下では90%以上の成功率を示します。ドナー歯の状態、移植部位の骨量、患者様の全身状態などが成功に影響します。"
         }
+      },
+      {
+        "@type": "Question",
+        "name": "インプラントと比較したメリットは？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "自分の歯を使用するため生体親和性が高く、歯根膜が保持されるため自然な感覚が得られます。また、長期的な予後が良好とされています。"
+        }
+      }
     ]
-}
-</script>
+  }
+  </script>
+
+  {# 医療免責事項 #}
+  <meta name="medical-disclaimer" content="本サイトの情報は一般的な参考情報であり、医学的アドバイスではありません。具体的な治療については必ず歯科医師にご相談ください。">
 {% endblock %}
 
 {% block content %}

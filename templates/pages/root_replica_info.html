@@ -1,10 +1,56 @@
-
 {% extends "common/base.html" %}
-{% block title %}自家歯牙移植とは{% endblock %}
 
-{% block meta_description %}
-<meta name="description" content="自家歯牙移植の説明 / Explanation of tooth autotransplantation">
-<meta property="og:description" content="自家歯牙移植の説明 / Explanation of tooth autotransplantation">
+{# SEO最適化 #}
+{% block title %}自家歯牙移植とは | 渋谷歯科技工所{% endblock %}
+{% block description %}自家歯牙移植について詳しく解説。ドナー歯の選定から移植手術、成功率まで専門的な情報をわかりやすく説明します。埼玉県越谷市の渋谷歯科技工所【電話】048-961-8151{% endblock %}
+{% block keywords %}自家歯牙移植,歯牙移植,ドナー歯,移植手術,歯科治療,埼玉県,越谷市,渋谷歯科技工所,3Dレプリカ,成功率,適応症{% endblock %}
+
+{% block og_type %}article{% endblock %}
+
+{% block extra_meta %}
+  {# Twitter Card #}
+  <meta name="twitter:title" content="自家歯牙移植とは | 専門解説">
+  <meta name="twitter:description" content="ドナー歯の選定から移植手術まで、自家歯牙移植について専門的にわかりやすく解説します。">
+
+  {# 構造化データ（医療記事として） #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    "name": "自家歯牙移植とは",
+    "description": "自家歯牙移植について詳しく解説する専門ページ",
+    "url": "https://shibuya8020.com/pages/root_replica_info",
+    "mainEntity": {
+      "@type": "MedicalProcedure",
+      "name": "自家歯牙移植",
+      "alternateName": "歯牙移植",
+      "description": "患者自身の健康な歯を抜歯部位に移植する歯科治療法",
+      "procedureType": "外科手術",
+      "bodyLocation": {
+        "@type": "AnatomicalStructure",
+        "name": "口腔"
+      }
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "渋谷歯科技工所",
+      "url": "https://shibuya8020.com/"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "渋谷歯科技工所",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://shibuya8020.com/images/logo02.jpg"
+      }
+    },
+    "datePublished": "2024-01-01T09:00:00+09:00",
+    "dateModified": "2024-08-27T10:00:00+09:00"
+  }
+  </script>
+
+  {# 医療関連のメタタグ #}
+  <meta name="medical-disclaimer" content="本サイトの情報は医学的アドバイスではありません。治療については必ず医師にご相談ください。">
 {% endblock %}
 
 {% block content %}

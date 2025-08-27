@@ -4,36 +4,35 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="all">
-    <meta name="keywords" content="歯科技工所,埼玉県,越谷市,新越谷,南越谷,IOSデータ,自家歯牙移植,3Dプリント,デジタルデンティストリー,バイオブロック,矯正装置,口腔内スキャナー,AI,チャットボット,歯科相談">
+    <meta name="keywords" content="{% block keywords %}歯科技工所,埼玉県,越谷市,新越谷,南越谷,IOSデータ,自家歯牙移植,3Dプリント,デジタルデンティストリー,バイオブロック,矯正装置,口腔内スキャナー,AI,チャットボット,歯科相談{% endblock %}">
     <meta name="author" content="渋谷歯科技工所">
 
-    <!-- Open Graph Tags -->
-    {% block og_url %}
-    <meta property="og:url" content="https://shibuya8020.com/">
-    {% endblock %}
-    <meta property="og:type" content="website">
-    {% block og_title %}
-    <meta property="og:title" content="渋谷歯科技工所 | SHIBUYA Dental Laboratory">
-    {% endblock %}
-
-    {% block meta_description %}
-    <meta name="description" content="埼玉県越谷市の渋谷歯科技工所。最新のデジタル技術を活用した歯科技工サービスを提供。自家歯牙移植用3Dレプリカ、CAD/CAM修復物など。【電話】048-961-8151">
-    <meta property="og:description" content="埼玉県越谷市の渋谷歯科技工所。最新のデジタル技術を活用した歯科技工サービスを提供。【電話】048-961-8151">
-    {% endblock %}
+    <!-- SEO基本設定 -->
+    <title>{% block title %}渋谷歯科技工所 | SHIBUYA Dental Laboratory{% endblock %}</title>
+    <meta name="description" content="{% block description %}埼玉県越谷市の渋谷歯科技工所。最新のデジタル技術を活用した歯科技工サービスを提供。自家歯牙移植用3Dレプリカ、CAD/CAM修復物など。【電話】048-961-8151{% endblock %}">
     
+    <!-- Open Graph Tags -->
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ self.title()|striptags|trim }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.description()|striptags|trim }}{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ request.url }}{% endblock %}">
     <meta property="og:image" content="https://shibuya8020.com/images/logo02.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="渋谷歯科技工所のロゴ">
+    <meta property="og:locale" content="ja_JP">
     <meta property="og:site_name" content="渋谷歯科技工所">
     
-      <!-- Favicon -->
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}{{ self.title()|striptags|trim }}{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{{ self.description()|striptags|trim }}{% endblock %}">
+    <meta name="twitter:image" content="https://shibuya8020.com/images/logo02.jpg">
+    <meta name="twitter:image:alt" content="渋谷歯科技工所のロゴ">
+    
+    <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='main/top/favicon.ico') }}?v=2">
-    {% block canonical %}
-    <link rel="canonical" href="{{ request.url }}">
-    {% endblock %}
-
-          <!-- Title -->
-    <title>{% block title %}渋谷歯科技工所 | SHIBUYA Dental Laboratory{% endblock %}</title>
-    {% block head %}{% endblock %} 
-    {% block head_extras %}{% endblock %}
+    <link rel="canonical" href="{% block canonical %}{{ request.url }}{% endblock %}">
 
     <!-- 組織情報の構造化データ -->
     <script type="application/ld+json">
@@ -90,10 +89,10 @@
         const csrf_token = "{{ csrf_token() }}";
     </script> 
   
-    <!-- Bootstrap CSS を通常読み込み -->
+    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 
-    <!-- 自社 style.css を通常読み込み -->
+    <!-- 自社 style.css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <style>
@@ -102,6 +101,8 @@
       }
     </style>
 
+    <!-- ページ固有の追加設定 -->
+    {% block extra_meta %}{% endblock %}
 </head>
 
 <body>

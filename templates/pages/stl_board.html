@@ -1,10 +1,67 @@
 {% extends "common/base.html" %}
 
-{% block title %}STL Board{% endblock %}
+{# SEO最適化 #}
+{% block title %}STLファイル共有ボード｜3Dモデル投稿掲示板｜渋谷歯科技工所{% endblock %}
+{% block description %}歯科技工用STLファイルの共有・交換ができる専用掲示板。3Dモデルのアップロード、ダウンロード、技術情報の交換が可能です。{% endblock %}
+{% block keywords %}STLファイル,3Dモデル,歯科技工,ファイル共有,3Dプリント,CAD,掲示板,技工所,デジタルデンティストリー{% endblock %}
 
-{% block meta_description %}
-<meta name="description" content="A dedicated STL file forum where you can share and interact with 3D models.">
-<meta property="og:description" content="A dedicated STL file forum where you can share and interact with 3D models.">
+{% block og_type %}website{% endblock %}
+{% block og_description %}歯科技工用STLファイルの共有・交換ができる専用掲示板。3Dモデルのアップロードやダウンロードが可能です。{% endblock %}
+
+{% block extra_meta %}
+  {# Twitter Card専用設定 #}
+  <meta name="twitter:title" content="STLファイル共有ボード｜3Dモデル掲示板">
+  <meta name="twitter:description" content="歯科技工用STLファイルの共有・交換ができる専用掲示板。技術情報の交換も可能です。">
+
+  {# パンくず構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+          {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "ホーム",
+              "item": "https://shibuya8020.com/"
+          },
+          {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "STLファイル共有ボード",
+              "item": "https://shibuya8020.com/stl_board/"
+          }
+      ]
+  }
+  </script>
+
+  {# WebApplicationの構造化データ #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "STLファイル共有ボード",
+    "description": "歯科技工用STLファイルの共有・交換ができる専用掲示板システム",
+    "url": "https://shibuya8020.com/stl_board/",
+    "applicationCategory": "3D Modeling Tool",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "JPY"
+    },
+    "provider": {
+      "@type": "Organization",
+      "name": "渋谷歯科技工所"
+    },
+    "featureList": [
+      "STLファイルのアップロード",
+      "3Dモデルの共有",
+      "技術情報の交換",
+      "ファイルのダウンロード"
+    ]
+  }
+  </script>
 {% endblock %}
 
 {% block content %}
