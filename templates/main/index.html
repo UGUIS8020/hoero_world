@@ -41,10 +41,7 @@
     margin-right: 20px;
     display: block; /* インライン要素のスペースを除去 */
     /* レイアウトシフト対策の追加 */
-    object-fit: contain; /* 画像の縦横比を保持 */
-    position: absolute; /* 絶対位置で配置 */
-    top: 0;
-    left: 0;
+    object-fit: contain; /* 画像の縦横比を保持 */    
     opacity: 0; /* 初期状態で透明 */
     transition: opacity 0.3s ease; /* スムーズな表示 */
 }
@@ -120,15 +117,16 @@ a:active { color: #b22222; text-decoration: none; }
 
 <!-- メインヘッダー -->
 <section class="dental-header">
-    <div class="logo">         
+    <div class="logo">
         <img src="{{ url_for('static', filename='main/top/logo02.webp') }}" 
         alt="渋谷歯科技工所ロゴ" 
         width="157" 
         height="157"
-        loading="lazy"
-        decoding="async"
+        loading="eager"
+        decoding="sync"
         fetchpriority="high"
-        onload="this.classList.add('loaded')">
+        style="opacity: 0;"
+        onload="this.style.opacity='1';">
     </div>
     <div class="text-content">
       <div class="japanese-text">渋谷歯科技工所</div>
@@ -615,22 +613,9 @@ function loadVideo(elementId, videoId) {
 // 画像の読み込み完了を確実に検知
 document.addEventListener('DOMContentLoaded', function() {
     const logoImg = document.querySelector('.logo img');
-    
-    // 画像が既に読み込み済みの場合
-    if (logoImg.complete && logoImg.naturalHeight !== 0) {
-        logoImg.classList.add('loaded');
+    if (logoImg && logoImg.complete && logoImg.naturalHeight !== 0) {
+        logoImg.style.opacity = '1';
     }
-    
-    // 画像の読み込み完了時
-    logoImg.addEventListener('load', function() {
-        this.classList.add('loaded');
-    });
-    
-    // 読み込みエラー時の対処
-    logoImg.addEventListener('error', function() {
-        this.style.opacity = '0.5';
-        console.warn('Logo image failed to load');
-    });
 });
 </script>
 
