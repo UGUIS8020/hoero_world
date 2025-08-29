@@ -27,6 +27,14 @@
     width: 157px; /* 明示的な幅指定 */
     height: 157px; /* 明示的な高さ指定 */
     flex-shrink: 0; /* サイズ変動を防止 */
+    /* レイアウトシフト対策の追加 */
+    background-color: rgba(124, 24, 32, 0.05); /* 薄い背景色でプレースホルダー */
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative; /* 子要素の位置制御用 */
+    overflow: hidden; /* はみ出し防止 */
 }
 
 .logo img {
@@ -34,6 +42,35 @@
     height: 157px; /* 明示的な高さ */
     margin-right: 20px;
     display: block; /* インライン要素のスペースを除去 */
+    /* レイアウトシフト対策の追加 */
+    object-fit: contain; /* 画像の縦横比を保持 */
+    position: absolute; /* 絶対位置で配置 */
+    top: 0;
+    left: 0;
+    opacity: 0; /* 初期状態で透明 */
+    transition: opacity 0.3s ease; /* スムーズな表示 */
+}
+
+.logo img.loaded {
+    opacity: 1; /* 読み込み完了後に表示 */
+}
+
+/* 画像読み込みエラー時のスタイル */
+.logo img.error {
+    opacity: 0.3;
+    background-color: #f0f0f0;
+}
+
+/* レスポンシブ対応時の修正 */
+@media (max-width: 768px) {
+    .logo {
+        margin-bottom: 15px;
+    }
+    
+    .logo img {
+        margin-right: 0; /* モバイル時はマージンリセット */
+        position: relative; /* モバイル時は通常の配置に戻す */
+    }
 }
 
 .text-content {
@@ -92,13 +129,14 @@ a:active { color: #b22222; text-decoration: none; }
         height="157"
         loading="eager"
         decoding="async"
-        fetchpriority="high">
+        fetchpriority="high"
+        onload="this.classList.add('loaded')">
     </div>
     <div class="text-content">
       <div class="japanese-text">渋谷歯科技工所</div>
       <div class="english-text">SHIBUYA Dental Laboratory</div>
     </div>
-</section>  
+</section> 
 
 <!-- 管理者メニュー -->
 {% if current_user.is_authenticated and current_user.is_administrator %}
@@ -304,6 +342,82 @@ a:active { color: #b22222; text-decoration: none; }
      height: auto;
    }
  }
+         .video {
+            position: relative;
+            width: 500px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 8px auto 20px;
+            cursor: pointer;
+        }
+        
+        .video-thumbnail {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .play-button {
+            width: 80px;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .play-button:hover {
+            background: rgba(255, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+        
+        .play-button::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 20px solid white;
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            margin-left: 4px;
+        }
+        
+        .video iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        
+        .video-title {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            color: white;
+            padding: 20px 15px 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 576px) {
+            .video {
+                width: 100%;
+                max-width: 400px;
+            }
+        }
 </style>
 
 <!-- メインコンテンツエリア -->
@@ -317,22 +431,26 @@ a:active { color: #b22222; text-decoration: none; }
     <div class="grid">
       <!-- 左カラム：テキスト＋動画＋手順リンク -->
       <section aria-labelledby="work-title">
-        <h2 id="work-title">歯科技工士の仕事</h2>
-        <p>仕事を知っていただくための動画です。</p>
+          <h2>歯科技工士の仕事</h2> 
 
-        <!-- YouTube動画 - 遅延読み込み -->
-        <div class="video" aria-label="歯科技工士の仕事 動画">
-          <div id="video1" class="video-placeholder" onclick="loadVideo('video1', '8Ca6YuMNXyQ')" style="background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
-            <span>▶ 動画を読み込む</span>
-          </div>
+    <!-- 動画1: 歯科技工士の仕事 -->
+    <div class="video" onclick="loadVideo('video1', '8Ca6YuMNXyQ')">
+        <div id="video1" class="video-thumbnail" style="background-image: url('https://img.youtube.com/vi/8Ca6YuMNXyQ/hqdefault.jpg');">
+            <div class="play-button"></div>
+            <div class="video-title">歯科技工士の仕事</div>
         </div>
+    </div>
 
-        <h2>石膏の注ぎ方</h2>
-        <div class="video" aria-label="石膏の注ぎ方 動画">
-          <div id="video2" class="video-placeholder" onclick="loadVideo('video2', '4r6pxVJDpZs')" style="background: #000; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
-            <span>▶ 動画を読み込む</span>
-          </div>
+    <h2>石膏の注ぎ方</h2>
+    
+    <!-- 動画2: 石膏の注ぎ方 -->
+    <div class="video" onclick="loadVideo('video2', '4r6pxVJDpZs')">
+        <div id="video2" class="video-thumbnail" style="background-image: url('https://img.youtube.com/vi/4r6pxVJDpZs/hqdefault.jpg');">
+            <div class="play-button"></div>
+            <div class="video-title">石膏の注ぎ方</div>
         </div>
+    </div>
+    
 
         <h2>技工物の製作手順</h2>
         <ul class="link-list">
@@ -534,6 +652,27 @@ document.addEventListener('DOMContentLoaded', function() {
     
     videoPlaceholders.forEach(placeholder => {
         observer.observe(placeholder);
+    });
+});
+
+// 画像の読み込み完了を確実に検知
+document.addEventListener('DOMContentLoaded', function() {
+    const logoImg = document.querySelector('.logo img');
+    
+    // 画像が既に読み込み済みの場合
+    if (logoImg.complete && logoImg.naturalHeight !== 0) {
+        logoImg.classList.add('loaded');
+    }
+    
+    // 画像の読み込み完了時
+    logoImg.addEventListener('load', function() {
+        this.classList.add('loaded');
+    });
+    
+    // 読み込みエラー時の対処
+    logoImg.addEventListener('error', function() {
+        this.style.opacity = '0.5';
+        console.warn('Logo image failed to load');
     });
 });
 </script>
