@@ -4,8 +4,6 @@
 {% block extra_meta %}
 <!-- ページ固有のプリロード -->
 <link rel="preload" href="{{ url_for('static', filename='main/top/logo02.webp') }}" as="image" fetchpriority="high">
-<link rel="preload" href="{{ url_for('static', filename='main/top/root_replica003.webp') }}" as="image">
-<link rel="preload" href="{{ url_for('static', filename='main/top/root_replica004.webp') }}" as="image">
 {% endblock %}
 
 {% block content %}
@@ -127,7 +125,7 @@ a:active { color: #b22222; text-decoration: none; }
         alt="渋谷歯科技工所ロゴ" 
         width="157" 
         height="157"
-        loading="eager"
+        loading="lazy"
         decoding="async"
         fetchpriority="high"
         onload="this.classList.add('loaded')">
@@ -185,7 +183,7 @@ a:active { color: #b22222; text-decoration: none; }
             alt="歯根レプリカ003"
             width="300" 
             height="225"
-            loading="eager"
+            loading="lazy"
             decoding="async">
 
             <img src="{{ url_for('static', filename='main/top/root_replica004.webp') }}"
@@ -271,6 +269,7 @@ a:active { color: #b22222; text-decoration: none; }
      border-radius: 8px;
      overflow: hidden;
      margin: 8px auto 20px;
+     cursor: pointer;
    }
    .video iframe {
      position: absolute;
@@ -341,17 +340,7 @@ a:active { color: #b22222; text-decoration: none; }
      max-width: 100% !important;
      height: auto;
    }
- }
-         .video {
-            position: relative;
-            width: 500px;
-            aspect-ratio: 16/9;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 8px auto 20px;
-            cursor: pointer;
-        }
+ }         
         
         .video-thumbnail {
             position: relative;
@@ -389,15 +378,7 @@ a:active { color: #b22222; text-decoration: none; }
             border-top: 12px solid transparent;
             border-bottom: 12px solid transparent;
             margin-left: 4px;
-        }
-        
-        .video iframe {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
+        }       
         
         .video-title {
             position: absolute;
@@ -430,7 +411,7 @@ a:active { color: #b22222; text-decoration: none; }
 
     <div class="grid">
       <!-- 左カラム：テキスト＋動画＋手順リンク -->
-      <section aria-labelledby="work-title">
+      <section>
           <h2>歯科技工士の仕事</h2> 
 
     <!-- 動画1: 歯科技工士の仕事 -->
@@ -630,30 +611,6 @@ function loadVideo(elementId, videoId) {
     element.innerHTML = '';
     element.appendChild(iframe);
 }
-
-// Intersection Observer でビューポートに入った時に動画を自動読み込み（オプション）
-document.addEventListener('DOMContentLoaded', function() {
-    const videoPlaceholders = document.querySelectorAll('.video-placeholder');
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const element = entry.target;
-                if (element.id === 'video1') {
-                    // 必要に応じて自動読み込みを有効化
-                    // loadVideo('video1', '8Ca6YuMNXyQ');
-                }
-                if (element.id === 'video2') {
-                    // loadVideo('video2', '4r6pxVJDpZs');
-                }
-                observer.unobserve(element);
-            }
-        });
-    }, { threshold: 0.1 });
-    
-    videoPlaceholders.forEach(placeholder => {
-        observer.observe(placeholder);
-    });
-});
 
 // 画像の読み込み完了を確実に検知
 document.addEventListener('DOMContentLoaded', function() {
