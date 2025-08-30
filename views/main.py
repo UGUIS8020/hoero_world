@@ -661,8 +661,17 @@ def meziro_upload():
 以下の内容で受付を完了いたしました。
 
 【受付番号】No.{id_str}
-【製作物】{project_type}
+【事業者名】{business_name}
+【送信者名】{user_name}
+【メールアドレス】{user_email}
+【患者名】{patient_name}
 【セット希望日時】{appointment_date} {appointment_hour}時
+【製作物】{project_type}
+【クラウン種別】{crown_type}
+【対象部位】{", ".join(teeth)}
+【シェード】{shade}
+【メッセージ】
+{message}
 
 ファイルを確認の上、内容に応じて対応させていただきます。
 万が一、内容に不備がある場合は別途ご連絡させていただきます。
