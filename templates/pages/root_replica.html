@@ -1,89 +1,84 @@
 {% extends "common/base.html" %}
 
-{# SEO最適化 #}
+{# ===================== SEO 基本 ===================== #}
 {% block title %}自家歯牙移植用レプリカ｜3Dモデル製作サービス｜渋谷歯科技工所{% endblock %}
-{% block description %}CTデータから精密な3Dレプリカを製作し、自家歯牙移植の成功率向上をサポート。移植時間短縮と歯根膜保護により理想的な治療結果を実現します。{% endblock %}
-{% block keywords %}自家歯牙移植,3Dレプリカ,歯科技工,CTデータ,歯根モデル,移植手術,成功率向上,歯根膜保護,埼玉県,越谷市,渋谷歯科技工所{% endblock %}
+{% block description %}CTデータから精密な3Dレプリカを製作。自家歯牙移植用レプリカ（移植歯ダミー／移植窩形成用ダミー／3Dレプリカ）により、手術時間短縮と歯根膜保護を実現します。{% endblock %}
 
-{% block og_type %}service{% endblock %}
-{% block og_description %}CTデータから精密な3Dレプリカを製作する自家歯牙移植支援サービス。移植成功率の向上と手術時間短縮を実現します。{% endblock %}
+{# OGP/Twitter（OG:product、ページ固有画像・正規URLを明示） #}
+{% block og_type %}product{% endblock %}
+{% block og_description %}自家歯牙移植を支援する3Dレプリカ（移植歯ダミー）。CTベースで高精度、移植窩形成の事前シミュレーションに最適。{% endblock %}
+{% block canonical %}{{ url_for('pages.root_replica', _external=True) }}{% endblock %}
+{% block og_image %}<meta property="og:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
+{% block twitter_title %}自家歯牙移植用3Dレプリカ（移植歯ダミー）{% endblock %}
+{% block twitter_description %}CTデータから精密な移植歯レプリカを製作。移植窩形成の効率化と成功率向上に貢献します。{% endblock %}
+{% block twitter_image %}<meta name="twitter:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
 
+{# ===================== 追加メタ／構造化データ ===================== #}
 {% block extra_meta %}
-  {# Twitter Card 専用設定 #}
-  <meta name="twitter:title" content="自家歯牙移植用3Dレプリカ製作サービス">
-  <meta name="twitter:description" content="CTデータから精密な歯根レプリカを製作。移植成功率向上と手術時間短縮を実現する専門サービスです。">
-
   {# パンくず構造化データ #}
   <script type="application/ld+json">
   {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-          {
-              "@type": "ListItem",
-              "position": 1,
-              "name": "ホーム",
-              "item": "https://shibuya8020.com/"
-          },
-          {
-              "@type": "ListItem",
-              "position": 2,
-              "name": "自家歯牙移植用レプリカ",
-              "item": "https://shibuya8020.com/pages/root_replica"
-          }
-      ]
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "ホーム", "item": "https://shibuya8020.com/" },
+      { "@type": "ListItem", "position": 2, "name": "自家歯牙移植用レプリカ", "item": "https://shibuya8020.com/pages/root_replica" }
+    ]
   }
   </script>
 
-  {# サービス情報構造化データ #}
+  {# サービス情報構造化データ（MedicalService） #}
   <script type="application/ld+json">
   {
-      "@context": "https://schema.org",
-      "@type": "MedicalService",
-      "name": "自家歯牙移植用3Dレプリカ製作",
-      "description": "CTデータから正確な歯根形状を再現し、自家歯牙移植の成功率向上を支援する専門技工サービス",
-      "url": "https://shibuya8020.com/pages/root_replica",
-      "provider": {
-          "@type": "MedicalOrganization",
-          "name": "渋谷歯科技工所",
-          "url": "https://shibuya8020.com/",
-          "address": {
-            "@type": "PostalAddress",
-            "streetAddress": "南越谷4-9-6 新越谷プラザビル203",
-            "addressLocality": "越谷市",
-            "addressRegion": "埼玉県",
-            "postalCode": "343-0845",
-            "addressCountry": "JP"
-          },
-          "telephone": "+81-48-961-8151",
-          "email": "shibuya8020@gmail.com"
+    "@context": "https://schema.org",
+    "@type": "MedicalService",
+    "name": "自家歯牙移植用3Dレプリカ製作",
+    "alternateName": ["移植歯ダミー", "移植窩形成用ダミー", "3Dレプリカ", "移植歯模型"],
+    "keywords": "自家歯牙移植, 移植歯ダミー, 3Dレプリカ, 移植窩形成, 歯根モデル, CTデータ",
+    "description": "CTデータから正確な歯根形状を再現し、自家歯牙移植の成功率向上を支援する専門技工サービス",
+    "url": "https://shibuya8020.com/pages/root_replica",
+    "provider": {
+      "@type": "MedicalOrganization",
+      "name": "渋谷歯科技工所",
+      "url": "https://shibuya8020.com/",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "南越谷4-9-6 新越谷プラザビル203",
+        "addressLocality": "越谷市",
+        "addressRegion": "埼玉県",
+        "postalCode": "343-0845",
+        "addressCountry": "JP"
       },
-      "serviceType": "歯科技工サービス",
-      "areaServed": {
-        "@type": "Country",
-        "name": "日本"
-      },
-      "offers": {
-        "@type": "Offer",
-        "name": "3Dレプリカ製作",
-        "description": "CTデータから精密な歯根レプリカを製作し、移植手術の精度向上をサポート"
-      },
-      "hasOfferCatalog": {
-        "@type": "OfferCatalog",
-        "name": "自家歯牙移植支援サービス",
-        "itemListElement": [
-          {
-            "@type": "Offer",
-            "name": "3Dレプリカ製作",
-            "description": "CTスキャンデータから精密な歯根レプリカを3Dプリントで製作"
-          },
-          {
-            "@type": "Offer", 
-            "name": "移植窩準備支援",
-            "description": "レプリカを使用した事前の移植窩形成により手術時間を短縮"
-          }
-        ]
-      }
+      "telephone": "+81-48-961-8151",
+      "email": "shibuya8020@gmail.com"
+    },
+    "serviceType": "歯科技工サービス",
+    "areaServed": "JP",
+    "offers": {
+      "@type": "Offer",
+      "name": "3Dレプリカ製作",
+      "description": "CTデータから精密な歯根レプリカを製作し、移植手術の精度向上をサポート",
+      "priceCurrency": "JPY",
+      "price": "8500",
+      "availability": "https://schema.org/InStock",
+      "url": "https://shibuya8020.com/pages/root_replica"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "自家歯牙移植支援サービス",
+      "itemListElement": [
+        {
+          "@type": "Offer",
+          "name": "3Dレプリカ製作",
+          "description": "CTスキャンデータから精密な歯根レプリカを3Dプリントで製作"
+        },
+        {
+          "@type": "Offer",
+          "name": "移植窩準備支援",
+          "description": "レプリカを使用した事前の移植窩形成により手術時間を短縮"
+        }
+      ]
+    }
   }
   </script>
   
@@ -130,11 +125,24 @@
         </ol>
     </nav>
 
-<div class="text-center">
-  <h1>レプリカを用いた自家歯牙移植</h1>  
-  <h2>移植歯シミュレーションモデル</h2>
-  <h2>CBCT画像(CTデータ)から歯牙歯根モデルの作製。</h2>
+<h1 class="mb-3">自家歯牙移植用レプリカ（3Dモデル）</h1>
+
+<p class="lead">
+  本サービスは、CT/CBCTデータから移植歯の形状を正確に再現した
+  <strong>自家歯牙移植用レプリカ</strong>です。<br>
+  臨床では <strong>移植歯ダミー</strong>（移植窩形成用ダミー）や
+  <strong>3Dレプリカ</strong>とも呼ばれます。
+</p>
+
+<div style="text-align:center;">
+  <h2>主な用途（移植歯ダミー／3Dレプリカ）</h2>
+  <ul style="display:inline-block; text-align:left;">
+    <li>移植窩形成の事前シミュレーション</li>
+    <li>口腔外時間の短縮と歯根膜保護</li>
+    <li>難症例の術前検討・説明補助</li>
+  </ul>
 </div>
+
 
 <div class="box-replica mt-3">  
   <div class="replica-row">
