@@ -1,16 +1,22 @@
 {% extends "common/base.html" %}
 
 {# ===================== SEO 基本 ===================== #}
-{% block title %}自家歯牙移植用レプリカ｜3Dモデル製作サービス｜渋谷歯科技工所{% endblock %}
-{% block description %}CTデータから精密な3Dレプリカを製作。自家歯牙移植用レプリカ（移植歯ダミー／移植窩形成用ダミー／3Dレプリカ）により、手術時間短縮と歯根膜保護を実現します。{% endblock %}
+{% block title %}自家歯牙移植用レプリカ｜3Dモデル製作サービス（ドナーレプリカ対応）｜渋谷歯科技工所{% endblock %}
+{% block description %}
+CT/CBCT（DICOM）データから精密な3Dレプリカを製作。自家歯牙移植用レプリカ（ドナーレプリカ／移植歯ダミー／移植窩形成用ダミー／3Dレプリカ）により、手術時間短縮と歯根膜保護を実現。CAD/CAM・3Dプリンタに対応。
+{% endblock %}
 
 {# OGP/Twitter（OG:product、ページ固有画像・正規URLを明示） #}
 {% block og_type %}product{% endblock %}
-{% block og_description %}自家歯牙移植を支援する3Dレプリカ（移植歯ダミー）。CTベースで高精度、移植窩形成の事前シミュレーションに最適。{% endblock %}
+{% block og_description %}
+自家歯牙移植を支援するデジタル・ドナーレプリカ（移植歯ダミー／3Dレプリカ）。CBCT（DICOM）ベースで高精度、移植窩形成の事前シミュレーションに最適。CAD/CAM・3Dプリンタ対応。
+{% endblock %}
 {% block canonical %}{{ url_for('pages.root_replica', _external=True) }}{% endblock %}
 {% block og_image %}<meta property="og:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
-{% block twitter_title %}自家歯牙移植用3Dレプリカ（移植歯ダミー）{% endblock %}
-{% block twitter_description %}CTデータから精密な移植歯レプリカを製作。移植窩形成の効率化と成功率向上に貢献します。{% endblock %}
+{% block twitter_title %}自家歯牙移植用3Dレプリカ（ドナーレプリカ／移植歯ダミー）{% endblock %}
+{% block twitter_description %}
+CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と成功率向上に貢献（CAD/CAM・3Dプリンタ対応）。
+{% endblock %}
 {% block twitter_image %}<meta name="twitter:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
 
 {# ===================== 追加メタ／構造化データ ===================== #}
@@ -32,10 +38,20 @@
   {
     "@context": "https://schema.org",
     "@type": "MedicalService",
+    "inLanguage": "ja",
     "name": "自家歯牙移植用3Dレプリカ製作",
-    "alternateName": ["移植歯ダミー", "移植窩形成用ダミー", "3Dレプリカ", "移植歯模型"],
-    "keywords": "自家歯牙移植, 移植歯ダミー, 3Dレプリカ, 移植窩形成, 歯根モデル, CTデータ",
-    "description": "CTデータから正確な歯根形状を再現し、自家歯牙移植の成功率向上を支援する専門技工サービス",
+    "alternateName": [
+      "ドナーレプリカ",
+      "デジタルドナーレプリカ",
+      "移植歯ダミー",
+      "移植窩形成用ダミー",
+      "3Dレプリカ",
+      "移植歯模型",
+      "donor tooth replica",
+      "digital donor replica"
+    ],
+    "keywords": "自家歯牙移植, ドナーレプリカ, デジタルドナーレプリカ, 移植歯ダミー, 3Dレプリカ, 移植窩形成, 歯根モデル, CT, CBCT, DICOM, CAD/CAM, 3Dプリンタ, Autotransplantation",
+    "description": "CBCT（DICOM）データから移植歯の正確な形状を再現するレプリカ（ドナーレプリカ／移植歯ダミー）をCAD/CAM・3Dプリンタで製作し、移植窩形成の事前シミュレーション、口腔外時間短縮、歯根膜保護に貢献します。",
     "url": "https://shibuya8020.com/pages/root_replica",
     "provider": {
       "@type": "MedicalOrganization",
@@ -57,7 +73,7 @@
     "offers": {
       "@type": "Offer",
       "name": "3Dレプリカ製作",
-      "description": "CTデータから精密な歯根レプリカを製作し、移植手術の精度向上をサポート",
+      "description": "CBCT（DICOM）→ CAD/CAM/3Dプリンタで作る精密な移植歯レプリカ。移植手術の精度向上をサポート。",
       "priceCurrency": "JPY",
       "price": "8500",
       "availability": "https://schema.org/InStock",
@@ -69,19 +85,19 @@
       "itemListElement": [
         {
           "@type": "Offer",
-          "name": "3Dレプリカ製作",
-          "description": "CTスキャンデータから精密な歯根レプリカを3Dプリントで製作"
+          "name": "3Dレプリカ製作（ドナーレプリカ）",
+          "description": "CBCT/DICOMからのデータ処理（STL化）後、CAD/CAMまたは3Dプリンタでレプリカを製作"
         },
         {
           "@type": "Offer",
           "name": "移植窩準備支援",
-          "description": "レプリカを使用した事前の移植窩形成により手術時間を短縮"
+          "description": "レプリカを使用した事前の移植窩形成シミュレーションにより手術時間を短縮"
         }
       ]
     }
   }
   </script>
-  
+
   {# 医療免責事項 #}
   <meta name="medical-disclaimer" content="本サービスは歯科医師の診断・治療計画に基づいて提供されます。治療結果は個人により異なります。">
 {% endblock %}
@@ -188,11 +204,158 @@
   
     <a href="{{ url_for('pages.root_replica_info') }}"><h3>自家歯牙移植とは</a></h3>
     <a href="{{ url_for('pages.root_replica_case') }}"><h3>自家歯牙移植症例ページ</a></h3>
+
+
+
+<div class="box-replica mt-3">
+  <h2>【症例 1】自家歯牙移植（デジタル・ドナーレプリカ使用）</h2>
+  <h3>【画像提供】<a href="https://kaedenomori-dc.jp/" target="_blank" rel="noopener noreferrer">
+    熊本県合志市：楓の森歯科クリニック Dr.白濱 義将</a></h3>  
+  <h3>右下8番→左下6番の自家歯牙移植｜CBCT（DICOM）→ STL → 3Dプリント（造影剤あり）</h3>
+
+  <p>
+    本症例では、<strong>CBCT（DICOM）</strong>データから抽出したドナー歯形状を
+    <strong>STL変換 → CAD/CAM／3Dプリンタ</strong>で出力した
+    <strong>デジタル・ドナーレプリカ（移植歯ダミー／3Dレプリカ）</strong>を用いて、
+    <strong>移植窩形成の事前シミュレーション</strong>を実施。これにより
+    <strong>口腔外時間の短縮</strong>と<strong>歯根膜の温存</strong>に配慮しつつ、
+    移植床の適合精度を高めました。
+  </p>
+
+  <dl>
+    <dt>目的</dt>
+    <dd>移植窩形成の精度向上、口腔外時間短縮、歯根膜温存、術前説明の可視化</dd>
+    <dt>使用データ／工程</dt>
+    <dd>CBCT（DICOM）→ セグメンテーション → STL → CAD/CAM／3Dプリンタで<strong>ドナーレプリカ</strong>を作製</dd>
+    <dt>結果</dt>
+    <dd>受容窩への試適がスムーズになり、咬合・適合ともに良好</dd>
+  </dl>
+
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/021.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="デジタル・ドナーレプリカ（移植歯ダミー）を用いた移植窩形成シミュレーション：症例1-1">
+      
+        <figcaption>左下6番X線画像</figcaption>
+      
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/022.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="移植歯レプリカの試適（受容窩の適合確認）：症例1-2">
+      <figcaption>左下6番抜歯</figcaption>
+    </figure>
+  </div>
+
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/023.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="受容窩形成の事前シミュレーション（ドナーレプリカ使用）：症例1-3">
+      <figcaption>ドナーレプリカ使用し移植床形成</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/024.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="口腔外時間短縮と歯根膜温存を意識した術式：症例1-4">
+      <figcaption>X線にて移植床形成量を確認</figcaption>
+    </figure>
+  </div>
+
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/026.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="移植後の適合評価：症例1-5">
+      <figcaption>レプリカと抜歯した右下８番との比較</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/025.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="移植歯の固定と咬合調整：症例1-6">
+      <figcaption>右下8番を左下6番部に植立</figcaption>
+    </figure>
+  </div>
+
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/027.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="術後評価（咬合・適合良好）：症例1-7">
+      <figcaption>術後評価（咬合・適合良好）</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/028.jpg') }}"
+           loading="lazy" width="400" height="300"
+           alt="デジタル・ドナーレプリカ活用のメリットまとめ：症例1-8">
+      <figcaption>術後のX線画像</figcaption>
+    </figure>
+  </div>  
+</div>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MedicalProcedure",
+  "name": "Autologous tooth transplantation using a digital donor tooth replica (Case 1)",
+  "alternateName": ["自家歯牙移植 症例1", "デジタル・ドナーレプリカ 症例", "移植歯ダミー 症例"],
+  "procedureType": "Autotransplantation of teeth",
+  "about": [
+    "donor tooth replica", "digital replica", "CBCT", "DICOM", "STL",
+    "CAD/CAM", "3D printing", "socket preparation",
+    "periodontal ligament preservation", "extra-alveolar time"
+  ],
+  "bodyLocation": "Mandibular: 48 → 36",
+  "instrument": "Digital donor tooth replica (3D-printed, with contrast)",
+  "technique": "CBCT (DICOM) segmentation → STL conversion → CAD/CAM or 3D printing for replica; preoperative socket simulation",
+  "image": [
+    "{{ url_for('static', filename='pages/root_replica/shirahama/021.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/022.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/023.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/024.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/026.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/025.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/027.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/028.jpg', _external=True) }}"
+  ],
+  "url": "{{ url_for('pages.root_replica', _external=True) }}"
+}
+</script>
+
+
+{# 症例の構造化データ：検索エンジンに文脈を伝える #}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MedicalProcedure",
+  "name": "Autologous tooth transplantation with digital donor tooth replica (Case 1)",
+  "alternateName": ["自家歯牙移植 症例1", "デジタル・ドナーレプリカ 症例", "移植歯ダミー 症例"],
+  "procedureType": "Autotransplantation of teeth",
+  "about": ["donor tooth replica", "digital replica", "CBCT", "DICOM", "STL", "CAD/CAM", "3D printing", "socket preparation", "periodontal ligament preservation", "extra-alveolar time"],
+  "bodyLocation": "Mandibular molar region (48 → 36)",
+  "instrument": "Digital donor tooth replica (3D-printed)",
+  "technique": "CBCT (DICOM) segmentation → STL conversion → CAD/CAM or 3D printing for replica; preoperative socket simulation",
+  "image": [
+    "{{ url_for('static', filename='pages/root_replica/shirahama/021.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/022.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/023.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/024.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/025.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/026.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/027.jpg', _external=True) }}",
+    "{{ url_for('static', filename='pages/root_replica/shirahama/028.jpg', _external=True) }}"
+  ],
+  "url": "{{ url_for('pages.root_replica', _external=True) }}"
+}
+</script>
+
+
+
   
 
 <div class="box-replica mt-3">
   <h2>【症例 1】</h2>
-  <h3>右下8番を左下6番に移植 造形剤有りのレプリカ使用</h3>
+  <h3>右下8番を左下6番に移植 造影剤有りのレプリカ使用</h3>
 
   <div class="replica-row">
     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/021.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例1-1" width="400" height="300">
@@ -220,7 +383,7 @@
 
 <div class="box-replica mt-3">
   <h2>【症例 2】</h2>
-  <h3>右上8番を右上7番に移植 造形剤有りのレプリカ使用</h3>
+  <h3>右上8番を右上7番に移植 造影剤有りのレプリカ使用</h3>
 
   <div class="replica-row">
     <img src="{{ url_for('static', filename='pages/root_replica/nishimura/001.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-1" width="400" height="300">
@@ -254,7 +417,7 @@
 
 <div class="box-replica mt-3">
   <h2>【症例 3】</h2>
-  <h3>左下8番を右下6番に移植 造形剤有りのレプリカ使用</h3>
+  <h3>左下8番を右下6番に移植 造影剤有りのレプリカ使用</h3>
 
      <div class="replica-row">     
      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/013.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-1" width="400" height="300">
