@@ -19,6 +19,10 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
 {% endblock %}
 {% block twitter_image %}<meta name="twitter:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
 
+{% block og_url %}<meta property="og:url" content="{{ url_for('pages.root_replica', _external=True) }}">{% endblock %}
+{% block twitter_card %}<meta name="twitter:card" content="summary_large_image">{% endblock %}
+{% block og_title %}<meta property="og:title" content="自家歯牙移植用レプリカ｜3Dモデル製作サービス（ドナーレプリカ対応）｜渋谷歯科技工所">{% endblock %}
+
 {# ===================== 追加メタ／構造化データ ===================== #}
 {% block extra_meta %}
   {# パンくず構造化データ #}
@@ -376,8 +380,8 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
   </div>
 
   
-    <a href="{{ url_for('pages.root_replica_info') }}"><h3>自家歯牙移植とは</a></h3>
-    <a href="{{ url_for('pages.root_replica_case') }}"><h3>自家歯牙移植症例ページ</a></h3>
+    <h3><a href="{{ url_for('pages.root_replica_info') }}">自家歯牙移植とは</a></h3>
+    <h3><a href="{{ url_for('pages.root_replica_case') }}">自家歯牙移植症例ページ</a></h3>
 
 
 
@@ -467,21 +471,19 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
     </figure>
   </div>  
 </div>
+
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "MedicalProcedure",
+  "@id": "https://shibuya8020.com/pages/root_replica#case1",
   "name": "Autologous tooth transplantation using a digital donor tooth replica (Case 1)",
   "alternateName": ["自家歯牙移植 症例1", "デジタル・ドナーレプリカ 症例", "移植歯ダミー 症例"],
   "procedureType": "Autotransplantation of teeth",
-  "about": [
-    "donor tooth replica", "digital replica", "CBCT", "DICOM", "STL",
-    "CAD/CAM", "3D printing", "socket preparation",
-    "periodontal ligament preservation", "extra-alveolar time"
-  ],
+  "about": ["donor tooth replica", "digital replica", "CBCT", "DICOM", "STL", "CAD/CAM", "3D printing", "socket preparation", "periodontal ligament preservation", "extra-alveolar time"],
   "bodyLocation": "Mandibular: 48 → 36",
   "instrument": "Digital donor tooth replica (3D-printed, with contrast)",
-  "technique": "CBCT (DICOM) segmentation → STL conversion → CAD/CAM or 3D printing for replica; preoperative socket simulation",
+  "technique": "CBCT (DICOM) segmentation → STL conversion → CAD/CAM or 3D printing; preoperative socket simulation",
   "image": [
     "{{ url_for('static', filename='pages/root_replica/shirahama/021.jpg', _external=True) }}",
     "{{ url_for('static', filename='pages/root_replica/shirahama/022.jpg', _external=True) }}",
@@ -495,33 +497,6 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
   "url": "{{ url_for('pages.root_replica', _external=True) }}"
 }
 </script>
-
-
-{# 症例の構造化データ：検索エンジンに文脈を伝える #}
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "MedicalProcedure",
-  "name": "Autologous tooth transplantation with digital donor tooth replica (Case 1)",
-  "alternateName": ["自家歯牙移植 症例1", "デジタル・ドナーレプリカ 症例", "移植歯ダミー 症例"],
-  "procedureType": "Autotransplantation of teeth",
-  "about": ["donor tooth replica", "digital replica", "CBCT", "DICOM", "STL", "CAD/CAM", "3D printing", "socket preparation", "periodontal ligament preservation", "extra-alveolar time"],
-  "bodyLocation": "Mandibular molar region (48 → 36)",
-  "instrument": "Digital donor tooth replica (3D-printed)",
-  "technique": "CBCT (DICOM) segmentation → STL conversion → CAD/CAM or 3D printing for replica; preoperative socket simulation",
-  "image": [
-    "{{ url_for('static', filename='pages/root_replica/shirahama/021.jpg', _external=True) }}",
-    "{{ url_for('static', filename='pages/root_replica/shirahama/022.jpg', _external=True) }}",
-    "{{ url_for('static', filename='pages/root_replica/shirahama/023.jpg', _external=True) }}",
-    "{{ url_for('static', filename='pages/root_replica/shirahama/024.jpg', _external=True) }}",
-    "{{ url_for('static', filename='pages/root_replica/shirahama/025.jpg', _external=True) }}",
-    "{{ url_for('static', filename='pages/root_replica/shirahama/026.jpg', _external=True) }}",
-    "{{ url_for('static', filename='pages/root_replica/shirahama/027.jpg', _external=True) }}",
-    "{{ url_for('static', filename='pages/root_replica/shirahama/028.jpg', _external=True) }}"
-  ],
-  "url": "{{ url_for('pages.root_replica', _external=True) }}"
-}
-</script>  
 
 
 
