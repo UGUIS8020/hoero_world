@@ -104,35 +104,186 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
 
 {% block content %}
 
-<style> 
-  .box-replica {
-    display: flex;
-    flex-direction: column;
-    gap: 10px; /* 画像間の隙間 */
-    flex-wrap: wrap; /* 必要に応じて折り返し */
-    align-items: center; /* 中央揃え（任意） */ 
+<style>
+        /* 基本スタイル（現在のものを改良） */
+        .box-replica {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            max-width: 1200px; /* 最大幅を設定 */
+            margin: 0 auto; /* 中央配置 */
+            padding: 20px; /* 内側の余白 */
+        }
 
-  }
-.box-replica h2 {
-  width: 100%;
-  flex-basis: 100%; /* フレックスボックス内での幅 */
-  margin: 15px 0px 0px 0px;  
-}
-.box-replica h3 {
-  width: 100%;
-  flex-basis: 100%; /* フレックスボックス内での幅 */
-  margin: 0px 0px 0px 0px; 
-}
-.replica-row {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 5px;
-  min-height: 300px; /* 画像の高さに合わせて設定 */
-}
+        .box-replica h2 {
+            width: 100%;
+            flex-basis: 100%;
+            margin: 15px 0px 0px 0px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
 
+        .box-replica h3 {
+            width: 100%;
+            flex-basis: 100%;
+            margin: 0px 0px 0px 0px;
+            color: #34495e;
+        }
 
-</style>
+        .replica-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 5px;
+            min-height: 300px;
+            width: 100%; /* 全幅使用 */
+        }
+
+        /* 画像とfigureのスタイル */
+        .replica-row figure {
+            flex: 1;
+            margin: 0;
+            max-width: 400px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .replica-row img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: cover;
+            aspect-ratio: 4/3; /* 縦横比を維持 */
+        }
+
+        .replica-row figcaption {
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            background: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        /* スマホ対応：768px以下でレイアウト変更 */
+        @media (max-width: 768px) {
+            .box-replica {
+                padding: 15px; /* スマホ用に余白を調整 */
+            }
+            
+            .replica-row {
+                flex-direction: column; /* 縦一列に変更 */
+                align-items: center;
+                gap: 20px; /* 縦並び時の間隔を広げる */
+                min-height: auto; /* 高さ制限を解除 */
+            }
+            
+            .replica-row figure {
+                width: 100%;
+                max-width: 350px; /* スマホ用サイズ */
+            }
+            
+            .box-replica h2 {
+                font-size: 18px; /* フォントサイズを調整 */
+                margin: 10px 0px 0px 0px;
+            }
+            
+            .box-replica h3 {
+                font-size: 16px;
+                line-height: 1.4;
+            }
+        }
+
+        /* 小型スマホ対応：480px以下 */
+        @media (max-width: 480px) {
+            .box-replica {
+                padding: 10px;
+                gap: 5px;
+            }
+            
+            .replica-row {
+                gap: 15px;
+            }
+            
+            .replica-row figure {
+                max-width: 100%; /* 画面幅いっぱい使用 */
+            }
+            
+            .replica-row figcaption {
+                font-size: 13px;
+                padding: 10px;
+            }
+            
+            .box-replica h2 {
+                font-size: 16px;
+            }
+            
+            .box-replica h3 {
+                font-size: 14px;
+            }
+        }
+
+        /* 超小型デバイス：360px以下 */
+        @media (max-width: 360px) {
+            .box-replica {
+                padding: 8px;
+            }
+            
+            .replica-row {
+                gap: 12px;
+            }
+            
+            .replica-row figcaption {
+                font-size: 12px;
+                padding: 8px;
+            }
+        }
+
+        /* デモ用スタイル */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        p {
+            line-height: 1.6;
+            color: #555;
+        }
+
+        strong {
+            color: #e74c3c;
+        }
+
+        dl {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        dt {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 10px;
+        }
+
+        dt:first-child {
+            margin-top: 0;
+        }
+
+        dd {
+            margin-left: 15px;
+            color: #555;
+        }
+    </style>
+
 <!-- パンくずナビ -->
     <nav class="breadcrumb-nav" aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -353,90 +504,208 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
 
 <div class="box-replica mt-3">
   <h2>【症例 2】</h2>
+  <h3>【画像提供】<a href="https://nishimura-dcc.com/" target="_blank">
+    長崎県長崎市:にしむらデンタルケアクリニック Dr.西村 孝人</a></h3>
   <h3>右上8番を右上7番に移植 造影剤有りのレプリカ使用</h3>
 
   <div class="replica-row">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/001.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-1" width="400" height="300">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/003.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-2" width="400" height="300">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/001.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-1">
+      <figcaption>術前画像</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/003.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-2">
+      <figcaption>右上7番抜歯</figcaption>
+    </figure>
   </div>
 
   <div class="replica-row">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/004.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-3" width="400" height="300">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/005.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-4" width="400" height="300">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/004.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-3">
+      <figcaption>レプリカにて移植床の確認</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/005.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-4">
+      <figcaption>X線にて移植床形成量を確認</figcaption>
+    </figure>
   </div>
 
   <div class="replica-row">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/006.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-5" width="400" height="300">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/007.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-6" width="400" height="300">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/006.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-5">
+      <figcaption>右上8番(ドナー歯)抜歯</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/007.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-6">
+      <figcaption>右上7番部に右上8番を移植</figcaption>
+    </figure>
   </div>
 
   <div class="replica-row">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/008.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-7" width="400" height="300">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/002.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-8" width="400" height="300">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/008.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-7">
+      <figcaption>移植歯を固定</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/002.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-8">
+      <figcaption>術後X線画像</figcaption>
+    </figure>
   </div>
 
-<h3>支台築造、補綴物装着</h3>
+  <h3>支台築造、補綴物装着</h3>
   <div class="replica-row">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/009.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-9" width="400" height="300">
-    <img src="{{ url_for('static', filename='pages/root_replica/nishimura/010.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例2-10" width="400" height="300">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/009.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-9">
+      <figcaption>術後、補綴処置</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/nishimura/010.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例2-10">
+      <figcaption>補綴物装着</figcaption>
+    </figure>
   </div>
-
-  <h3>【画像提供】<a href="https://nishimura-dcc.com//" target="_blank">
-    長崎県長崎市:にしむらデンタルケアクリニック Dr.西村 孝人</a></h3>
+  
 </div>
 
 <div class="box-replica mt-3">
   <h2>【症例 3】</h2>
-  <h3>左下8番を右下6番に移植 造影剤有りのレプリカ使用</h3>
+  <h3>【画像提供】<a href="https://kaedenomori-dc.jp/" target="_blank">
+    熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</a></h3> 
+  <h3>左下8番を右下6番に移植 造影剤有りのレプリカ使用</h3>    
 
-     <div class="replica-row">     
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/013.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-1" width="400" height="300">
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/014.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-2" width="400" height="300">     
-     </div>  
+  <div class="replica-row">     
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/013.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-1">
+      <figcaption>術前移植床</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/014.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-2">
+      <figcaption>レプリカ試適にて移植床の確認</figcaption>
+    </figure>
+  </div>  
 
-     <div class="replica-row">
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/015.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-3" width="400" height="300">
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/016.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-4" width="400" height="300">     
-     </div>  
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/017.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-3">
+      <figcaption>左下8番（ドナー歯）抜歯準備</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/015.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-4">
+      <figcaption>左下8番を右下6番に移植</figcaption>
+    </figure>
+  </div>  
 
-      <div class="replica-row">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/017.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-5" width="400" height="300">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/018.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-6" width="400" height="300">  
-      </div>  
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/016.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-5">
+      <figcaption>ドナー歯固定</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/018.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-6">
+      <figcaption>術後</figcaption>
+    </figure>
+  </div>  
 
-      <div class="replica-row">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/019.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-7" width="400" height="300">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/020.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例3-8" width="400" height="300">  
-      </div> 
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/019.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-7">
+      <figcaption>ドナー歯とレプリカの比較</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/020.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例3-8">
+      <figcaption>ドナー歯とレプリカの比較</figcaption>
+    </figure>
+  </div> 
       
-     <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">
-      熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</a></h3>     
-
+      
 </div>  
 
 <div class="box-replica mt-3">
   <h2>【症例 4】</h2>
-  <h3>左下8番を左下6番に移植</h3>
-  
+  <h3>【画像提供】<a href="https://kaedenomori-dc.jp/" target="_blank">
+    熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</a></h3>
+  <h3>左下8番を左下6番に移植</h3>   
 
-     <div class="replica-row">     
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/001.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例4-1" width="400" height="300">
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/002.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例4-2" width="400" height="300">      
-     </div>  
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/003.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-3">
+      <figcaption>レプリカにて移植床の確認</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/005.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-4">
+      <figcaption>レプリカにて移植床の確認</figcaption>
+    </figure>
+  </div>  
 
-     <div class="replica-row">
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/003.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例4-3" width="400" height="300">
-     <img src="{{ url_for('static', filename='pages/root_replica/shirahama/004.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例4-4" width="400" height="300">     
-     </div>  
-
-      <div class="replica-row">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/005.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例4-5" width="400" height="300">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/006.jpg') }}" loading="lazy" alt="自家歯牙移植用レプリカ症例4-6" width="400" height="300">  
-      </div>       
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/004.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-5">
+      <figcaption>左下8番を左下6番に移植</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/006.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-6">
+      <figcaption>左下8番を左下6番に移植</figcaption>
+    </figure>
+  </div>   
+  <div class="replica-row">     
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/001.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-1">
+      <figcaption>ドナー歯とレプリカの比較</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/002.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-2">
+      <figcaption>ドナー歯とレプリカの比較</figcaption>
+    </figure>
+  </div>     
             
-     <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">
-      熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</a></h3>     
-
+       
 </div>
 
   <div class="box-replica mt-3">
