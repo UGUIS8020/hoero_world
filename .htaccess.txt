@@ -1,0 +1,2 @@
+# 自家歯牙移植レプリカページのリダイレクト
+Redirect 301 /shibuya/rootreplica.html https://shibuya8020.com/pages/root_replica
