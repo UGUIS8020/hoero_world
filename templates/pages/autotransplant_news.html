@@ -1,0 +1,386 @@
+{% extends "common/base.html" %}
+
+{# SEO最適化 #}
+{% block title %}自家歯牙移植ニュース - 最新研究と技術情報 | SHIBUYA Dental Laboratory{% endblock %}
+{% block description %}自家歯牙移植の最新研究、技術情報、症例報告を日本語・英語で配信。デジタルドナーレプリカ、移植成功率向上技術など幅広くカバー。{% endblock %}
+{% block keywords %}自家歯牙移植,歯牙移植,デジタルドナーレプリカ,移植窩形成,歯根膜温存,口腔外科,歯科技工,最新研究,症例報告{% endblock %}
+
+{% block extra_meta %}
+  {# 正規URL（canonical） #}
+  <link rel="canonical" href="https://shibuya8020.com/dental_news">
+
+  {# 検索エンジン向けのメタタグ #}
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+  <meta name="googlebot" content="index, follow">
+  <meta name="author" content="SHIBUYA Dental Laboratory">
+
+  {# Open Graph（Facebook等のSNS用） #}
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="自家歯牙移植ニュース - 最新研究と技術情報">
+  <meta property="og:description" content="自家歯牙移植の最新研究、技術情報、症例報告を日本語・英語で配信。デジタルドナーレプリカなど最新技術をカバー。">
+  <meta property="og:url" content="https://shibuya8020.com/dental_news">
+  <meta property="og:image" content="https://shibuya8020.com/static/images/dental_news_og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="自家歯牙移植技術のイメージ画像">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:site_name" content="SHIBUYA Dental Laboratory">
+
+  {# Twitter Card #}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="自家歯牙移植ニュース - 最新研究と技術情報">
+  <meta name="twitter:description" content="自家歯牙移植の最新研究・技術を自動収集。デジタルドナーレプリカ、移植成功率向上技術を日英両言語で配信。">
+  <meta name="twitter:image" content="https://shibuya8020.com/static/images/dental_news_og.jpg">
+  <meta name="twitter:image:alt" content="自家歯牙移植技術のイメージ画像">
+
+  {# パンくずリスト用構造化データ #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "ホーム",
+        "item": "https://shibuya8020.com/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "自家歯牙移植ニュース",
+        "item": "https://shibuya8020.com/dental_news"
+      }
+    ]
+  }
+  </script>
+
+  {# その他のSEO向上タグ #}
+  <meta name="revisit-after" content="1 days">
+
+{% endblock %}
+
+{% block jsonld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "NewsMediaOrganization",
+  "name": "SHIBUYA Dental News",
+  "url": "https://shibuya8020.com/dental_news",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://shibuya8020.com/static/images/logo.png"
+  },
+  "sameAs": [
+    "https://shibuya8020.com/"
+  ],
+  "description": "自家歯牙移植の最新研究と技術情報を配信する歯科専門ニュースサイト"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            margin-top: 60px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .tab.active {
+            background: #2c5282;
+            color: white;
+        }
+        
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .news-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .news-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .news-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        
+        /* 研究論文・症例報告専用スタイル（画像なし） */
+        .news-card.no-image .news-content {
+            padding: 30px 20px 20px 20px;
+        }
+        
+        .news-content {
+            padding: 20px;
+        }
+        
+        .news-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        
+        .news-type {
+            background: #2c5282;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .news-type.video {
+            background: #e53e3e;
+        }
+        
+        .news-type.research {
+            background: #38a169;
+        }
+        
+        .news-type.case {
+            background: #d69e2e;
+        }
+        
+        .pagination {
+            text-align: center;
+            margin-top: 40px;
+        }
+        
+        .load-more {
+            background: #2c5282;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .load-more:hover {
+            background: #2a4365;
+        }
+        
+        .admin-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .collect-btn {
+            background: #38a169;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            .filter-tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                text-align: center;
+            }
+        }
+    </style>
+
+    <div class="header">
+        <h1>🦷 自家歯牙移植ニュース</h1>
+        
+        <!-- 管理者コントロール -->
+        <div class="admin-controls">
+            <button class="collect-btn" onclick="collectNews()">📥 研究情報収集実行</button>
+            <button class="collect-btn" onclick="autoRefresh()">🔄 自動更新 ON/OFF</button>
+            <div id="status" class="status"></div>
+        </div>
+        
+        <!-- フィルタータブ -->
+        <div class="filter-tabs">
+            <a href="/dental_news?kind=research&lang=ja" class="tab {{ 'active' if kind=='research' and lang=='ja' }}">📄 日本語研究論文</a>
+            <a href="/dental_news?kind=research&lang=en" class="tab {{ 'active' if kind=='research' and lang=='en' }}">📄 English Research</a>
+            <a href="/dental_news?kind=case&lang=ja" class="tab {{ 'active' if kind=='case' and lang=='ja' }}">📋 日本語症例報告</a>
+            <a href="/dental_news?kind=case&lang=en" class="tab {{ 'active' if kind=='case' and lang=='en' }}">📋 English Cases</a>
+            <a href="/dental_news?kind=video&lang=ja" class="tab {{ 'active' if kind=='video' and lang=='ja' }}">🎥 技術動画</a>
+            <a href="/dental_news?kind=video&lang=en" class="tab {{ 'active' if kind=='video' and lang=='en' }}">🎥 Technical Videos</a>
+        </div>
+    </div>
+
+    <div class="news-grid">
+        {% for item in rows %}
+        <article class="news-card {{ 'no-image' if kind in ['research', 'case'] }}">
+            {# 研究論文・症例報告は画像を表示しない。動画のみ画像表示 #}
+            {% if kind == 'video' %}
+                {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="{{ item.title }}" class="news-image" 
+                        onerror="this.style.display='none'">
+                {% else %}
+                    <div class="news-image" style="background: linear-gradient(45deg, #f0f0f0, #e0e0e0); display: flex; align-items: center; justify-content: center; color: #999;">
+                        🎥
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            <div class="news-content">
+                <h2 class="news-title">
+                    <a href="{{ item.url }}" target="_blank" style="text-decoration: none; color: inherit;">
+                        {{ item.title }}
+                    </a>
+                </h2>
+                
+                <div class="news-meta">
+                    <span class="news-type {{ item.kind }}">
+                        {% if item.kind == 'research' %}
+                            研究論文
+                        {% elif item.kind == 'case' %}
+                            症例報告
+                        {% elif item.kind == 'video' %}
+                            技術動画
+                        {% else %}
+                            情報
+                        {% endif %}
+                    </span>
+                    <span>{{ item.published_at[:10] if item.published_at else '日付不明' }}</span>
+                </div>
+                
+                {% if item.author %}
+                    <p style="font-size: 13px; color: #888; margin: 8px 0;">出典: {{ item.author }}</p>
+                {% endif %}
+                
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    {% if next_tok %}
+        <div class="pagination">
+            <a href="/dental_news?kind={{ kind }}&lang={{ lang }}&tok={{ next_tok }}" class="load-more">さらに読み込む</a>
+        </div>
+    {% endif %}
+
+    <script>
+        let autoRefreshInterval = null;
+        
+        async function collectNews() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status';
+            statusDiv.textContent = '収集中...';
+            
+            try {
+                const response = await fetch('/admin/run_dentalnews');
+                const text = await response.text();
+                
+                statusDiv.className = 'status success';
+                statusDiv.textContent = `✅ ${text}`;
+                
+                // 5秒後にページをリロード
+                setTimeout(() => location.reload(), 5000);
+                
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ エラー: ${error.message}`;
+            }
+        }
+        
+        function autoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                alert('自動更新を停止しました');
+            } else {
+                autoRefreshInterval = setInterval(() => {
+                    collectNews();
+                }, 60 * 60 * 1000); // 60分間隔（研究情報は頻繁でなくても良い）
+                alert('自動更新を開始しました（60分間隔）');
+            }
+        }
+        
+        // ページ読み込み時に最新データを確認
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('自家歯牙移植ニュースページを読み込みました');
+        });
+    </script>
+
+{% endblock %}
