@@ -37,6 +37,8 @@ s3 = boto3.client(
 PREFIX = 'meziro/'
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 
+
+
 # ZIPハンドラーのインスタンス作成
 zip_handler_instance = ZipHandler()  # インスタンスを作成
 
@@ -1219,3 +1221,5 @@ def add_featured_image(upload_image):
     image.thumbnail(image_size)
     image.save(filepath)
     return image_filename
+
+
