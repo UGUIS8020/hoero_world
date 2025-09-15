@@ -19,9 +19,9 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
 {% endblock %}
 {% block twitter_image %}<meta name="twitter:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
 
-{% block og_url %}<meta property="og:url" content="{{ url_for('pages.root_replica', _external=True) }}">{% endblock %}
-{% block twitter_card %}<meta name="twitter:card" content="summary_large_image">{% endblock %}
-{% block og_title %}<meta property="og:title" content="自家歯牙移植用レプリカ｜3Dモデル製作サービス（ドナーレプリカ対応）｜渋谷歯科技工所">{% endblock %}
+{% block og_title %}自家歯牙移植用レプリカ｜3Dモデル製作サービス（ドナーレプリカ対応）｜渋谷歯科技工所{% endblock %}
+{% block og_url %}{{ url_for('pages.root_replica', _external=True) }}{% endblock %}
+{% block twitter_card %}summary_large_image{% endblock %}
 
 {# ===================== 追加メタ／構造化データ ===================== #}
 {% block extra_meta %}
@@ -112,13 +112,14 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
         /* 基本スタイル（現在のものを改良） */
         .box-replica {
             display: flex;
-            flex-direction: column;
+            flex-direction: row; 
             gap: 10px;
             flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
             max-width: 1200px; /* 最大幅を設定 */
             margin: 0 auto; /* 中央配置 */
-            padding: 20px; /* 内側の余白 */
+            padding: 10px; /* 内側の余白 */
         }
 
         .box-replica h2 {
@@ -314,23 +315,18 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
   </ul>
 </div>
 
-
 <div class="box-replica mt-3">  
-  <div class="replica-row">
-    <img src="{{ url_for('static', filename='pages/root_replica/033_01.jpg') }}" 
-         loading="eager" 
-         fetchpriority="high" 
-         alt="自家歯牙移植用レプリカ症例1-1" 
+  
+    <img src="{{ url_for('static', filename='pages/root_replica/033_01.jpg') }}" alt="自家歯牙移植用レプリカ症例1-1" 
          width="300" 
          height="300">
-    <img src="{{ url_for('static', filename='pages/root_replica/033_02.jpg') }}" 
-         loading="eager" 
-         fetchpriority="high" 
-         alt="自家歯牙移植用レプリカ症例1-2" 
+    <img src="{{ url_for('static', filename='pages/root_replica/033_02.jpg') }}" alt="自家歯牙移植用レプリカ症例1-2" 
          width="300" 
          height="300">
-  </div>
+  
 </div>
+
+
 
 <div style="text-align: center; margin: 20px 0;">
   <h3>料金</h3>
@@ -354,7 +350,10 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
     <h3>郵送の場合は下記にお願いいたします</h3>
     <h3>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h3>
     <h2><a href = "tel:0489618151">Tel 048-961-8151</a></h2>
-    <h3>E-mail shibuya8020@gmail.com</h3>
+    
+    <h3>
+      <a href="mailto:shibuya8020@gmail.com">E-mail shibuya8020@gmail.com</a>
+    </h3>
     <h3>CTデータはメールでは受送信できませんので大容量ファイル転送サービスをご利用ください↓</h3>
     <h3><a href="https://gigafile.nu/" target="_blank"><b>ギガファイル便</b></a></h3>
     <h3>または郵送にてUSB、SDカードなどでデータをお送りください</h3>
@@ -363,6 +362,16 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
   
     <h3><a href="{{ url_for('pages.root_replica_info') }}">自家歯牙移植とは</a></h3>
     <h3><a href="{{ url_for('pages.root_replica_case') }}">自家歯牙移植症例ページ</a></h3>
+
+
+
+
+
+
+
+
+
+
 
 
 
