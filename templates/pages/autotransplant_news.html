@@ -278,12 +278,12 @@
         
         <!-- フィルタータブ -->
         <div class="filter-tabs">
-            <a href="/dental_news?kind=research&lang=ja" class="tab {{ 'active' if kind=='research' and lang=='ja' }}">📄 日本語研究論文</a>
-            <a href="/dental_news?kind=research&lang=en" class="tab {{ 'active' if kind=='research' and lang=='en' }}">📄 English Research</a>
-            <a href="/dental_news?kind=case&lang=ja" class="tab {{ 'active' if kind=='case' and lang=='ja' }}">📋 日本語症例報告</a>
-            <a href="/dental_news?kind=case&lang=en" class="tab {{ 'active' if kind=='case' and lang=='en' }}">📋 English Cases</a>
-            <a href="/dental_news?kind=video&lang=ja" class="tab {{ 'active' if kind=='video' and lang=='ja' }}">🎥 技術動画</a>
-            <a href="/dental_news?kind=video&lang=en" class="tab {{ 'active' if kind=='video' and lang=='en' }}">🎥 Technical Videos</a>
+            <a href="/autotransplant_news?kind=research&lang=ja" class="tab {{ 'active' if kind=='research' and lang=='ja' }}">📄 日本語研究論文</a>
+            <a href="/autotransplant_news?kind=research&lang=en" class="tab {{ 'active' if kind=='research' and lang=='en' }}">📄 English Research</a>
+            <a href="/autotransplant_news?kind=case&lang=ja" class="tab {{ 'active' if kind=='case' and lang=='ja' }}">📋 日本語症例報告</a>
+            <a href="/autotransplant_news?kind=case&lang=en" class="tab {{ 'active' if kind=='case' and lang=='en' }}">📋 English Cases</a>
+            <a href="/autotransplant_news?kind=video&lang=ja" class="tab {{ 'active' if kind=='video' and lang=='ja' }}">🎥 技術動画</a>
+            <a href="/autotransplant_news?kind=video&lang=en" class="tab {{ 'active' if kind=='video' and lang=='en' }}">🎥 Technical Videos</a>
         </div>
     </div>
 
@@ -333,9 +333,10 @@
         {% endfor %}
     </div>
 
+   <!-- ページネーション部分 -->
     {% if next_tok %}
         <div class="pagination">
-            <a href="/dental_news?kind={{ kind }}&lang={{ lang }}&tok={{ next_tok }}" class="load-more">さらに読み込む</a>
+            <a href="/autotransplant_news?kind={{ kind }}&lang={{ lang }}&tok={{ next_tok }}" class="load-more">さらに読み込む</a>
         </div>
     {% endif %}
 
@@ -349,7 +350,7 @@
             statusDiv.textContent = '収集中...';
             
             try {
-                const response = await fetch('/admin/run_dentalnews');
+                const response = await fetch('/admin/run_autotransplant_news');
                 const text = await response.text();
                 
                 statusDiv.className = 'status success';
@@ -372,12 +373,11 @@
             } else {
                 autoRefreshInterval = setInterval(() => {
                     collectNews();
-                }, 60 * 60 * 1000); // 60分間隔（研究情報は頻繁でなくても良い）
+                }, 60 * 60 * 1000); // 60分間隔
                 alert('自動更新を開始しました（60分間隔）');
             }
         }
         
-        // ページ読み込み時に最新データを確認
         document.addEventListener('DOMContentLoaded', () => {
             console.log('自家歯牙移植ニュースページを読み込みました');
         });
