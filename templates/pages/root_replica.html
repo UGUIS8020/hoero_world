@@ -3,19 +3,19 @@
 {# ===================== SEO 基本 ===================== #}
 {% block title %}自家歯牙移植用レプリカ｜3Dモデル製作サービス（ドナーレプリカ対応）｜渋谷歯科技工所{% endblock %}
 {% block description %}
-CT/CBCT（DICOM）データから精密な3Dレプリカを製作。自家歯牙移植用レプリカ（ドナーレプリカ／移植歯ダミー／移植窩形成用ダミー／3Dレプリカ）により、手術時間短縮と歯根膜保護を実現。CAD/CAM・3Dプリンタに対応。
+CT/CBCT（DICOM）データから精密な3Dレプリカを製作。自家歯牙移植用レプリカ（ドナーレプリカ／移植歯ダミー／移植床形成用ダミー／3Dレプリカ）により、手術時間短縮と歯根膜保護を実現。CAD/CAM・3Dプリンタに対応。
 {% endblock %}
 
 {# OGP/Twitter（OG:product、ページ固有画像・正規URLを明示） #}
 {% block og_type %}product{% endblock %}
 {% block og_description %}
-自家歯牙移植を支援するデジタル・ドナーレプリカ（移植歯ダミー／3Dレプリカ）。CBCT（DICOM）ベースで高精度、移植窩形成の事前シミュレーションに最適。CAD/CAM・3Dプリンタ対応。
+自家歯牙移植を支援するデジタル・ドナーレプリカ（移植歯ダミー／3Dレプリカ）。CBCT（DICOM）ベースで高精度、移植床形成の事前シミュレーションに最適。CAD/CAM・3Dプリンタ対応。
 {% endblock %}
 {% block canonical %}{{ url_for('pages.root_replica', _external=True) }}{% endblock %}
 {% block og_image %}<meta property="og:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
 {% block twitter_title %}自家歯牙移植用3Dレプリカ（ドナーレプリカ／移植歯ダミー）{% endblock %}
 {% block twitter_description %}
-CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と成功率向上に貢献（CAD/CAM・3Dプリンタ対応）。
+CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と成功率向上に貢献（CAD/CAM・3Dプリンタ対応）。
 {% endblock %}
 {% block twitter_image %}<meta name="twitter:image" content="https://shibuya8020.com/static/ogp/root_replica_1200x630.jpg">{% endblock %}
 
@@ -48,14 +48,14 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
       "ドナーレプリカ",
       "デジタルドナーレプリカ",
       "移植歯ダミー",
-      "移植窩形成用ダミー",
+      "移植床形成用ダミー",
       "3Dレプリカ",
       "移植歯模型",
       "donor tooth replica",
       "digital donor replica"
     ],
-    "keywords": "自家歯牙移植, ドナーレプリカ, デジタルドナーレプリカ, 移植歯ダミー, 3Dレプリカ, 移植窩形成, 歯根モデル, CT, CBCT, DICOM, CAD/CAM, 3Dプリンタ, Autotransplantation",
-    "description": "CBCT（DICOM）データから移植歯の正確な形状を再現するレプリカ（ドナーレプリカ／移植歯ダミー）をCAD/CAM・3Dプリンタで製作し、移植窩形成の事前シミュレーション、口腔外時間短縮、歯根膜保護に貢献します。",
+    "keywords": "自家歯牙移植, ドナーレプリカ, デジタルドナーレプリカ, 移植歯ダミー, 3Dレプリカ, 移植床形成, 歯根モデル, CT, CBCT, DICOM, CAD/CAM, 3Dプリンタ, Autotransplantation",
+    "description": "CBCT（DICOM）データから移植歯の正確な形状を再現するレプリカ（ドナーレプリカ／移植歯ダミー）をCAD/CAM・3Dプリンタで製作し、移植床形成の事前シミュレーション、口腔外時間短縮、歯根膜保護に貢献します。",
     "url": "https://shibuya8020.com/pages/root_replica",
     "provider": {
       "@type": "MedicalOrganization",
@@ -94,8 +94,8 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
         },
         {
           "@type": "Offer",
-          "name": "移植窩準備支援",
-          "description": "レプリカを使用した事前の移植窩形成シミュレーションにより手術時間を短縮"
+          "name": "移植床準備支援",
+          "description": "レプリカを使用した事前の移植床形成シミュレーションにより手術時間を短縮"
         }
       ]
     }
@@ -110,6 +110,17 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
 
 <style>
         /* 基本スタイル（現在のものを改良） */
+        .box-replica-top {
+            display: flex;
+            flex-direction: row;             
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-width: 1200px; /* 最大幅を設定 */
+            margin: 0 auto; /* 中央配置 */  
+            padding: 5px; /* 内側の余白 */          
+        }  
+
         .box-replica {
             display: flex;
             flex-direction: row; 
@@ -120,7 +131,7 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
             max-width: 1200px; /* 最大幅を設定 */
             margin: 0 auto; /* 中央配置 */
             padding: 10px; /* 内側の余白 */
-        }
+        }              
 
         .box-replica h2 {
             width: 100%;
@@ -253,7 +264,7 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
         body {
             font-family: Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
             background-color: #f5f5f5;
         }
 
@@ -268,9 +279,9 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
 
         dl {
             background: #f8f9fa;
-            padding: 15px;
+            padding: 10px;
             border-radius: 8px;
-            margin: 15px 0;
+            margin: 10px 0;
         }
 
         dt {
@@ -295,35 +306,34 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
             <li class="breadcrumb-item"><a href="/">ホーム</a></li>
             <li class="breadcrumb-item active" aria-current="page">自家歯牙移植用レプリカ</li>
         </ol>
-    </nav>
+    </nav>    
 
 <h1 class="mb-3">自家歯牙移植用レプリカ（3Dモデル）</h1>
 
 <p class="lead">
   本サービスは、CT/CBCTデータから移植歯の形状を正確に再現した
   <strong>自家歯牙移植用レプリカ</strong>です。<br>
-  臨床では <strong>移植歯ダミー</strong>（移植窩形成用ダミー）や
+  臨床では <strong>移植歯ダミー</strong>（移植床形成用ダミー）や
   <strong>3Dレプリカ</strong>とも呼ばれます。
 </p>
 
 <div style="text-align:center;">
   <h2>主な用途（移植歯ダミー／3Dレプリカ）</h2>
   <ul style="display:inline-block; text-align:left;">
-    <li>移植窩形成の事前シミュレーション</li>
+    <li>移植床形成の事前シミュレーション</li>
     <li>口腔外時間の短縮と歯根膜保護</li>
     <li>難症例の術前検討・説明補助</li>
   </ul>
 </div>
 
-<div class="box-replica mt-3">  
+<div class="box-replica-top">  
   
     <img src="{{ url_for('static', filename='pages/root_replica/033_01.jpg') }}" alt="自家歯牙移植用レプリカ症例1-1" 
          width="300" 
          height="300">
     <img src="{{ url_for('static', filename='pages/root_replica/033_02.jpg') }}" alt="自家歯牙移植用レプリカ症例1-2" 
          width="300" 
-         height="300">
-  
+         height="300">  
 </div>
 
 
@@ -385,24 +395,24 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
     本症例では、<strong>CBCT（DICOM）</strong>データから抽出したドナー歯形状を
     <strong>STL変換 → CAD/CAM／3Dプリンタ</strong>で出力した
     <strong>デジタル・ドナーレプリカ（移植歯ダミー／3Dレプリカ）</strong>を用いて、
-    <strong>移植窩形成の事前シミュレーション</strong>を実施。<br>これにより
+    <strong>移植床形成の事前シミュレーション</strong>を実施。<br>これにより
     <strong>口腔外時間の短縮</strong>と<strong>歯根膜の温存</strong>に配慮しつつ、
     移植床の適合精度を高めました。
   </p>
 
   <dl>
     <dt>目的</dt>
-    <dd>移植窩形成の精度向上、口腔外時間短縮、歯根膜温存、術前説明の可視化</dd>
+    <dd>移植床形成の精度向上、口腔外時間短縮、歯根膜温存、術前説明の可視化</dd>
     <dt>使用データ／工程</dt>
     <dd>CBCT（DICOM）→ セグメンテーション → STL → CAD/CAM／3Dプリンタで<strong>ドナーレプリカ</strong>を作製</dd>
     <dt>結果</dt>
-    <dd>受容窩への試適がスムーズになり、咬合・適合ともに良好</dd>
+    <dd>移植床への試適がスムーズになり、咬合・適合ともに良好</dd>
   </dl>
 
   <div class="replica-row">
     <figure>
       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/021.jpg') }}" width="400" height="300"
-           alt="デジタル・ドナーレプリカ（移植歯ダミー）を用いた移植窩形成シミュレーション：症例1-1">
+           alt="デジタル・ドナーレプリカ（移植歯ダミー）を用いた移植床形成シミュレーション：症例1-1">
       
         <figcaption>左下6番X線画像</figcaption>
       
@@ -410,7 +420,7 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
     <figure>
       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/022.jpg') }}"
            width="400" height="300"
-           alt="移植歯レプリカの試適（受容窩の適合確認）：症例1-2">
+           alt="移植歯レプリカの試適（移植床の適合確認）：症例1-2">
       <figcaption>左下6番抜歯</figcaption>
     </figure>
   </div>
@@ -419,7 +429,7 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
     <figure>
       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/023.jpg') }}"
            width="400" height="300"
-           alt="受容窩形成の事前シミュレーション（ドナーレプリカ使用）：症例1-3">
+           alt="移植床形成の事前シミュレーション（ドナーレプリカ使用）：症例1-3">
       <figcaption>ドナーレプリカ使用し移植床形成</figcaption>
     </figure>
     <figure>
@@ -699,7 +709,7 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
   <a href="{{ url_for('pages.root_replica_case') }}"><h2>自家歯牙移植症例ページ</a></h2>
   </div>
 
-  <div style="margin: 20px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; text-align: center;">
+  <div style="margin: 10px 0; padding: 0px; border: 1px solid #ddd; border-radius: 5px; text-align: center;">
     <p style="margin: 0; font-style: italic; color: #555;">※画像掲載について：先生と患者さまの許可をいただいております</p>
   </div>
 </div>
@@ -817,7 +827,7 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
             <div class="replica-benefit-item">
                 <div class="replica-benefit-title">手術時間の大幅な短縮</div>
                 <div class="replica-benefit-description">
-                    従来法では移植歯の抜歯から移植部位への植立まで連続して行うため時間がかかりますが、レプリカを使用することで事前に移植窩の形成を正確に行え、実際の移植時間を大幅に短縮できます。
+                    従来法では移植歯の抜歯から移植部位への植立まで連続して行うため時間がかかりますが、レプリカを使用することで事前に移植床の形成を正確に行え、実際の移植時間を大幅に短縮できます。
                 </div>
             </div>
             
@@ -829,9 +839,9 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
             </div>
             
             <div class="replica-benefit-item">
-                <div class="replica-benefit-title">より精密な移植窩の形成</div>
+                <div class="replica-benefit-title">より精密な移植床の形成</div>
                 <div class="replica-benefit-description">
-                    レプリカにより移植歯の形状を事前に把握できるため、移植窩をより正確に形成でき、移植歯との適合性が向上します。これにより初期固定が良好になります。
+                    レプリカにより移植歯の形状を事前に把握できるため、移植床をより正確に形成でき、移植歯との適合性が向上します。これにより初期固定が良好になります。
                 </div>
             </div>
             
@@ -859,7 +869,7 @@ CBCT（DICOM）から作る精密レプリカ。移植窩形成の効率化と�
             <div class="replica-benefit-item">
                 <div class="replica-benefit-title">移植歯の損傷リスク軽減</div>
                 <div class="replica-benefit-description">
-                    移植窩の試適回数が減ることで、移植歯の歯根面への機械的損傷を最小限に抑えることができ、歯根膜の保護につながります。
+                    移植床の試適回数が減ることで、移植歯の歯根面への機械的損傷を最小限に抑えることができ、歯根膜の保護につながります。
                 </div>
             </div>
             
