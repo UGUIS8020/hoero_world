@@ -94,37 +94,286 @@
 {% block content %}
 
 <style> 
-  body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #f5f5f5;
-        }
-        
-  .box-replica {
-    display: flex;
-    flex-direction: column;
-    gap: 10px; /* 画像間の隙間 */
-    flex-wrap: wrap; /* 必要に応じて折り返し */
-    align-items: center; /* 中央揃え（任意） */ 
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 10px;
+    background-color: #f5f5f5;
+}
 
-  }
-  .box-replica h2 {
+/* レプリカボックス（上部） */
+.box-replica-top {
+    display: flex;
+    flex-direction: column;             
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 5px;          
+}  
+
+/* レプリカボックス（メイン） */
+.box-replica {
+    display: flex;
+    flex-direction: column; 
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 10px;
+}              
+
+.box-replica h2 {
     width: 100%;
-    flex-basis: 100%; /* フレックスボックス内での幅 */
-    margin: 15px 0px 0px 0px;  
-  }
-  .box-replica h3 {
+    flex-basis: 100%;
+    margin: 15px 0px 0px 0px;
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+}
+
+.box-replica h3 {
     width: 100%;
-    flex-basis: 100%; /* フレックスボックス内での幅 */
-    margin: 0px 0px 0px 0px; 
-  }
-   .box00 h3 {
+    flex-basis: 100%;
+    margin: 0px 0px 0px 0px;
+    color: #34495e;
+}
+
+.box00 h3 {
     width: 100%;
-    flex-basis: 100%; /* フレックスボックス内での幅 */
+    flex-basis: 100%;
     margin: 10px 0px 5px 0px; 
-  }
-  </style>
+}
+
+/* レプリカ行 */
+.replica-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 5px;
+  width: 100%;
+  flex-wrap: wrap; /* 2枚並び時に折り返せるように */
+}
+
+.replica-row img {
+  width: auto;        /* ← これがポイント（100%をやめる） */
+  height: auto;       /* HTMLのwidth/heightを尊重 */
+  max-width: 100%;    /* 画面が狭い時だけ縮む */
+  object-fit: contain;/* coverをやめたい場合はcontain推奨。不要なら削除 */
+  aspect-ratio: auto; /* 縦横比は画像そのままに（指定しないでも可） */
+}
+
+        /* 画像とfigureのスタイル */
+        .replica-row figure {
+            flex: 1;
+            margin: 0;
+            max-width: 400px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }       
+
+        .replica-row figcaption {
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            background: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        /* スマホ対応：768px以下でレイアウト変更 */
+        @media (max-width: 768px) {
+            .box-replica {
+                padding: 15px; /* スマホ用に余白を調整 */
+            }
+            
+            .replica-row {
+                flex-direction: column; /* 縦一列に変更 */
+                align-items: center;
+                gap: 20px; /* 縦並び時の間隔を広げる */
+                min-height: auto; /* 高さ制限を解除 */
+            }
+            
+            .replica-row figure {
+                width: 100%;
+                max-width: 350px; /* スマホ用サイズ */
+            }
+            
+            .box-replica h2 {
+                font-size: 18px; /* フォントサイズを調整 */
+                margin: 10px 0px 0px 0px;
+            }
+            
+            .box-replica h3 {
+                font-size: 16px;
+                line-height: 1.4;
+            }
+        }
+
+        /* 小型スマホ対応：480px以下 */
+        @media (max-width: 480px) {
+            .box-replica {
+                padding: 10px;
+                gap: 5px;
+            }
+            
+            .replica-row {
+                gap: 15px;
+            }
+            
+            .replica-row figure {
+                max-width: 100%; /* 画面幅いっぱい使用 */
+            }
+            
+            .replica-row figcaption {
+                font-size: 13px;
+                padding: 10px;
+            }
+            
+            .box-replica h2 {
+                font-size: 16px;
+            }
+            
+            .box-replica h3 {
+                font-size: 14px;
+            }
+        }
+
+        /* 超小型デバイス：360px以下 */
+        @media (max-width: 360px) {
+            .box-replica {
+                padding: 8px;
+            }
+            
+            .replica-row {
+                gap: 12px;
+            }
+            
+            .replica-row figcaption {
+                font-size: 12px;
+                padding: 8px;
+            }
+        }
+
+/* テキストスタイル */
+p {
+    line-height: 1.6;
+    color: #555;
+}
+
+strong {
+    color: #e74c3c;
+}
+
+/* 説明リスト */
+dl {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+dt {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-top: 10px;
+}
+
+dt:first-child {
+    margin-top: 0;
+}
+
+dd {
+    margin-left: 15px;
+    color: #555;
+}
+
+/* レスポンシブデザイン */
+
+/* タブレット：768px以下 */
+@media (max-width: 768px) {
+    .box-replica {
+        padding: 15px;
+    }
+    
+    .replica-row {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        min-height: auto;
+    }
+    
+    .replica-row figure {
+        width: 100%;
+        max-width: 350px;
+    }
+    
+    .box-replica h2 {
+        font-size: 18px;
+        margin: 10px 0px 0px 0px;
+    }
+    
+    .box-replica h3 {
+        font-size: 16px;
+        line-height: 1.4;
+    }
+}
+
+/* スマートフォン：480px以下 */
+@media (max-width: 480px) {
+    .box-replica {
+        padding: 10px;
+        gap: 5px;
+    }
+    
+    .replica-row {
+        gap: 15px;
+    }
+    
+    .replica-row figure {
+        max-width: 100%;
+    }
+    
+    .replica-row figcaption {
+        font-size: 13px;
+        padding: 10px;
+    }
+    
+    .box-replica h2 {
+        font-size: 16px;
+    }
+    
+    .box-replica h3 {
+        font-size: 14px;
+    }
+}
+
+/* 小型デバイス：360px以下 */
+@media (max-width: 360px) {
+    .box-replica {
+        padding: 8px;
+    }
+    
+    .replica-row {
+        gap: 12px;
+    }
+    
+    .replica-row figcaption {
+        font-size: 12px;
+        padding: 8px;
+    }
+}
+    </style>
+
+
+
+
+
   <!-- パンくずナビ -->
     <nav class="breadcrumb-nav" aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -169,6 +418,9 @@
     <h3>【画像提供】<a href="https://www.yumoto-dc.com/" target="_blank">
       埼玉県さいたま市:歯内療法専門歯科 ユモトデンタルクリニック Dr.湯本 真幸</a></h3>
   </div>
+
+
+
 
   <div class="box-replica mt-3">
     <h2>【症例 6】</h2>
@@ -234,46 +486,64 @@
     <h3>【画像提供】<a href="https://www.yumoto-dc.com/" target="_blank">埼玉県さいたま市:歯内療法専門歯科 ユモトデンタルクリニック Dr.湯本 真幸</a></h3>
   </div>  
 
+
   <div class="box-replica mt-3">
-    <h2>【症例 8】</h2>
-    <h3>左下8番を左下6番に移植</h3>
-  
-       <div class="box00">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/007.jpg') }}">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/008.jpg') }}">    
-       </div>  
-  
-       <div class="box00">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/009.jpg') }}">
-       <img src="{{ url_for('static', filename='pages/root_replica/shirahama/010.jpg') }}">     
-       </div>  
-  
-       <div class="box00">
-        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/011.jpg') }}">
-        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012.jpg') }}">     
-       </div> 
-  
-       <div class="box00">      
-        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012.jpg') }}">
-        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_02.jpg') }}">       
-       </div>
+  <h2>【症例 8】</h2>
+  <h3>【画像提供】<a href="https://kaedenomori-dc.jp/" target="_blank">
+    熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</a></h3>
+  <h3>左下8番を左下6番に移植</h3>   
+
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/003.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-3">
+      <figcaption>レプリカにて移植床の確認</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/005.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-4">
+      <figcaption>レプリカにて移植床の確認</figcaption>
+    </figure>
+  </div>  
+
+  <div class="replica-row">
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/004.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-5">
+      <figcaption>左下8番を左下6番に移植</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/006.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-6">
+      <figcaption>左下8番を左下6番に移植</figcaption>
+    </figure>
+  </div>   
+  <div class="replica-row">     
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/001.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-1">
+      <figcaption>ドナー歯とレプリカの比較</figcaption>
+    </figure>
+    <figure>
+      <img src="{{ url_for('static', filename='pages/root_replica/shirahama/002.jpg') }}" 
+           loading="lazy" 
+           alt="自家歯牙移植用レプリカ症例4-2">
+      <figcaption>ドナー歯とレプリカの比較</figcaption>
+    </figure>
+  </div>     
+            
        
-       <div class="box00">
-        <h3>３週間後</h3>
-        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_03.jpg') }}">
-        <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_03_01.jpg') }}">       
-        </div>  
-  
-        <div class="box00">
-          <h3>補綴後</h3>
-          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_04.jpg') }}">
-          <img src="{{ url_for('static', filename='pages/root_replica/shirahama/012_05.jpg') }}">       
-        </div>
-  
-       <h3>【画像提供】<a href="https://kaedenomori-dc.jp/"target="_blank">熊本県合志市:楓の森歯科クリニック Dr.白濱 義将</h3></a>
-       
-  
-    </div>
+</div>
+
+
+
+
+
 
 <div class="box-replica mt-3">
   <h2>【症例 9】</h2>
