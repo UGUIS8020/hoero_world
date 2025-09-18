@@ -307,8 +307,22 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
         }        
 
         .box_root_replica_info {
-            padding: 20px 60px;
+            padding: 10px 60px;
         }
+        .replica-benefits .replica-summary {
+            background: #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 5px;
+            text-align: center;
+        }
+        
+        .replica-benefits .replica-summary h2 {
+            color: #e67e22;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }       
+        
     </style>
 
 <!-- パンくずナビ -->
@@ -322,8 +336,7 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 <h1 class="mb-3">自家歯牙移植用レプリカ（3Dモデル）</h1>
 
 <p class="lead">
-  本サービスは、CT/CBCTデータから移植歯の形状を正確に再現した
-  <strong>自家歯牙移植用レプリカ</strong>です。<br>
+  本サービスは、CT/CBCTデータから移植歯の形状を正確に再現した<strong>自家歯牙移植用レプリカ</strong>です。<br>
   臨床では <strong>移植歯ダミー</strong>（移植床形成用ダミー）や
   <strong>3Dレプリカ</strong>とも呼ばれます。
 </p>
@@ -386,10 +399,7 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 
 
 
-<div class="container">
-        <div class="box_root_replica_info">
-            <h2>3Dレプリカの重要性</h2>
-        </div>
+<div class="container">       
         
         <div class="box-replica-top">
             <img src="{{ url_for('static', filename='pages/root_replica/029.jpg') }}">
@@ -397,16 +407,25 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 
         <div class="box_root_replica_info">
             <h2>自家歯牙移植用レプリカの役割</h2>
-            <p><strong>3Dレプリカとは、移植歯のCTデータから作成された精密な複製モデルです。これを使用することで：</strong></p>
+            <p><strong>3Dレプリカとは、移植歯のCTデータから作成された精密な複製モデルです。これを使用することで：</strong></p>            
             <ul>
-                <li>移植前に移植床を正確に形成できる</li>
-                <li>移植歯の抜歯後、短時間で適切に植立できる</li>
-                <li>歯根膜へのダメージを最小限に抑えられる</li>
+                <li>移植前に移植床を正確に形成できるため、移植歯の抜歯後の移植時間を大幅に短縮できます。</li> 
+                <li>より精密な移植床の形成が行えるため、必要以上の削合がなくなる</li>                 
+                <li>移植歯の口腔外時間のを短くできるため、移植に重要な役割を持つ歯根膜へのダメージを最小限に抑えられる</li>
                 <li>歯根膜（特にマラッセの上皮遺残）の保護</li>
                 <li>歯根未完成歯の場合はヘルトヴィッヒ上皮鞘の保護も重要</li>
-                <li>事前に移植シミュレーションが可能（歯の回転や位置調整など）</li>
+                <li>術前にレプリカを製作するため予測可能性は向上し、事前に移植シミュレーションが可能（歯の回転や位置調整など）</li>
             </ul>
         </div>
+
+        <div class="replica-benefits">
+        <div class="replica-summary">
+          <h2>
+            レプリカを用いた自家歯牙移植は、従来法と比較してより成功率が高く<br>
+            患者さまにとってもメリットの大きい先進的な治療法です。</h2>
+          </p>
+        </div>
+      </div>
 
         <div class="box_root_replica_info">
             <p><strong>従来の方法（レプリカなし）では：</strong></p>
@@ -548,8 +567,7 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
         <h2>【症例2】自家歯牙移植（デジタル・ドナーレプリカ使用）</h2>
         <h3>【画像提供】<a href="https://kaedenomori-dc.jp/" target="_blank" rel="noopener noreferrer">
             熊本県合志市：楓の森歯科クリニック Dr.白濱 義将</a></h3>  
-        <h3>左下8番→左下6番に自家歯牙移植｜CBCT（DICOM）→ STL → 3Dプリント（造影剤あり）</h3>
-        
+        <h3>左下8番→左下6番に180度回転させ自家歯牙移植を行った｜CBCT（DICOM）→ STL → 3Dプリント（造影剤あり）</h3>        
 
         <figure style="margin: 10px auto; max-width: 500px; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 15px; backdrop-filter: blur(10px); text-align: center;">
             <img src="{{ url_for('static', filename='pages/root_replica/shirahama/007_00.jpg') }}" 
@@ -969,25 +987,7 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
             line-height: 1.6;
         }
         
-        .replica-benefits .replica-summary {
-            background: #ffeaa7;
-            padding: 25px;
-            border-radius: 5px;
-            margin-top: 30px;
-            text-align: center;
-        }
         
-        .replica-benefits .replica-summary h2 {
-            color: #e67e22;
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
-        
-        .replica-benefits .replica-summary p {
-            color: #666;
-            font-size: 15px;
-            margin: 0;
-        }
         
         @media (max-width: 768px) {
             .replica-benefits {
@@ -1016,71 +1016,7 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
         }
     </style>
 
-<div class="replica-benefits">
-    <div class="replica-container">
-        <div class="replica-header">
-            <h1>レプリカを用いた自家歯牙移植のメリット</h1>
-        </div>
-        
-        <div class="replica-content">
-            <div class="replica-benefit-item">
-                <div class="replica-benefit-title">手術時間の大幅な短縮</div>
-                <div class="replica-benefit-description">
-                    従来法では移植歯の抜歯から移植部位への植立まで連続して行うため時間がかかりますが、レプリカを使用することで事前に移植床の形成を正確に行え、実際の移植時間を大幅に短縮できます。
-                </div>
-            </div>
-            
-            <div class="replica-benefit-item">
-                <div class="replica-benefit-title">移植歯の口腔外時間の最小化</div>
-                <div class="replica-benefit-description">
-                    移植歯が口腔外に置かれる時間（口腔外時間）が短くなることで、歯根膜細胞の生存率が向上し、移植成功率の改善が期待できます。歯根膜の保存は移植成功の重要な要因です。
-                </div>
-            </div>
-            
-            <div class="replica-benefit-item">
-                <div class="replica-benefit-title">より精密な移植床の形成</div>
-                <div class="replica-benefit-description">
-                    レプリカにより移植歯の形状を事前に把握できるため、移植床をより正確に形成でき、移植歯との適合性が向上します。これにより初期固定が良好になります。
-                </div>
-            </div>
-            
-            <div class="replica-benefit-item">
-                <div class="replica-benefit-title">患者への負担軽減</div>
-                <div class="replica-benefit-description">
-                    手術時間の短縮により、患者の身体的・精神的負担が軽減されます。また、麻酔時間も短縮されるため、術後の不快感も少なくなります。
-                </div>
-            </div>
-            
-            <div class="replica-benefit-item">
-                <div class="replica-benefit-title">予測可能性の向上</div>
-                <div class="replica-benefit-description">
-                    事前にレプリカで移植の可否や成功の可能性をより正確に判断できるため、治療計画の精度が向上し、患者への説明もより具体的に行えます。
-                </div>
-            </div>
-            
-            <div class="replica-benefit-item">
-                <div class="replica-benefit-title">術者の技術的優位性</div>
-                <div class="replica-benefit-description">
-                    複雑な症例でも、レプリカを用いた事前のシミュレーションにより、より安全で確実な移植手術が可能になります。
-                </div>
-            </div>
-            
-            <div class="replica-benefit-item">
-                <div class="replica-benefit-title">移植歯の損傷リスク軽減</div>
-                <div class="replica-benefit-description">
-                    移植床の試適回数が減ることで、移植歯の歯根面への機械的損傷を最小限に抑えることができ、歯根膜の保護につながります。
-                </div>
-            </div>
-            
-            <div class="replica-summary">               
-                <p>
-                    レプリカを用いた自家歯牙移植は、従来法と比較してより成功率が高く、<br>
-                    患者さまにとってもメリットの大きい先進的な治療法です。
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
+
   
 {% endblock %}
 
