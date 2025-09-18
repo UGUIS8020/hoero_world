@@ -110,16 +110,25 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 
 <style>
         /* 基本スタイル（現在のものを改良） */
-        .box-replica-top {
-            display: flex;
-            flex-direction: row;             
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            max-width: 1200px; /* 最大幅を設定 */
-            margin: 0 auto; /* 中央配置 */  
-            padding: 5px; /* 内側の余白 */          
-        }  
+        .box-replica-top{
+          display:flex;
+          flex-wrap:wrap;
+          justify-content:center;
+          align-items:center;
+          gap:12px;        /* 余白はgapで安定させる */
+          padding:0;       /* paddingは0に（内寸の揺れ防止） */
+          max-width:1200px;
+          margin:0 auto;
+          min-height:300px; /* 画像の高さを先取り→CLS低減 */
+        }
+        .box-replica-top .replica-img{
+          width:300px !important;
+          height:300px !important;
+          aspect-ratio:1/1;   /* 念のため */
+          object-fit:cover;   /* 元画像が正方形でなくても崩れにくい */
+          display:block;
+          flex:0 0 auto;      /* 伸縮させない */
+        }
 
         .box-replica {
             display: flex;
@@ -350,14 +359,17 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
   </ul>
 </div>
 
-<div class="box-replica-top">  
-  
-    <img src="{{ url_for('static', filename='pages/root_replica/033_01.jpg') }}" alt="自家歯牙移植用レプリカ症例1-1" 
-         width="300" 
-         height="300">
-    <img src="{{ url_for('static', filename='pages/root_replica/033_02.jpg') }}" alt="自家歯牙移植用レプリカ症例1-2" 
-         width="300" 
-         height="300">  
+<div class="box-replica-top">
+  <img class="replica-img"
+       src="{{ url_for('static', filename='pages/root_replica/033_01.jpg') }}"
+       alt="自家歯牙移植用レプリカ症例1-1"
+       width="300" height="300"
+       decoding="async" fetchpriority="high">
+  <img class="replica-img"
+       src="{{ url_for('static', filename='pages/root_replica/033_02.jpg') }}"
+       alt="自家歯牙移植用レプリカ症例1-2"
+       width="300" height="300"
+       loading="lazy" decoding="async">
 </div>
 
 
