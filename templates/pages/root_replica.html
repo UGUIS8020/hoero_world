@@ -110,43 +110,22 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 
 <style>
         /* 基本スタイル（現在のものを改良） */
-        .box-replica-top{
-          display:flex;
-          justify-content:center;
-          align-items:center;
-          margin:0 auto;
-          max-width:1200px;
-
-          /* 余白や折返しは不要 */
-          padding:0;
-          gap:0;
-          flex-wrap:nowrap;
-
-          /* CLS対策：表示領域を先取り（画像と同じ高さ） */
-          min-height:300px;
+        .box-replica-top {
+            display: flex;
+            flex-direction: row;             
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5px;
         }
 
-        /* 画像を確実に固定（リセットCSSの影響を遮断） */
-        .box-replica-top .replica-img{
-          width:300px !important;
-          height:300px !important;
-          aspect-ratio:1/1;
-          object-fit:cover;
-          display:block;
-          flex:0 0 auto;
-          background:#f0f0f0; /* 読み込み中のプレースホルダー（任意） */
+        .replica-img {
+            display: block;
+            margin: 0 auto;
         }
-
-        /* 極小画面でだけ少し縮めたい場合（任意） */
-        @media (max-width:360px){
-          .box-replica-top{
-            min-height:240px;
-          }
-          .box-replica-top .replica-img{
-            width:240px !important;
-            height:240px !important;
-          }
-        }
+        
 
         .box-replica {
             display: flex;
