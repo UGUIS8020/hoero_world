@@ -111,20 +111,29 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 <style>
         /* 基本スタイル（現在のものを改良） */
         .box-replica-top {
-            display: flex;
-            flex-direction: row;             
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 5px;
-        }
+          display: flex;
+          flex-direction: row;             
+          flex-wrap: wrap;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;          
+          margin: 0 auto;
+          padding: 20px;          /* paddingを少し増やす */
+      }
 
-        .replica-img {
-            display: block;
-            margin: 0 auto;
-        }
+      .replica-img {
+          display: block;
+          max-width: 100%;        /* レスポンシブ対応 */
+          height: auto;           /* アスペクト比保持 */
+      }
+
+      /* モバイル対応 */
+      @media (max-width: 768px) {
+          .box-replica-top {
+              flex-direction: column;
+              gap: 15px;
+          }
+      }
         
 
         .box-replica {
@@ -359,6 +368,10 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 <div class="box-replica-top">
   <img class="replica-img"
        src="{{ url_for('static', filename='pages/root_replica/033_01.jpg') }}"
+       alt="自家歯牙移植用レプリカ症例1-1"
+       width="300" height="300">  
+  <img class="replica-img"
+       src="{{ url_for('static', filename='pages/root_replica/033_02.jpg') }}"
        alt="自家歯牙移植用レプリカ症例1-1"
        width="300" height="300">  
 </div>
