@@ -125,26 +125,28 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
           contain: layout style;
       }
 
-      .box-replica-top img {
-          flex-shrink: 0;
+     .box-replica-top img {
+          width: 300px !important;
+          height: 300px !important;
+          object-fit: cover !important;
+          flex-shrink: 0 !important;
+          display: block !important;
+          background-color: #f0f0f0;
+          border: 1px solid #ddd;
+          border-radius: 4px;
           will-change: transform;
           transform: translateZ(0);
       }
 
+      /* 干渉防止 */
       .replica-img {
-          display: block;
-          width: 300px;
-          height: 300px;
-          object-fit: cover;
-          background-color: #f0f0f0;
-          border: 1px solid #ddd;
+          /* 空にして他のスタイルとの競合を防ぐ */
       }
 
       @media (max-width: 768px) {
-          .box-replica-top {
-              flex-direction: column;
-              gap: 15px;
-              min-height: 320px;    /* 追加 */
+          .box-replica-top img {
+              width: 250px !important;
+              height: 250px !important;
           }
       }
 
