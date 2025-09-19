@@ -120,25 +120,82 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
           max-width: 1200px;
           margin: 0 auto;
           padding: 20px;
-          min-height: 340px; /* レイアウトシフト対策 */
+          min-height: 400px;        /* 統一 */
+          position: relative;
+          contain: layout style;
+      }
+
+      .box-replica-top img {
+          flex-shrink: 0;
+          will-change: transform;
+          transform: translateZ(0);
       }
 
       .replica-img {
           display: block;
-          width: 300px;      /* 明示的な幅指定 */
-          height: 300px;     /* 明示的な高さ指定 */
-          object-fit: cover; /* アスペクト比保持 */
-          background-color: #f0f0f0; /* プレースホルダー */
+          width: 300px;
+          height: 300px;
+          object-fit: cover;
+          background-color: #f0f0f0;
           border: 1px solid #ddd;
       }
 
-      /* モバイル対応 */
       @media (max-width: 768px) {
           .box-replica-top {
               flex-direction: column;
               gap: 15px;
+              min-height: 320px;    /* 追加 */
           }
       }
+
+      .box-replica-top02 {
+        display: flex;
+        flex-direction: row;             
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        min-height: 400px;        /* 600×341用 */
+        position: relative;
+        contain: layout style;
+    }
+
+    .box-replica-top02 img {
+        width: 600px;
+        height: 341px;
+        max-width: 100%;
+        height: auto;
+        object-fit: cover;
+        flex-shrink: 0;
+        will-change: transform;
+        transform: translateZ(0);
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    /* モバイル対応 */
+    @media (max-width: 768px) {
+        .box-replica-top02 {
+            flex-direction: column;
+            gap: 15px;
+            min-height: 300px;
+        }
+        .box-replica-top02 img {
+            width: 480px;
+            height: 273px;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .box-replica-top02 img {
+            width: 360px;
+            height: 205px;
+        }
+    }
         
 
         .box-replica {
@@ -424,7 +481,7 @@ CBCT（DICOM）から作る精密レプリカ。移植床形成の効率化と�
 
 <div class="container">       
         
-        <div class="box-replica-top">
+        <div class="box-replica-top02">
           <img src="{{ url_for('static', filename='pages/root_replica/029.jpg') }}"
               width="600"
               height="341"
