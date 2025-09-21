@@ -53,6 +53,11 @@ def missing_teeth_nation():
     
     return render_template('pages/missing_teeth_nation.html')
 
+@bp.route('/info')
+def info():
+    
+    return render_template('pages/info.html')
+
 
 # 自家歯牙移植ニュース
 
