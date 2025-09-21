@@ -1,0 +1,108 @@
+{% extends "common/base.html" %}
+
+{# ===================== SEO 基本 ===================== #}
+{% block title %}自家歯牙移植のページを更新しました｜お知らせ｜渋谷歯科技工所{% endblock %}
+{% block description %}
+自家歯牙移植用3Dレプリカ製作サービスと症例ページを更新・公開しました。CBCT/CTデータから精密なレプリカを製作し、移植床形成の事前シミュレーションを可能にします。
+{% endblock %}
+
+{# OGP/Twitter設定 #}
+{% block og_type %}article{% endblock %}
+{# ★ このニュース詳細ページ自身のURLに統一 #}
+{% block canonical %}{{ request.url }}{% endblock %}
+
+{% block content %}
+
+<style>
+  /* このページ専用のスコープ */
+  .news-page .news-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    line-height: 1.6;
+  }
+  .news-page .news-title {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #3498db;
+  }
+  .news-page .news-date { color: #666; font-size: 14px; margin-bottom: 30px; }
+  .news-page .news-content { margin-bottom: 30px; }
+  .news-page .news-section { margin-bottom: 40px; }
+  .news-page .news-section h2 {
+    font-size: 20px; color: #333; margin-bottom: 15px;
+    border-bottom: 1px solid #ddd; padding-bottom: 5px;
+  }
+  .news-page .link-buttons { text-align: center; margin: 30px 0; }
+  .news-page .link-buttons a {
+    display: inline-block; margin: 10px; padding: 12px 24px;
+    background-color: #3498db; color: #fff; text-decoration: none; border-radius: 5px;
+  }
+  .news-page .link-buttons a:hover { background-color: #2980b9; }
+</style>
+
+<div class="news-page">
+  <!-- パンくずナビ -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      {# Blueprint名が main の場合 #}
+      <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">ホーム</a></li>
+      <li class="breadcrumb-item active" aria-current="page">お知らせ</li>
+    </ol>
+  </nav>
+
+  <div class="news-container">
+    <article>
+      <h1 class="news-title">自家歯牙移植のページを更新しました</h1>
+      <p class="news-date"><time datetime="2025-09-20">2025年9月20日</time></p>
+
+      <div class="news-content">
+        <p>当ラボでは自家歯牙移植用3Dレプリカの製作サービスを行っております。</p>
+        <p>CBCT/CTデータから精密なレプリカを製作し、移植床形成の事前シミュレーションを可能にします。</p>
+      </div>
+
+      <div class="news-section">
+        <h2>新たに症例ページを公開しました</h2>
+        <p>自家歯牙移植における3Dレプリカ使用症例を多数掲載した専用ページを公開しました。</p>
+        <p>実際の治療過程をステップバイステップでご確認いただけます。</p>
+      </div>
+
+      <div class="link-buttons">
+        <a href="{{ url_for('pages.root_replica') }}">自家歯牙移植レプリカページ</a>
+        <a href="{{ url_for('pages.root_replica_case') }}">症例ページ</a>
+      </div>
+    </article>
+
+    <hr style="margin: 40px 0; border: none; border-top: 1px solid #ddd;">
+
+    <!-- 過去のお知らせ -->
+    <article class="news-item">
+      <h2 class="news-title">自家歯牙移植Q&A更新のお知らせ</h2>
+      <p class="news-date"><time datetime="2025-08-20">2025年8月20日</time></p>
+
+      <div class="news-content">
+        <p>患者様からよくいただくご質問にお答えするQ&Aページを更新しました。</p>
+        <p>自家歯牙移植に関する費用、期間、成功率など、皆様の疑問にお答えしています。</p>
+      </div>
+
+      <div class="news-section">
+        <h3>主な更新内容</h3>
+        <ul>
+          <li>移植の適応条件について</li>
+          <li>3Dレプリカを使用するメリット</li>
+          <li>治療期間と通院回数</li>
+          <li>費用に関するご質問</li>
+        </ul>
+      </div>
+
+      <div class="link-buttons">
+        <a href="{{ url_for('pages.root_replica_qa') }}">自家歯牙移植Q&A</a>
+      </div>
+    </article>
+  </div>
+</div>
+
+{% endblock %}
