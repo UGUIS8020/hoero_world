@@ -80,6 +80,7 @@ from views.error_pages import bp as error_bp
 from views.pages import bp as pages_bp
 from views.stl_board import bp as stl_board_bp
 from views.sub_account import bp as sub_account_bp
+from views.oralscan import bp as oralscan_bp
 
 flask_app.register_blueprint(main_bp)
 flask_app.register_blueprint(users_bp)
@@ -87,6 +88,7 @@ flask_app.register_blueprint(error_bp)
 flask_app.register_blueprint(pages_bp)
 flask_app.register_blueprint(stl_board_bp)
 flask_app.register_blueprint(sub_account_bp)
+flask_app.register_blueprint(oralscan_bp)
 
 if __name__ == '__main__':
     flask_app.run(debug=True)

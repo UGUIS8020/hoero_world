@@ -1,0 +1,420 @@
+{% extends "common/base.html" %}
+
+{% block title %}Oral Scan 自動化管理{% endblock %}
+
+{% block extra_css %}
+<style>
+    .oralscan-container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+    }
+    
+    .oralscan-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .oralscan-header h1 {
+        margin: 0;
+        font-size: 28px;
+    }
+    
+    .oralscan-header p {
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .card h2 {
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 20px;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+    }
+    
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .status-item {
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .status-item label {
+        display: block;
+        color: #666;
+        font-size: 13px;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+    
+    .status-item .value {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .status-running {
+        border-left-color: #f39c12;
+    }
+    
+    .status-success {
+        border-left-color: #27ae60;
+    }
+    
+    .status-failed {
+        border-left-color: #e74c3c;
+    }
+    
+    .run-btn {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .run-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .run-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .alert {
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .alert.success {
+        background-color: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+        display: block;
+    }
+    
+    .alert.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+        display: block;
+    }
+    
+    .alert.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border-left: 4px solid #17a2b8;
+        display: block;
+    }
+    
+    .spinner {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 3px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .instructions {
+        background: #e8f4f8;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #3498db;
+    }
+    
+    .instructions h3 {
+        color: #2980b9;
+        margin-bottom: 12px;
+        font-size: 16px;
+    }
+    
+    .instructions ul {
+        margin-left: 20px;
+        color: #555;
+    }
+    
+    .instructions li {
+        margin-bottom: 8px;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .badge-success {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .badge-danger {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .badge-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="oralscan-container">   
+    
+    <div class="card">
+        <h2>📊 ステータス</h2>
+        <div class="status-grid">
+            <div class="status-item" id="status-running">
+                <label>実行状態</label>
+                <div class="value" id="running-status">
+                    {% if status.is_running %}
+                        <span style="color: #f39c12;">⏳ 実行中</span>
+                    {% else %}
+                        <span style="color: #27ae60;">✓ 待機中</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="status-item">
+                <label>最終実行日時</label>
+                <div class="value" id="last-run">
+                    {{ status.last_run or '未実行' }}
+                </div>
+            </div>
+            
+            <div class="status-item {% if status.last_result == 'success' %}status-success{% elif status.last_result == 'failed' %}status-failed{% endif %}">
+                <label>最終実行結果</label>
+                <div class="value" id="last-result">
+                    {% if status.last_result == 'success' %}
+                        <span class="badge badge-success">✅ 成功</span>
+                    {% elif status.last_result == 'failed' %}
+                        <span class="badge badge-danger">❌ 失敗</span>
+                    {% elif status.last_result == 'error' %}
+                        <span class="badge badge-warning">⚠️ エラー</span>
+                    {% else %}
+                        <span>-</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div id="message-box"></div>
+    </div>
+    
+    <div class="card">
+        <h2>🚀 実行</h2>
+        <button type="button" class="run-btn" id="run-bot-btn">
+            Oral Scan にログインして症例一覧を開く
+        </button>
+    </div>
+    
+    <div class="card instructions">
+        <h3>📋 使用方法</h3>
+        <ul>
+            <li>上記のボタンをクリックすると、Oral Scan Dataに自動ログインします</li>
+            <li>ログイン後、自動的に症例一覧ページに移動します</li>
+            <li>処理はバックグラウンドで実行されます（ブラウザは表示されません）</li>
+            <li>ステータスは自動的に更新されます</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+(function() {
+  'use strict';
+  
+  let pollTimer = null;
+  let pollMs = 0;
+
+  function showMessage(message, type) {
+    const box = document.getElementById('message-box');
+    if (!box) return;
+    box.className = 'alert ' + type;
+    box.textContent = message;
+    box.style.display = 'block';
+  }
+
+  function startPolling(ms) {
+    if (pollMs === ms && pollTimer) return;
+    if (pollTimer) clearInterval(pollTimer);
+    pollMs = ms;
+    pollTimer = setInterval(updateStatus, ms);
+  }
+
+  async function updateStatus() {
+    try {
+      const res = await fetch('{{ url_for("oralscan.get_status") }}', {
+        credentials: 'same-origin'
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+
+      const runningStatus = document.getElementById('running-status');
+      const runBtn = document.getElementById('run-bot-btn');
+
+      if (data.is_running) {
+        if (runningStatus) {
+          runningStatus.innerHTML =
+            '<span style="color:#f39c12;"><span class="spinner"></span> 実行中</span>';
+        }
+        if (runBtn) {
+          runBtn.disabled = true;
+          runBtn.innerHTML = '<span class="spinner"></span> 実行中...';
+        }
+        startPolling(2000);
+      } else {
+        if (runningStatus) {
+          runningStatus.innerHTML = '<span style="color:#27ae60;">✓ 待機中</span>';
+        }
+        if (runBtn) {
+          runBtn.disabled = false;
+          runBtn.textContent = 'Oral Scan にログインして症例一覧を開く';
+        }
+        startPolling(5000);
+      }
+
+      if (data.last_run) {
+        const lastRun = document.getElementById('last-run');
+        if (lastRun) lastRun.textContent = data.last_run;
+      }
+
+      const lastResultElem = document.getElementById('last-result');
+      if (lastResultElem) {
+        if (data.last_result === 'success') {
+          lastResultElem.innerHTML = '<span class="badge badge-success">✅ 成功</span>';
+        } else if (data.last_result === 'failed') {
+          lastResultElem.innerHTML = '<span class="badge badge-danger">❌ 失敗</span>';
+        } else if (data.last_result === 'error') {
+          lastResultElem.innerHTML = '<span class="badge badge-warning">⚠️ エラー</span>';
+        }
+      }
+
+      if (data.message && !data.is_running) {
+        showMessage(data.message, data.last_result === 'success' ? 'success' : 'error');
+      }
+    } catch (err) {
+      console.error('ステータス取得エラー:', err);
+    }
+  }
+
+  async function runBot() {
+  const btn = document.getElementById('run-bot-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 実行中...'; }
+  showMessage('ボットを起動しています...', 'info');
+
+  try {
+    const res = await fetch('{{ url_for("oralscan.run_bot") }}', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        // Flask-WTF を使っているなら有効。未使用でも空文字で問題なし
+        'X-CSRFToken': '{{ csrf_token()|default("", true) }}'
+      },
+      // サーバが何かキーを期待している場合に備えて最低限のペイロードを渡す
+      body: JSON.stringify({ action: 'run' })
+    });
+
+    // 400時の本文を拾って見える化
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('run-bot error body:', text);
+      throw new Error(`HTTP ${res.status} ${text || ''}`.trim());
+    }
+
+    const data = await res.json();
+    if (data.success) {
+      showMessage(data.message || '起動しました。', 'success');
+      startPolling(2000);
+    } else {
+      showMessage(data.message || '起動に失敗しました。', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Oral Scan にログインして症例一覧を開く'; }
+    }
+  } catch (err) {
+    showMessage('エラーが発生しました: ' + err, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Oral Scan にログインして症例一覧を開く'; }
+  } finally {
+    updateStatus();
+  }
+}
+
+  // ページ読み込み完了後に実行
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  function init() {
+    console.log('🎯 初期化開始');
+    
+    const btn = document.getElementById('run-bot-btn');
+    console.log('ボタン要素:', btn);
+    
+    if (!btn) {
+      console.error('❌ ボタンが見つかりません！');
+      return;
+    }
+    
+    // クリックイベントを設定
+    btn.addEventListener('click', function(e) {
+      console.log('🖱️ ボタンがクリックされました');
+      e.preventDefault();
+      e.stopPropagation();
+      runBot();
+    });
+    
+    console.log('✅ イベントリスナー設定完了');
+    
+    updateStatus();
+    startPolling(5000);
+  }
+})();
+</script>
+
+{% endblock %}
