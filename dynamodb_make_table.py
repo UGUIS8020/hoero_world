@@ -38,64 +38,53 @@ def wait_gsis_active(client, table_name, index_names, timeout=300):
     raise TimeoutError(f"GSI not ACTIVE within timeout on {table_name}: {pending}")
 
 def ensure_table(dynamodb, spec: dict):
-    """
-    spec 例:
-    {
-      "TableName": "hoero-users",
-      "AttributeDefinitions": [{"AttributeName":"user_id","AttributeType":"S"}, ...],
-      "KeySchema": [{"AttributeName":"user_id","KeyType":"HASH"}],
-      "BillingMode": "PAY_PER_REQUEST",
-      "GlobalSecondaryIndexes": [
-        {"IndexName":"email-index","KeySchema":[{"AttributeName":"email","KeyType":"HASH"}], "Projection":{"ProjectionType":"ALL"}},
-        ...
-      ]
-    }
-    """
     client = dynamodb.meta.client
     name = spec["TableName"]
 
-    # テーブル存在チェック
+    def _wait_table_active():
+        return wait_table_active(client, name)
+
+    def _wait_gsis_active(index_names):
+        return wait_gsis_active(client, name, index_names)
+
     try:
         desc = client.describe_table(TableName=name)
         print(f"[INFO] Table '{name}' already exists (status={desc['Table']['TableStatus']}).")
         existing_gsis = {g["IndexName"] for g in desc["Table"].get("GlobalSecondaryIndexes", [])}
     except client.exceptions.ResourceNotFoundException:
-        # 無ければ作成
         create_args = {
             "TableName": name,
             "AttributeDefinitions": spec["AttributeDefinitions"],
             "KeySchema": spec["KeySchema"],
             "BillingMode": spec.get("BillingMode", "PAY_PER_REQUEST"),
         }
-        # 初回作成時にGSIを同時作成（オンデマンドなので Throughput 指定なし）
-        if "GlobalSecondaryIndexes" in spec and spec["GlobalSecondaryIndexes"]:
+        if spec.get("GlobalSecondaryIndexes"):
             create_args["GlobalSecondaryIndexes"] = spec["GlobalSecondaryIndexes"]
-
         print(f"[CREATE] Creating table '{name}' ...")
         client.create_table(**create_args)
-        desc = wait_table_active(client, name)
+        desc = _wait_table_active()
         existing_gsis = {g["IndexName"] for g in desc["Table"].get("GlobalSecondaryIndexes", [])}
 
-    # 不足GSIがあれば追加作成
     desired_gsis = {g["IndexName"] for g in spec.get("GlobalSecondaryIndexes", [])}
     missing = [g for g in spec.get("GlobalSecondaryIndexes", []) if g["IndexName"] not in existing_gsis]
+
     if missing:
+        # GSIキーに必要な AttributeDefinitions だけ整形
+        type_by_name = {a["AttributeName"]: a["AttributeType"] for a in spec["AttributeDefinitions"]}
+        needed_names = sorted({ks["AttributeName"] for g in missing for ks in g["KeySchema"]})
+        attr_defs = [{"AttributeName": n, "AttributeType": type_by_name[n]} for n in needed_names]
+
         print(f"[UPDATE] Adding GSIs on '{name}': {[m['IndexName'] for m in missing]}")
         client.update_table(
             TableName=name,
-            AttributeDefinitions=[
-                # GSIキーに使う属性定義だけを抽出（重複排除）
-                *{(a["AttributeName"], a["AttributeType"]) for a in spec["AttributeDefinitions"]}
-            ],
-            GlobalSecondaryIndexes=[
-                {"Create": {
-                    "IndexName": g["IndexName"],
-                    "KeySchema": g["KeySchema"],
-                    "Projection": g["Projection"]
-                }} for g in missing
-            ]
+            AttributeDefinitions=attr_defs,
+            GlobalSecondaryIndexes=[{"Create": {
+                "IndexName": g["IndexName"],
+                "KeySchema": g["KeySchema"],
+                "Projection": g["Projection"],
+            }} for g in missing]
         )
-        wait_gsis_active(client, name, [m["IndexName"] for m in missing])
+        _wait_gsis_active([m["IndexName"] for m in missing])
     else:
         if desired_gsis:
             print(f"[INFO] All desired GSIs already present on '{name}': {sorted(desired_gsis)}")

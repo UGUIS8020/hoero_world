@@ -114,6 +114,34 @@ a:active { color: #b22222; text-decoration: none; }
         font-size: 18px;
     }
 }
+/* セクション自体を中央に配置 */
+.autotransplant-news{
+  max-width: 900px;      /* お好みで */
+  margin: 0 auto;        /* 画面中央へ */
+}
+
+/* 見出し＋ステータスを縦に並べて中央寄せ */
+.autotransplant-news .news-header{
+  display: flex;
+  flex-direction: column;
+  align-items: center;    /* 水平中央 */
+  gap: 8px;
+  text-align: center;     /* テキスト中央 */
+}
+
+/* ステータス行の中身（点・更新時刻・ボタン・スピナー）を中央寄せ */
+.autotransplant-news .news-status{
+  display: flex;
+  align-items: center;
+  justify-content: center; /* 中央揃え */
+  gap: 10px;
+  flex-wrap: wrap;         /* 狭い画面で折り返し */
+}
+
+/* お好みで見出しの余白を少しだけ詰める */
+.autotransplant-news .news-heading{
+  margin: 0;
+}
 </style>
 
 <!-- メインヘッダー -->
@@ -174,26 +202,131 @@ a:active { color: #b22222; text-decoration: none; }
     <h2>レプリカを用いた自家歯牙移植</h2>
 </a>
 
-<div class="box box1">        
+<div class="box box1">
+  <h2>
     <a href="{{ url_for('pages.root_replica') }}" target="_self">
-        <h2>自家歯牙移植用レプリカ</h2>                   
-        <div>      
-            <img src="{{ url_for('static', filename='main/top/root_replica003.webp') }}"
-            alt="歯根レプリカ003"
-            width="300" 
-            height="225"
-            loading="lazy"
-            decoding="async">
-
-            <img src="{{ url_for('static', filename='main/top/root_replica004.webp') }}"
-            alt="歯根レプリカ004"
-            width="300" 
-            height="225"
-            loading="lazy"
-            decoding="async">
-        </div>
+      自家歯牙移植用レプリカ
     </a>
+  </h2>
+
+  <div>
+    <img src="{{ url_for('static', filename='main/top/root_replica003.webp') }}"
+         alt="歯根レプリカ003" width="300" height="225" loading="lazy" decoding="async">
+    <img src="{{ url_for('static', filename='main/top/root_replica004.webp') }}"
+         alt="歯根レプリカ004" width="300" height="225" loading="lazy" decoding="async">
+  </div>
+
+  <div class="autotransplant-news">
+    <div class="news-header">
+      <h3 class="news-heading">自家歯牙移植news</h3>
+      <div class="news-status">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span id="news-last-updated" class="last-updated">最終更新: 読み込み中…</span>
+        <button id="news-refresh-btn" type="button" class="news-refresh-btn" aria-label="ニュースを更新">更新</button>
+        <span id="news-loading" class="spinner" aria-hidden="true" hidden></span>
+      </div>
+    </div>
+
+    {% if autotransplant_headlines %}
+      <ul id="autotransplant-headlines" class="autotransplant-headlines text-only" aria-label="自家歯牙移植の最新ニュース">
+        {% for n in autotransplant_headlines %}
+          <li>
+            <a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
+            {% if n.published_at %}<small class="news-date">{{ n.published_at[:10] }}</small>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <ul id="autotransplant-headlines" class="autotransplant-headlines text-only" aria-label="自家歯牙移植の最新ニュース"></ul>
+      <p class="text-muted" id="news-empty">ニュースは準備中です。</p>
+    {% endif %}
+
+    <div class="news-more">
+      <a href="{{ url_for('news.autotransplant_news', kind='research', lang='ja') }}">すべてのニュースを見る</a>
+    </div>
+  </div>
 </div>
+
+<style>
+.autotransplant-news { margin-top: .5rem; }
+.news-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+.news-heading { font-size: 1.05rem; font-weight: 600; margin: 0; color:#222; }
+.news-status { display:flex; align-items:center; gap:.5rem; font-size:.9rem; color:#555; }
+.pulse-dot {
+  width:8px; height:8px; border-radius:50%; background:#2b6cb0; display:inline-block;
+  box-shadow:0 0 0 0 rgba(43,108,176,0.6); animation:pulse 1.8s infinite;
+}
+@keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(43,108,176,0.6); }
+  70% { box-shadow:0 0 0 10px rgba(43,108,176,0); } 100% { box-shadow:0 0 0 0 rgba(43,108,176,0); } }
+.news-refresh-btn { border:1px solid #ddd; background:#fff; padding:.25rem .5rem; border-radius:4px; cursor:pointer; }
+.news-refresh-btn:hover { background:#f5f5f5; }
+.spinner {
+  width:14px; height:14px; border:2px solid #ddd; border-top-color:#2b6cb0; border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.autotransplant-headlines.text-only { margin:.25rem 0 0; padding-left:1rem; }
+.autotransplant-headlines.text-only li { list-style:disc; margin:.25rem 0; line-height:1.35;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.autotransplant-headlines.text-only a { color:#222; text-decoration:none; }
+.autotransplant-headlines.text-only a:hover { text-decoration:underline; }
+.news-date { color:#888; margin-left:.5rem; font-size:.85em; }
+.news-more { margin-top:.4rem; }
+.news-more a { font-size:.9em; }
+</style>
+
+<script>
+(function(){
+  const listEl = document.getElementById('autotransplant-headlines');
+  const lastUpdatedEl = document.getElementById('news-last-updated');
+  const btn = document.getElementById('news-refresh-btn');
+  const loading = document.getElementById('news-loading');
+  const empty = document.getElementById('news-empty');
+
+  async function fetchHeadlines() {
+    try {
+      loading.hidden = false;
+      const res = await fetch('/news/api/latest?kind=research&lang=ja&limit=5', {cache:'no-store'});
+      const data = await res.json();
+
+      // UL 更新
+      listEl.innerHTML = '';
+      (data.items || []).forEach(it => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = it.url; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = it.title || '';
+        li.appendChild(a);
+        if (it.published_at) {
+          const s = document.createElement('small');
+          s.className = 'news-date';
+          s.textContent = ' ' + it.published_at;
+          li.appendChild(s);
+        }
+        listEl.appendChild(li);
+      });
+
+      if (empty) empty.style.display = (data.items && data.items.length) ? 'none' : '';
+
+      // 最終更新表示（ローカル時刻に整形）
+      const d = new Date(data.updated_at || Date.now());
+      const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+      const hh = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0');
+      lastUpdatedEl.textContent = `最終更新: ${y}-${m}-${day} ${hh}:${mm}`;
+    } catch (e) {
+      lastUpdatedEl.textContent = '最終更新: 取得に失敗しました';
+    } finally {
+      loading.hidden = true;
+    }
+  }
+
+  btn.addEventListener('click', fetchHeadlines);
+  // 初回ロード
+  fetchHeadlines();
+  // 1時間おきに静かに更新
+  setInterval(fetchHeadlines, 60 * 60 * 1000);
+})();
+</script>
 
 <!-- ジルコニアセクション -->
 <h2>ジルコニア</h2>

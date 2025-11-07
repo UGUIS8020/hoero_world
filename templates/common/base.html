@@ -181,16 +181,16 @@
             </ul>
             
             <ul class="navbar-nav ms-auto">
-              <!-- <li class="nav-item">
+              <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.raiden' %}active{% endif %}" href="{{ url_for('main.raiden') }}">歯科相談</a>
-              </li>  -->
+              </li> 
               
-              <!-- <li class="nav-item">
-              <a class="nav-link {{ 'active' if request.endpoint == 'pages.autotransplant_news' else '' }}"
-                href="{{ url_for('pages.autotransplant_news') }}">
+              <li class="nav-item">
+              <a class="nav-link {{ 'active' if request.endpoint == 'news.autotransplant_news' else '' }}"
+                href="{{ url_for('news.autotransplant_news', kind='research', lang='ja') }}">
                 News
               </a>
-            </li>              -->
+            </li>             
               
 
               <li class="nav-item">
@@ -223,8 +223,8 @@
               </li>    
               
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.info') }}">お知らせ</a>
-              </li>
+                <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.news') }}">お知らせ</a>
+              </li>             
               
 
               {% if current_user.is_authenticated %}
@@ -239,6 +239,12 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'users.user_maintenance' %}active{% endif %}" href="{{url_for('users.user_maintenance')}}">ユーザー</a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint and request.endpoint.startswith('oralscan.') %}active{% endif %}" href="{{ url_for('oralscan.admin') }}">
+                  <i class="fas fa-robot"></i> Oral Scan自動化
+                </a>
+              </li>
+              
               {% endif %}
               
               <li class="nav-item">
@@ -390,5 +396,6 @@
     });
     </script>
 
+ {% block extra_js %}{% endblock %}
 </body>
 </html>
