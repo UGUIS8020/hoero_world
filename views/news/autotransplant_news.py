@@ -8,6 +8,7 @@ import feedparser
 from hashlib import sha256 as _sha
 from . import bp
 from flask import render_template, request, current_app, jsonify
+import re 
 
 logger = logging.getLogger(__name__)
 
@@ -88,38 +89,55 @@ EN_NEG = ["ophthalmology", "glaucoma", "cataract", "eye", "cornea",
 def _lc(s: str | None) -> str:
     return (s or "").lower()
 
-def is_relevant(title: str | None, summary: str | None, lang: str) -> bool:
-    if not title:
-        return False
-    t = (title or "").lower()
-    s = (summary or "").lower()
-    text = f"{t} {s}"
+# 主題判定に使う語
+_CORE_JA = [
+    r"自家?歯牙?移植", r"歯牙移植", r"歯の移植", r"自家移植",
+    r"智歯.*移植", r"余剰歯.*移植", r"ドナー歯",
+]
+_SUPP_JA = [
+    r"レプリカ.*(移植|移動|窩|窩形成)", r"移植窩", r"歯根膜.*(温存|保存|再生)",
+    r"3D.?プリンタ.*(移植|レプリカ|シミュレーション)",
+]
 
+_CORE_EN = [
+    r"tooth\s+autotransplant", r"autogenous\s+tooth\s+transplant",
+    r"tooth\s+transplantation", r"donor\s+tooth",
+]
+_SUPP_EN = [
+    r"digital\s+replica.*(socket|site|graft|transplant)",
+    r"periodontal.*(ligament|PDL).*(preserv|healing|regenerat)",
+    r"third\s+molar.*transplant", r"supernumerary.*tooth.*transplant",
+]
+
+# 参照語（主題判定の補助。これだけでは採用しない）
+_IMPLANT_JA = [r"インプラント"]
+_IMPLANT_EN = [r"\bimplant(s)?\b"]
+
+def _count_hits(patterns, text: str) -> int:
+    return sum(1 for p in patterns if re.search(p, text, re.IGNORECASE))
+
+def is_relevant(title: str | None, summary: str | None, lang: str = "ja") -> bool:
+    text = f"{(title or '')} {(summary or '')}"
     if lang == "ja":
-        allow = [
-            "自家歯牙移植","自家歯移植","歯牙移植","歯の移植","歯の自家移植",
-            "ドナーレプリカ","レプリカ 手術","移植窩","移植窩形成","cbct",
-            "3d プリンタ","デジタル レプリカ","歯科","口腔","口腔外科"
-        ]
-        # 非歯科 or 広告/医院紹介ワードを弾く
-        deny = [
-            "乳房インプラント","インプラント医院","おすすめ","ランキング","費用","名医","口コミ","広告",
-            "腎","腎移植","肝","肝移植","角膜","骨移植","皮膚移植","臓器","移植片"
-        ]
+        core = _count_hits(_CORE_JA, text)
+        supp = _count_hits(_SUPP_JA, text)
+        impl = _count_hits(_IMPLANT_JA, text)
     else:
-        allow = [
-            "tooth autotransplantation","autogenous tooth transplantation","autotransplanted tooth",
-            "tooth transplantation","donor tooth replica","recipient site","alveolar socket",
-            "cbct","3d print","3d-printed","dental","dentistry","oral","maxillofacial"
-        ]
-        deny = [
-            "kidney","renal","liver","hepatic","corneal","bone graft","skin graft","organ","allograft","xenograft",
-            "implant clinic","best clinic","cost","pricing","cosmetic","whitening","aligner","ad"
-        ]
+        core = _count_hits(_CORE_EN, text)
+        supp = _count_hits(_SUPP_EN, text)
+        impl = _count_hits(_IMPLANT_EN, text)
 
-    if any(x in text for x in (d.lower() for d in deny)):
-        return False
-    return any(x in text for x in (a.lower() for a in allow))
+    # ルール:
+    # 1) コア語が1つでもあれば採用（インプラント語があってもOK＝主題が移植なら通す）
+    if core >= 1:
+        return True
+
+    # 2) コアが0でも、補助語が複数（>=2）で移植文脈が濃ければ採用
+    if core == 0 and supp >= 2:
+        return True
+
+    # 3) コア=0 かつ 補助<2 のときは、インプラントだけなど他主題とみなし除外
+    return False
 
 
 def classify_kind(title: str) -> str:
