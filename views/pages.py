@@ -59,12 +59,7 @@ def news():
     return render_template('pages/news.html')
 
 
-# 自家歯牙移植ニュース
 
-@bp.route("/admin/run_autotransplant_news")
-def run_autotransplant_news():
-    total = collect_autotransplant_news()
-    return f"collect ok ({total})"
 
 # ---- 自家歯牙移植ニュース収集関数 ----
 def fetch_google_news_dental(query="自家歯牙移植", lang="ja"):
@@ -238,63 +233,7 @@ def dental_query_items(kind=None, lang=None, limit=40, last_evaluated_key=None):
     resp = table.query(**kwargs)
     return resp.get("Items", []), resp.get("LastEvaluatedKey")
 
-# ---- ルート定義 ----
-@bp.route("/autotransplant_news")
-def autotransplant_news():
-    kind = request.args.get("kind") or "research"   # 'research', 'case', 'video'
-    lang = request.args.get("lang") or "ja"         # 'ja' or 'en'
-    page_token = request.args.get("tok")
 
-    last_evaluated_key = None
-    if page_token:
-        try:
-            last_evaluated_key = json.loads(
-                base64.urlsafe_b64decode(page_token.encode()).decode()
-            )
-        except Exception:
-            last_evaluated_key = None
-
-    items, lek = dental_query_items(kind=kind, lang=lang, limit=40, last_evaluated_key=last_evaluated_key)
-
-    next_tok = None
-    if lek:
-        next_tok = base64.urlsafe_b64encode(json.dumps(lek).encode()).decode()
-
-    return render_template("pages/autotransplant_news.html", rows=items, kind=kind, lang=lang, page=1, next_tok=next_tok)
-
-@bp.route("/autotransplant_news/demo")
-def autotransplant_news_demo():
-    """デモ用のダミーデータ表示"""
-    test_items = [
-        {
-            "title": "デジタルドナーレプリカを用いた自家歯牙移植の成功率向上に関する研究",
-            "url": "https://example.com/research1",
-            "author": "日本口腔外科学会",
-            "published_at": "2025-01-15T09:00:00",
-            "summary": "デジタル技術を活用した移植窩形成により、従来法と比較して成功率が15%向上することが判明。",
-            "kind": "research",
-            "image_url": None
-        },
-        {
-            "title": "右上8番から左下6番への自家歯牙移植症例報告",
-            "url": "https://example.com/case1",
-            "author": "日本歯科医学会誌",
-            "published_at": "2025-01-10T14:30:00",
-            "summary": "CBCT画像から作製したレプリカを使用し、口腔外時間2分で移植完了した症例。",
-            "kind": "case",
-            "image_url": None
-        },
-        {
-            "title": "Digital Donor Replica Technique for Autotransplantation",
-            "url": "https://example.com/video1",
-            "author": "Dental Education YouTube",
-            "published_at": "2025-01-08T18:30:00",
-            "summary": None,
-            "kind": "video",
-            "image_url": "https://placehold.jp/300x200.png"
-        }
-    ]
-    return render_template("pages/autotransplant_news.html", rows=test_items, kind="research", lang="ja", page=1, next_tok=None)
 
 # ---- データ収集実行 ----
 def collect_autotransplant_news():

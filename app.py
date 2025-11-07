@@ -15,16 +15,30 @@ load_dotenv()
 # 2) Flask アプリ生成
 flask_app = Flask(__name__)
 
-# 3) 基本設定（1回だけ）
-csrf = CSRFProtect()
-csrf.init_app(flask_app)
+# ===== ここから基本設定（1回だけ） =====
+# 本番判定（必要ならあなたの運用に合わせて調整）
+IS_PROD = (os.getenv("FLASK_ENV") == "production") or (os.getenv("ENV") == "prod") or (os.getenv("DEBUG") == "0")
 
-flask_app.config['DEBUG'] = True
+# 本番では SECRET_KEY 必須
+if IS_PROD and not os.getenv('SECRET_KEY'):
+    raise RuntimeError("SECRET_KEY is required in production")
+
+# SECRET_KEY 設定：本番は env 必須、開発はフォールバック可
+flask_app.config['SECRET_KEY'] = (
+    os.getenv('SECRET_KEY') if IS_PROD else os.getenv('SECRET_KEY', 'dev-secret-key')
+)
+
+# DEBUG を環境変数で制御（デフォルト False → 開発だけ True でもOK）
+flask_app.config['DEBUG'] = (os.getenv('DEBUG', '1') == '1') and not IS_PROD
 flask_app.config['MAIL_DEBUG'] = False
 flask_app.config['WTF_CSRF_TIME_LIMIT'] = 10800  # 秒
 flask_app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024
-flask_app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'mysecretkey')
 
+# CSRF は SECRET_KEY 設定後に init
+csrf = CSRFProtect()
+csrf.init_app(flask_app)
+
+# DB 接続
 basedir = os.path.abspath(os.path.dirname(__file__))
 flask_app.config['SQLALCHEMY_DATABASE_URI'] = (
     f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
@@ -34,11 +48,11 @@ flask_app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 flask_app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
 os.makedirs(flask_app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# 4) メール設定
+# 4) メール設定（TLS/SSLは片方だけ True に）
 flask_app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
 flask_app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 465))
 flask_app.config['MAIL_USE_SSL'] = os.getenv('MAIL_USE_SSL', 'True') == 'True'
-flask_app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
+flask_app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'False') == 'True'  # 例：SSL優先
 flask_app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
 flask_app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 flask_app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
@@ -81,6 +95,7 @@ from views.pages import bp as pages_bp
 from views.stl_board import bp as stl_board_bp
 from views.sub_account import bp as sub_account_bp
 from views.oralscan import bp as oralscan_bp
+from views.news import bp as news_bp        # ← 追加
 
 flask_app.register_blueprint(main_bp)
 flask_app.register_blueprint(users_bp)
@@ -89,6 +104,7 @@ flask_app.register_blueprint(pages_bp)
 flask_app.register_blueprint(stl_board_bp)
 flask_app.register_blueprint(sub_account_bp)
 flask_app.register_blueprint(oralscan_bp)
+flask_app.register_blueprint(news_bp)       # ← 追加
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     flask_app.run(debug=True)

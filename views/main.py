@@ -45,18 +45,29 @@ zip_handler_instance = ZipHandler()  # インスタンスを作成
 @bp.route('/')
 def index():
     form = BlogSearchForm()
-    # ブログ記事の取得
+
+    # ブログ記事（現状のまま）
     page = request.args.get('page', 1, type=int)
     blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
-
-    # 最新記事の取得
-    # recent_blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).limit(5).all()
     recent_blog_posts = blog_posts.items[:5]
-
-    # カテゴリの取得
     blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
 
-    return render_template('main/index.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, form=form)
+    # 自家歯牙移植ニュース（研究/ja）の上位5件を取得
+    autotransplant_headlines = []
+    try:
+        from .news.autotransplant_news import dental_query_items  # ← ローカル import
+        autotransplant_headlines, _ = dental_query_items(kind="research", lang="ja", limit=5)
+    except Exception as e:
+        current_app.logger.warning("load autotransplant headlines failed: %s", e)
+
+    return render_template(
+        'main/index.html',
+        blog_posts=blog_posts,
+        recent_blog_posts=recent_blog_posts,
+        blog_categories=blog_categories,
+        form=form,
+        autotransplant_headlines=autotransplant_headlines,  # ← 追加
+    )
 
 @bp.route('/category_maintenance', methods=['GET', 'POST'])
 @login_required
