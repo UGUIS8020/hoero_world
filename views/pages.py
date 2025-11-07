@@ -192,7 +192,7 @@ def fetch_youtube_dental(query="tooth autotransplantation", lang="en"):
 def put_unique_dental(item: dict):
     """歯科ニュース専用のDynamoDB保存関数"""
     table = current_app.config["DENTAL_TABLE"]  # 歯科ニュース専用テーブル
-    pk = f"URL#{sha256(item['url'])}"
+    pk = f"URL#{sha256(item['url'].encode()).hexdigest()}"
     try:
         table.put_item(
             Item={
