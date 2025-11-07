@@ -195,16 +195,16 @@ def put_unique_dental(item: dict):
     pk = f"URL#{sha256(item['url'].encode()).hexdigest()}"
     try:
         table.put_item(
-            Item={
+            Item=_dynamodb_sanitize({
                 "pk": pk, "sk": "METADATA",
                 "url": item["url"], "title": item.get("title"),
                 "source": item.get("source"), "kind": item.get("kind"),
-                "lang": item.get("lang"), "published_at": item.get("published_at"),
+                "lang": item.get("lang"), "published_at": (_ensure_iso(item.get("published_at")) or _iso_now_utc()),
                 "summary": item.get("summary"), "image_url": item.get("image_url"),
                 "author": item.get("author"),
                 "gsi1pk": f"KIND#{item.get('kind')}#LANG#{item.get('lang')}",
                 "gsi1sk": item.get("published_at") or "0000-00-00T00:00:00"
-            },
+            }),
             ConditionExpression="attribute_not_exists(pk)"
         )
         return True
@@ -276,3 +276,45 @@ def auto_collect_dental():
         return {"success": True, "total": total}
     except Exception as e:
         return {"success": False, "error": str(e)}, 500
+
+# --- helper: DynamoDB が datetime を受け取れないため ISO 文字列に揃える ---
+def _ensure_iso(v):
+    from datetime import datetime, date, timezone
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        # naiveならUTC付与、awareならUTCへ変換
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        else:
+            v = v.astimezone(timezone.utc)
+        return v.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(v, date):
+        return datetime(v.year, v.month, v.day, tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return str(v)
+
+# --- helper: DynamoDB に渡す辞書を安全化（datetime→ISO 文字列 など） ---
+def _dynamodb_sanitize(v):
+    from datetime import datetime, date, timezone
+    # datetime -> ISO
+    if isinstance(v, datetime):
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        else:
+            v = v.astimezone(timezone.utc)
+        return v.strftime("%Y-%m-%dT%H:%M:%SZ")
+    # date -> ISO(00:00Z)
+    if isinstance(v, date):
+        return datetime(v.year, v.month, v.day, tzinfo=timezone.utc)\
+               .strftime("%Y-%m-%dT%H:%M:%SZ")
+    # dict -> 再帰
+    if isinstance(v, dict):
+        return {k: _dynamodb_sanitize(v2) for k, v2 in v.items()}
+    # list/tuple -> 再帰
+    if isinstance(v, (list, tuple)):
+        return type(v)(_dynamodb_sanitize(x) for x in v)
+    # set は SS として扱うなら set(str,…) に、面倒なら list へ
+    if isinstance(v, set):
+        return list(_dynamodb_sanitize(x) for x in v)
+    # それ以外はそのまま/文字列化
+    return v
