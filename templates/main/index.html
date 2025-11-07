@@ -17,20 +17,18 @@
     width: 100%;
     color: #7c1820;
     justify-content: center;
-    height: 197px; /* ロゴ画像 + パディング分の高さを事前確保 */
+    min-height: 180px;
     flex-wrap: wrap;
 }
 
 .logo {
     width: 157px; /* 明示的な幅指定 */
     height: 157px; /* 明示的な高さ指定 */
-    flex-shrink: 0; /* サイズ変動を防止 */
-    /* レイアウトシフト対策の追加 */
-    background-color: rgba(124, 24, 32, 0.05); /* 薄い背景色でプレースホルダー */
+    flex-shrink: 0; /* サイズ変動を防止 */   
     border-radius: 4px;
     display: flex;
     align-items: center;
-    margin: 10px;
+    margin: 0px;
     justify-content: center;
     position: relative; /* 子要素の位置制御用 */
     overflow: hidden; /* はみ出し防止 */
