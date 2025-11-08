@@ -10,7 +10,7 @@ from extensions import db, migrate, login_manager, mail
 from utils.common_utils import setup_scheduled_cleanup
 
 # 1) .env を最初にロード
-load_dotenv()
+load_dotenv(dotenv_path="/var/www/hoero_world/.env")
 
 # 2) Flask アプリ生成
 flask_app = Flask(__name__)

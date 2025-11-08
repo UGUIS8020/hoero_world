@@ -44,6 +44,13 @@ def put_unique_dental(item: dict) -> bool:
                 "author": item.get("author"),
                 "gsi1pk": f"KIND#{item.get('kind')}#LANG#{item.get('lang')}",
                 "gsi1sk": item.get("published_at") or "0001-01-01T00:00:00Z",
+                # 追加フィールド（存在すれば保存、無ければスキップでOK）
+                "ai_relevant": item.get("ai_relevant"),         # bool
+                "ai_kind": item.get("ai_kind"),                 # str
+                "ai_summary": item.get("ai_summary"),           # 140字など短要約
+                "ai_reason": item.get("ai_reason"),             # 採否の理由（管理用）
+                "ai_prompt_id": item.get("ai_prompt_id"),       # プロンプトのハッシュなど
+                "ai_score_semantic": item.get("ai_score_semantic"),  # 任意：前段スコア
             },
             ConditionExpression="attribute_not_exists(pk)"
         )
