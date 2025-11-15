@@ -7,7 +7,7 @@ from extensions import db
 import boto3
 import shutil
 import os, tempfile, json, zipfile
-from datetime import timezone, timedelta, datetime
+from datetime import timezone, time, datetime
 from dotenv import load_dotenv
 from PIL import Image
 from flask import current_app
@@ -18,6 +18,8 @@ from extensions import mail
 from utils.common_utils import get_next_sequence_number, process_image, sanitize_filename, ZipHandler, cleanup_temp_files
 from pytz import timezone
 import requests
+from views.news.autotransplant_news import ai_collect_news
+
 
 JST = timezone('Asia/Tokyo')
 current_time = datetime.now(JST)
@@ -52,11 +54,19 @@ def index():
     recent_blog_posts = blog_posts.items[:5]
     blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
 
-    # 自家歯牙移植ニュース（研究/ja）の上位5件を取得
     autotransplant_headlines = []
     try:
-        from .news.autotransplant_news import dental_query_items  # ← ローカル import
-        autotransplant_headlines, _ = dental_query_items(kind="research", lang="ja", limit=5)
+        from .news.autotransplant_news import dental_query_items
+        items, _ = dental_query_items(kind="research", lang="ja", limit=5)
+        autotransplant_headlines = [
+            {
+                "title": it.get("title"),
+                "url": it.get("url"),
+                "published_at": (it.get("published_at") or "")[:10],
+            }
+            for it in items
+            if it.get("title") and it.get("url")
+        ]
     except Exception as e:
         current_app.logger.warning("load autotransplant headlines failed: %s", e)
 
@@ -66,7 +76,7 @@ def index():
         recent_blog_posts=recent_blog_posts,
         blog_categories=blog_categories,
         form=form,
-        autotransplant_headlines=autotransplant_headlines,  # ← 追加
+        autotransplant_headlines=autotransplant_headlines, 
     )
 
 @bp.route('/category_maintenance', methods=['GET', 'POST'])
@@ -1232,5 +1242,28 @@ def add_featured_image(upload_image):
     image.thumbnail(image_size)
     image.save(filepath)
     return image_filename
+
+@bp.route("/admin/ai_collect_dental", methods=["POST"])
+def ai_collect_dental():
+    """AIエージェントによる自律的な収集"""
+    try:
+        results_ja = ai_collect_news(lang="ja", max_iterations=5)
+        time.sleep(2)
+        results_en = ai_collect_news(lang="en", max_iterations=3)
+        
+        total = results_ja["saved"] + results_en["saved"]
+        
+        return jsonify({
+            "success": True, 
+            "total": total,
+            "details": {
+                "ja": results_ja,
+                "en": results_en
+            }
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
