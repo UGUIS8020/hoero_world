@@ -58,28 +58,6 @@ def news():
     
     return render_template('pages/news.html')
 
-# ---- 歯科ニュース用クエリ関数 ----
-def dental_query_items(kind=None, lang=None, limit=40, last_evaluated_key=None):
-    table = current_app.config["DENTAL_TABLE"]
-    if not kind:
-        kind = "research"
-    if not lang:
-        lang = "ja"
-
-    kwargs = {
-        "IndexName": "gsi1",
-        "KeyConditionExpression": Key("gsi1pk").eq(f"KIND#{kind}#LANG#{lang}"),
-        "ScanIndexForward": False,  # gsi1sk（published_at）で新しい順
-        "Limit": limit,
-    }
-    if last_evaluated_key:
-        kwargs["ExclusiveStartKey"] = last_evaluated_key
-
-    resp = table.query(**kwargs)
-    return resp.get("Items", []), resp.get("LastEvaluatedKey")
-
-
-
 # --- helper: DynamoDB が datetime を受け取れないため ISO 文字列に揃える ---
 def _ensure_iso(v):
     from datetime import datetime, date, timezone

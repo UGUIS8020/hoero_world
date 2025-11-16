@@ -1,7 +1,6 @@
 from __future__ import annotations
 import base64, json, time, logging, traceback, os
 from flask import render_template, request, current_app, jsonify
-from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 from urllib.parse import quote_plus
 import feedparser
@@ -10,6 +9,7 @@ from . import bp
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from boto3.dynamodb.conditions import Attr
 
 logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -72,68 +72,13 @@ def _table():
 def _hash_url(url: str) -> str:
     return _sha(url.encode()).hexdigest()
 
-def put_unique_dental(item: dict) -> bool:
-    """歯科ニュース専用のDynamoDB保存関数（AI対応版）"""
-    pk = f"URL#{_hash_url(item['url'])}"
-    try:
-        _table().put_item(
-            Item=_dynamodb_sanitize({
-                "pk": pk, "sk": "METADATA",
-                "url": item["url"], 
-                "title": item.get("title"),
-                "source": item.get("source"), 
-                "kind": item.get("kind"),
-                "lang": item.get("lang"), 
-                "published_at": (_ensure_iso(item.get("published_at")) or _iso_now_utc()),
-                "summary": item.get("summary"), 
-                "image_url": item.get("image_url"),
-                "author": item.get("author"),
-                "gsi1pk": f"KIND#{item.get('kind')}#LANG#{item.get('lang')}",
-                "gsi1sk": _ensure_iso(item.get("published_at")) or "0000-00-00T00:00:00",
-                # AI判定結果を保存
-                "ai_relevant": item.get("ai_relevant"),
-                "ai_kind": item.get("ai_kind"),
-                "ai_summary": item.get("ai_summary"),
-                "ai_reason": item.get("ai_reason"),
-                "ai_search_query": item.get("ai_search_query"),
-                "ai_headline": item.get("ai_headline"),
-            }),
-            ConditionExpression="attribute_not_exists(pk)"
-        )
-        _d(f"[DB] ✅ Saved: {item.get('title', '')[:60]}")  # ★ 成功ログ
-        return True
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            _d(f"[DB] ⚠️ Already exists: {item.get('title', '')[:60]}")  # ★ 重複ログ
-            return False
-        _d(f"[DB] ❌ Error saving: {e}")  # ★ エラーログ
-        raise
-    except Exception as e:
-        _d(f"[DB] ❌ Unexpected error: {e}")  # ★ その他のエラー
-        traceback.print_exc()
-        raise
-
-def dental_query_items(kind="research", lang="ja", limit=40, last_evaluated_key=None):
-    """歯科ニュース用クエリ関数"""
-    kwargs = {
-        "IndexName": "gsi1",
-        "KeyConditionExpression": Key("gsi1pk").eq(f"KIND#{kind}#LANG#{lang}"),
-        "ScanIndexForward": False,
-        "Limit": limit,
-    }
-    if last_evaluated_key:
-        kwargs["ExclusiveStartKey"] = last_evaluated_key
-    resp = _table().query(**kwargs)
-    return resp.get("Items", []), resp.get("LastEvaluatedKey")
-
-# ========= AI収集機能 =========
 def ai_filter_and_classify(title: str, summary: str | None, lang: str = "ja") -> dict:
     """AIで記事の関連度判定と分類（OpenAI版）"""
     prompt = f"""以下の記事が「自家歯牙移植（tooth autotransplantation）」に関連するか判定してください。
 
 【記事情報】
-タイトル: {title}
-要約: {summary or "なし"}
+タイトル（見出し生成の元データ）: {title}
+要約（内容理解用、見出しには使わない）: {summary or "なし"}
 
 【判定基準】
 関連する内容：
@@ -157,16 +102,26 @@ def ai_filter_and_classify(title: str, summary: str | None, lang: str = "ja") ->
 
 【出力要件】
 - ai_summary と headline_ja は必ず**日本語**で書いてください
-- headline_ja はおおよそ20文字以内の短い見出しとし、体言止めを推奨します
-  例: 「3Dレプリカを用いた移植術」「親知らず移植の長期予後」など
+
+- ai_summary:
+  - タイトルと要約の**両方**を使って、記事全体の要点を30〜50字程度の日本語1文で要約してください。
+  - 可能であれば「どのような患者・歯」「どんな方法（3Dプリントやガイド手術など）」
+    「どんな結果・意義（長期予後や審美性の改善など）」が分かるようにしてください。
+  - タイトルの言い換えだけの短いフレーズにはしないでください。
+
+- headline_ja:
+  - 【タイトルのみ】を材料にして作成してください。要約から新しい情報を足したり、本文の内容を推測して追加しないでください。
+  - 30〜45文字程度の自然な日本語の見出しにしてください。
+  - 名詞の羅列ではなく、「〜を報告」「〜が示された」「〜により改善した」「〜の症例」などの表現を含む**文章調**にしてください。
+  - 原題の直訳ではなく、日本の歯科ニュースサイトや歯科雑誌に載るような読みやすい見出しにしてください。
 
 以下のJSON形式で回答してください：
 {{
   "relevant": true/false,
   "kind": "research/case/video/product/market",
-  "ai_summary": "記事の要点を40〜80字程度の日本語1文で要約。可能であれば『どのような患者・歯』『どんな方法（3Dプリントやガイド手術など）』『どんな結果・意義（長期予後や審美性の改善など）』が分かるようにしてください。タイトルの言い換えだけの短いフレーズにはしないでください。",
-  "headline_ja": "30〜45文字程度の自然な日本語の見出し。名詞の羅列ではなく、『〜を報告』『〜が示された』『〜により改善した』『〜の症例』などの表現を含む文章調にしてください。原題の直訳ではなく、日本の歯科ニュースサイト風の読みやすい見出しにしてください。",
-  "reason": "判定理由を簡潔に（日本語）"
+  "ai_summary": "上記の条件を満たす日本語1文の要約",
+  "headline_ja": "上記の条件を満たす日本語見出し",
+  "reason": "この記事を関連あり/なしと判断した理由を簡潔に（日本語）"
 }}
 
 DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
@@ -839,6 +794,74 @@ def clear_all_dental_news():
     except Exception as e:
         return f"エラー: {e}"
     
+
+def dental_query_items(kind=None, lang=None, limit=40, last_evaluated_key=None):
+    table = current_app.config["DENTAL_TABLE"]
+
+    if not kind:
+        kind = "research"
+    if not lang:
+        lang = "ja"
+
+    pk = f"KIND#{kind}#LANG#{lang}"
+
+    scan_kwargs = {
+        # ★ GSI を使わずテーブル全体をスキャンして絞り込み
+        "FilterExpression": Attr("gsi1pk").eq(pk),
+        "Limit": limit,
+    }
+
+    if last_evaluated_key:
+        scan_kwargs["ExclusiveStartKey"] = last_evaluated_key
+
+    resp = table.scan(**scan_kwargs)
+    items = resp.get("Items", [])
+
+    # gsi1sk（= published_at）で新しい順にソート
+    items.sort(
+        key=lambda x: x.get("gsi1sk", "0000-00-00T00:00:00"),
+        reverse=True
+    )
+
+    return items, resp.get("LastEvaluatedKey")
+
+
+def put_unique_dental(item: dict) -> bool:
+    """歯科ニュース専用のDynamoDB保存関数（AI対応版）"""
+    pk = f"URL#{_hash_url(item['url'])}"
+    try:
+        _table().put_item(
+            Item=_dynamodb_sanitize({
+                "pk": pk, "sk": "METADATA",
+                "url": item["url"],
+                "title": item.get("title"),
+                "source": item.get("source"),
+                "kind": item.get("kind"),
+                "lang": item.get("lang"),
+                "published_at": (_ensure_iso(item.get("published_at")) or _iso_now_utc()),
+                "summary": item.get("summary"),
+                "image_url": item.get("image_url"),
+                "author": item.get("author"),
+                "gsi1pk": f"KIND#{item.get('kind')}#LANG#{item.get('lang')}",
+                "gsi1sk": _ensure_iso(item.get("published_at")) or "0000-00-00T00:00:00",
+                # AI 判定結果
+                "ai_relevant": item.get("ai_relevant"),
+                "ai_kind": item.get("ai_kind"),
+                "ai_summary": item.get("ai_summary"),
+                "ai_reason": item.get("ai_reason"),
+                "ai_search_query": item.get("ai_search_query"),
+                "ai_headline": item.get("ai_headline"),
+            }),
+            ConditionExpression="attribute_not_exists(pk)",
+        )
+        _d(f"[DB] ✅ Saved: {item.get('title','')[:50]}")
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            _d("[DB] Skipped (already exists)")
+            return False
+        _d(f"[DB] Error in put_unique_dental: {e}")
+        return False
 
 
 

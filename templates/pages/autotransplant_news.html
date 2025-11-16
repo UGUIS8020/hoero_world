@@ -222,11 +222,22 @@
     </style>
     
     <div class="dental-news-header">
-        <h2>🦷 自家歯牙移植 最新情報</h2>
+        <h2>自家歯牙移植 最新情報</h2>
         <p style="color: #666; margin: 10px 0;">
             AIが自動収集した自家歯牙移植に関する最新の研究論文、症例報告、技術情報
             （全 <span id="total-count">-</span> 件）
         </p>
+
+        {# ▼ 管理人専用コントロール ▼ #}
+        {% if current_user.is_authenticated and current_user.administrator %}
+        <div>
+            <a href="/news/admin/clear_all_dental_news">全クリア</a>
+            ｜
+            <a href="/news/admin/run_autotransplant_news">ニュース再取得</a>
+        </div>
+        {% endif %}      
+
+       
         
         <!-- フィルター -->
         <div class="news-filters">
