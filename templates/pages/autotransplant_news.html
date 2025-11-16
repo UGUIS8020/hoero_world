@@ -1,9 +1,13 @@
 {% extends "common/base.html" %}
 
 {# SEO最適化 #}
-{% block title %}自家歯牙移植ニュース - 最新研究と技術情報 | SHIBUYA Dental Laboratory{% endblock %}
-{% block description %}自家歯牙移植の最新研究、技術情報、症例報告を日本語・英語で配信。デジタルドナーレプリカ、移植成功率向上技術など幅広くカバー。{% endblock %}
-{% block keywords %}自家歯牙移植,歯牙移植,デジタルドナーレプリカ,移植窩形成,歯根膜温存,口腔外科,歯科技工,最新研究,症例報告{% endblock %}
+{% block title %}自家歯牙移植ニュース（最新研究・症例・デジタル技術）| SHIBUYA Dental Laboratory{% endblock %}
+{% block description %}
+自家歯牙移植（tooth autotransplantation／歯牙移植）に関する最新研究・症例報告・デジタルガイドや3Dレプリカなどの技術情報を自動収集して掲載する歯科専門ニュースページです。
+{% endblock %}
+{% block keywords %}
+自家歯牙移植,歯牙移植,オートトランスプラント,自家歯牙移植 レプリカ,デジタルドナーレプリカ,3Dプリント ガイドサージェリー,移植窩形成,歯根膜温存,tooth autotransplantation,autogenous tooth transplantation,dental autotransplantation
+{% endblock %}
 
 {% block extra_meta %}
   {# 正規URL（canonical） #}
@@ -17,19 +21,21 @@
   {# Open Graph（Facebook等のSNS用） #}
   <meta property="og:type" content="website">
   <meta property="og:title" content="自家歯牙移植ニュース - 最新研究と技術情報">
-  <meta property="og:description" content="自家歯牙移植の最新研究、技術情報、症例報告を日本語・英語で配信。デジタルドナーレプリカなど最新技術をカバー。">
+  <meta property="og:description" content="自家歯牙移植の最新研究、症例報告、3Dレプリカやデジタルガイドなどの技術情報を自動収集して配信。歯科医師・技工士向けの専門ニュースです。">
   <meta property="og:url" content="https://shibuya8020.com/dental_news">
   <meta property="og:image" content="https://shibuya8020.com/static/images/dental_news_og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="自家歯牙移植技術のイメージ画像">
+  <meta property="og:image:alt" content="自家歯牙移植とデジタルレプリカ技術のイメージ画像">
   <meta property="og:locale" content="ja_JP">
   <meta property="og:site_name" content="SHIBUYA Dental Laboratory">
+  {# 英語ニュースも扱うので、将来的に英語版ページを作るなら alternate を追加してもよい #}
+  {# <meta property="og:locale:alternate" content="en_US"> #}
 
   {# Twitter Card #}
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="自家歯牙移植ニュース - 最新研究と技術情報">
-  <meta name="twitter:description" content="自家歯牙移植の最新研究・技術を自動収集。デジタルドナーレプリカ、移植成功率向上技術を日英両言語で配信。">
+  <meta name="twitter:description" content="自家歯牙移植の最新研究・症例・デジタルレプリカ技術をAIが自動収集。歯科臨床と技工の両面から情報を整理して配信。">
   <meta name="twitter:image" content="https://shibuya8020.com/static/images/dental_news_og.jpg">
   <meta name="twitter:image:alt" content="自家歯牙移植技術のイメージ画像">
 
@@ -57,24 +63,49 @@
 
   {# その他のSEO向上タグ #}
   <meta name="revisit-after" content="1 days">
-
 {% endblock %}
 
 {% block jsonld %}
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "NewsMediaOrganization",
-  "name": "SHIBUYA Dental News",
-  "url": "https://shibuya8020.com/dental_news",
-  "logo": {
-    "@type": "ImageObject",
-    "url": "https://shibuya8020.com/static/images/logo.png"
-  },
-  "sameAs": [
-    "https://shibuya8020.com/"
-  ],
-  "description": "自家歯牙移植の最新研究と技術情報を配信する歯科専門ニュースサイト"
+  "@graph": [
+    {
+      "@type": "NewsMediaOrganization",
+      "name": "SHIBUYA Dental News",
+      "url": "https://shibuya8020.com/dental_news",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://shibuya8020.com/static/images/logo.png"
+      },
+      "sameAs": [
+        "https://shibuya8020.com/"
+      ],
+      "description": "自家歯牙移植の最新研究と技術情報を配信する歯科専門ニュースサイト"
+    },
+    {
+      "@type": "CollectionPage",
+      "name": "自家歯牙移植ニュース",
+      "url": "https://shibuya8020.com/dental_news",
+      "inLanguage": "ja",
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "SHIBUYA Dental Laboratory",
+        "url": "https://shibuya8020.com/"
+      },
+      "description": "自家歯牙移植の研究論文・症例報告・デジタルレプリカ技術などを集約したニュース一覧ページ。",
+      "about": [
+        {
+          "@type": "MedicalProcedure",
+          "name": "Tooth autotransplantation"
+        },
+        {
+          "@type": "MedicalTherapy",
+          "name": "Autogenous tooth transplantation"
+        }
+      ]
+    }
+  ]
 }
 </script>
 {% endblock %}
