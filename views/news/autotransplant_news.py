@@ -299,6 +299,11 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
                 if lang == "en":
                     pubmed_results = _execute_pubmed_search(query, max_results=20)
                     search_results.extend(pubmed_results)
+
+                # ③ YouTube（ja でも en でもOK。まずは両方で動かす）
+                yt_results = _execute_youtube_search(query, lang, max_results=10)
+                # source="youtube" は _execute_youtube_search 側で設定済み
+                search_results.extend(yt_results)    
                 
                 for result_item in search_results:
                     if not result_item.get("url"):
@@ -312,23 +317,32 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
                         lang
                     )
                     
-                    if ai_result["relevant"]:
-                        result_item["lang"] = lang
-                        result_item["kind"] = ai_result["kind"]
-                        result_item["ai_relevant"] = ai_result["relevant"]
-                        result_item["ai_kind"] = ai_result["kind"]
-                        result_item["ai_summary"] = ai_result["ai_summary"]
-                        result_item["ai_reason"] = ai_result["reason"]
-                        result_item["ai_search_query"] = query
-                        result_item["ai_headline"] = ai_result.get("ai_headline")
-                        
-                        all_items.append(result_item)
-                        collected_urls.add(result_item["url"])
-                        
-                        _d(
-                            f"[AI AGENT] ✓ Found: {result_item['title'][:60]}..."
-                            f" (kind={ai_result['kind']}, lang={lang})"
-                        )
+                    if not ai_result["relevant"]:
+                        continue
+
+                    # 基本は AI の kind
+                    kind = ai_result.get("kind", "research")
+
+                    # YouTube から来たものは必ず video 扱い
+                    if result_item.get("source") == "youtube":
+                        kind = "video"
+                    
+                    result_item["lang"] = lang
+                    result_item["kind"] = kind
+                    result_item["ai_relevant"] = ai_result["relevant"]
+                    result_item["ai_kind"] = kind
+                    result_item["ai_summary"] = ai_result["ai_summary"]
+                    result_item["ai_reason"] = ai_result["reason"]
+                    result_item["ai_search_query"] = query
+                    result_item["ai_headline"] = ai_result.get("ai_headline")
+                    
+                    all_items.append(result_item)
+                    collected_urls.add(result_item["url"])
+                    
+                    _d(
+                        f"[AI AGENT] ✓ Found: {result_item['title'][:60]}..."
+                        f" (kind={kind}, lang={lang}, source={result_item.get('source')})"
+                    )
                 
                 search_history.append({
                     "iteration": iteration + 1,
@@ -355,35 +369,43 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
             search_results = _execute_google_search(query, "ja")
 
             for result_item in search_results:
-                if not result_item.get("url"):
-                    continue
-                if result_item["url"] in collected_urls:
-                    continue
+                    if not result_item.get("url"):
+                        continue
+                    if result_item["url"] in collected_urls:
+                        continue
+                    
+                    ai_result = ai_filter_and_classify(
+                        result_item["title"], 
+                        result_item.get("summary"), 
+                        lang
+                    )
+                    
+                    if not ai_result["relevant"]:
+                        continue
 
-                ai_result = ai_filter_and_classify(
-                    result_item["title"],
-                    result_item.get("summary"),
-                    "ja"
-                )
+                    # ★ 基本は AI の kind
+                    kind = ai_result.get("kind", "research")
 
-                if not ai_result["relevant"]:
-                    continue
-
-                result_item["lang"] = "ja"
-                result_item["kind"] = ai_result["kind"]
-                result_item["ai_relevant"] = ai_result["relevant"]
-                result_item["ai_kind"] = ai_result["kind"]
-                result_item["ai_summary"] = ai_result["ai_summary"]
-                result_item["ai_reason"] = ai_result["reason"]
-                result_item["ai_search_query"] = query
-                result_item["ai_headline"] = ai_result.get("ai_headline")
-
-                all_items.append(result_item)
-                collected_urls.add(result_item["url"])
-                _d(
-                    f"[AI AGENT] ✓ Fallback Found: {result_item['title'][:60]}..."
-                    f" (kind={ai_result['kind']}, lang=ja)"
-                )
+                    # ★ YouTube から来たものは必ず video 扱いに上書き
+                    if result_item.get("source") == "youtube":
+                        kind = "video"
+                    
+                    result_item["lang"] = lang
+                    result_item["kind"] = kind
+                    result_item["ai_relevant"] = ai_result["relevant"]
+                    result_item["ai_kind"] = kind
+                    result_item["ai_summary"] = ai_result["ai_summary"]
+                    result_item["ai_reason"] = ai_result["reason"]
+                    result_item["ai_search_query"] = query
+                    result_item["ai_headline"] = ai_result.get("ai_headline")
+                    
+                    all_items.append(result_item)
+                    collected_urls.add(result_item["url"])
+                    
+                    _d(
+                        f"[AI AGENT] ✓ Found: {result_item['title'][:60]}..."
+                        f" (kind={kind}, lang={lang}, source={result_item.get('source')})"
+                    )
 
         # ログ用に履歴も追加しておく
         search_history.append({
@@ -452,6 +474,66 @@ def _execute_google_search(query, lang="ja"):
             "lang": lang,
         })
     
+    return items
+
+def _execute_youtube_search(query, lang="ja", max_results=20):
+    """
+    YouTube 検索（RSS）から動画一覧を取得
+    返り値は他のニュースと同じフォーマット：
+    {source, title, url, published_at, summary, author, image_url, lang}
+    """
+    # YouTube 検索用 RSS フィード
+    # 例: https://www.youtube.com/feeds/videos.xml?search_query=%E8%87%AA%E5%AE%B6%E6%AD%AF%E7%89%99%E7%A7%BB%E6%A4%8D
+    url = f"https://www.youtube.com/feeds/videos.xml?search_query={quote_plus(query)}"
+
+    feed = feedparser.parse(url)
+    items = []
+
+    for e in feed.entries[:max_results]:
+        link = getattr(e, "link", None)
+        if not link:
+            continue
+
+        title = (getattr(e, "title", "") or "").strip()
+        summary = getattr(e, "summary", None)
+
+        # 投稿日
+        pub = getattr(e, "published", None) or getattr(e, "updated", None)
+        published_at = _iso_now_utc()
+        if pub and getattr(e, "published_parsed", None):
+            try:
+                import datetime
+                import time as _time
+                tm = e.published_parsed
+                published_at = datetime.datetime.utcfromtimestamp(
+                    _time.mktime(tm)
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+            except Exception:
+                pass
+
+        # チャンネル名
+        author = getattr(e, "author", None)
+
+        # サムネイル（あれば）
+        thumb = None
+        if "media_thumbnail" in e:
+            try:
+                thumb = e.media_thumbnail[0]["url"]
+            except Exception:
+                pass
+
+        items.append({
+            "source": "youtube",
+            "title": title,
+            "url": link,
+            "published_at": published_at,
+            "summary": summary,
+            "author": author,
+            "image_url": thumb,
+            "lang": lang,
+            # kind は後で強制的に "video" にする
+        })
+
     return items
 
 

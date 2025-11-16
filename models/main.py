@@ -37,7 +37,7 @@ class BlogPostForm(FlaskForm):
         try:
             blog_categories = BlogCategory.query.all()
             if blog_categories:
-                self.category.choices = [(blog_category.id, blog_category.category) for blog_category in blog_categories]
+                self.category.choices = [(blog_category.id, blog_category.name) for blog_category in blog_categories]
                 if not self.category.data:
                     self.category.data = blog_categories[0].id
             else:

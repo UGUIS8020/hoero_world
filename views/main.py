@@ -19,6 +19,13 @@ from utils.common_utils import get_next_sequence_number, process_image, sanitize
 from pytz import timezone
 import requests
 from views.news.autotransplant_news import ai_collect_news
+from utils.blog_dynamo import (
+    create_blog_post_in_dynamo,
+    get_post_by_id,
+    list_recent_posts,
+)
+from types import SimpleNamespace
+from boto3.dynamodb.conditions import Attr
 
 
 JST = timezone('Asia/Tokyo')
@@ -123,6 +130,22 @@ def delete_category(blog_category_id):
     flash('ブログカテゴリが削除されました')
     return redirect(url_for('main.category_maintenance'))
 
+def get_dynamo_user_id_by_email(email: str) -> str | None:
+    """
+    hoero-users テーブルから email に一致する user_id(UUID) を1件返す。
+    見つからなければ None。
+    """
+    table = current_app.config["HOERO_USERS_TABLE"]  # 例: app.config で設定しておく
+    resp = table.scan(
+        FilterExpression=Attr("email").eq(email),
+        ProjectionExpression="user_id",
+        Limit=1,
+    )
+    items = resp.get("Items", [])
+    if not items:
+        return None
+    return items[0]["user_id"]
+
 @bp.route('/create_post', methods=['GET', 'POST'])
 @login_required
 def create_post():
@@ -132,52 +155,62 @@ def create_post():
             print("フォーム検証成功")
             print(f"タイトル: {form.title.data}")
             print(f"カテゴリー: {form.category.data}")
-            print(f"ユーザーID: {current_user.id}")
-            
+            print(f"RDSユーザーID: {current_user.id}")
+            print(f"メール: {current_user.email}")
+
+            # ① hoero-users から UUID の user_id を取得
+            dynamo_user_id = get_dynamo_user_id_by_email(current_user.email)
+            print(f"Dynamo user_id: {dynamo_user_id}")
+
+            if not dynamo_user_id:
+                # 念のため fallback（暫定で RDS id を入れる／エラーにするお好みで）
+                # dynamo_user_id = str(current_user.id)
+                raise RuntimeError("hoero-users に対応するユーザーが見つかりません")
+
+            # 画像アップロード
             if form.picture.data:
                 pic = add_featured_image(form.picture.data)
                 print(f"画像保存: {pic}")
             else:
                 pic = ''
                 print("画像なし")
-            
-            blog_post = BlogPost(
-                title=form.title.data, 
-                text=form.text.data, 
-                featured_image=pic, 
-                user_id=current_user.id, 
-                category_id=form.category.data, 
-                summary=form.summary.data
+
+            author_name = current_user.display_name
+
+            category_name_map = dict(form.category.choices)
+            category_name = category_name_map.get(form.category.data, "")
+            category_id = form.category.data
+
+            # ② user_id に Dynamo の UUID を渡す
+            post_id = create_blog_post_in_dynamo(
+                user_id=dynamo_user_id,  # ★ここがポイント
+                title=form.title.data,
+                text=form.text.data,
+                summary=form.summary.data or "",
+                featured_image=pic,
+                author_name=author_name,
+                category_id=category_id,
+                category_name=category_name,
             )
-            
-            print("BlogPostオブジェクト作成成功")
-            db.session.add(blog_post)
-            print("セッションに追加")
-            db.session.commit()
-            print("コミット成功")
-            
+            print(f"DynamoDB に投稿作成, post_id={post_id}")
+
             flash('ブログ投稿が作成されました', 'success')
-            return redirect(url_for('main.blog_maintenance'))
-            
+            return redirect(url_for('main.blog_post', blog_post_id=post_id))
+
         except Exception as e:
-            db.session.rollback()
             print(f"エラー発生: {e}")
             flash(f'エラーが発生しました: {str(e)}', 'danger')
     else:
         print("フォーム検証失敗")
         print(f"エラー: {form.errors}")
-    
+
     return render_template('main/create_post.html', form=form)
 
-@bp.route('/blog_maintenance')
+@bp.route("/blog_maintenance")
 @login_required
 def blog_maintenance():
-    page = request.args.get('page', 1, type=int)
-    # authorリレーションを使用してeager loading
-    blog_posts = BlogPost.query.options(
-        db.joinedload(BlogPost.author)
-    ).order_by(BlogPost.date.desc()).paginate(page=page, per_page=10)
-    return render_template('main/blog_maintenance.html', blog_posts=blog_posts)
+    posts = list_recent_posts(limit=50)   # DynamoDB から取得
+    return render_template("main/blog_maintenance.html", blog_posts=posts)
 
 @bp.route('/colors', methods=['GET', 'POST'])
 def colors():
@@ -843,14 +876,51 @@ def meziro_mark_complete():
 @bp.route('/<int:blog_post_id>/blog_post')
 def blog_post(blog_post_id):
     form = BlogSearchForm()
-    blog_post = BlogPost.query.get_or_404(blog_post_id)
-    # 最新記事の取得
-    recent_blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).limit(5).all()
 
-    # カテゴリの取得
-    blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
+    # ① DynamoDB から対象の投稿を取得
+    item = get_post_by_id(blog_post_id)
+    if not item:
+        # ここで 404 になるのは「Dynamo にも無いとき」だけ
+        abort(404)
 
-    return render_template('main/blog_post.html', post=blog_post, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, form=form)
+    # ② テンプレートで扱いやすいように属性アクセスできるオブジェクトに変換
+    post = SimpleNamespace(
+        id=int(item.get("post_id")),                # URL で使う id
+        title=item.get("title", ""),
+        text=item.get("text", ""),
+        summary=item.get("summary", ""),
+        featured_image=item.get("featured_image", ""),
+        date=item.get("date", ""),                  # "2025-11-16T06:01:28+00:00" など
+        author_name=item.get("author_name", ""),
+        category_name=item.get("category_name", ""),
+    )
+
+    # ③ 最近の投稿も Dynamo から
+    recent_items = list_recent_posts(limit=5)
+    recent_blog_posts = []
+    for it in recent_items:
+        try:
+            pid = int(it.get("post_id"))
+        except Exception:
+            continue
+        recent_blog_posts.append(
+            SimpleNamespace(
+                id=pid,
+                title=it.get("title", ""),
+                featured_image=it.get("featured_image", ""),
+            )
+        )
+
+    # ④ カテゴリ一覧は、いったん空でもOK（必要になったら Dynamo から作る）
+    blog_categories = []
+
+    return render_template(
+        'main/blog_post.html',
+        post=post,
+        recent_blog_posts=recent_blog_posts,
+        blog_categories=blog_categories,
+        form=form
+    )
 
 @bp.route('/<int:blog_post_id>/delete_post', methods=['GET', 'POST'])
 @login_required

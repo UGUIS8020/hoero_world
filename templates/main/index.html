@@ -673,13 +673,9 @@ a:active { color: #b22222; text-decoration: none; }
                         {% for recent_post in recent_blog_posts %}
                         <li>
                             <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.id) }}" class="text-decoration-none">
-                                {% if recent_post.featured_image %}
-                                <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}" 
-                                     class="img-fluid" 
-                                     width="90" 
-                                     height="50"
-                                     loading="lazy"
-                                     alt="{{ recent_post.title }}">
+                                {% if recent_post.featured_image and recent_post.featured_image != "none" %}
+                                    <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}"
+                                        class="img-fluid" width="90" height="50">
                                 {% endif %}
                                 <span class="ms-2">{{ recent_post.title | truncate(14) }}</span>
                             </a>

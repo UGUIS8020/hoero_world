@@ -7,7 +7,10 @@
                 <div class="col-md-6 m-auto text-center">
                     <h1 class="fst-italic">{{ post.title }}</h1>
                     <hr>
-                    <p>{{ post.date.strftime('%Y/%m/%d') }} : {{ post.author.username }}（{{ post.blogcategory.category }}）</p>
+                    <p>
+                        {{ post.date[:10] if post.date }} :
+                        {{ post.author_name }}（{{ post.category_name }})
+                    </p>
                 </div>
             </div>
         </div>
@@ -21,10 +24,10 @@
                 <!--ブログ投稿-->
                 <section id="blog_post">
                     <div class="container py-2 bg-light">
-                        {% if post.featured_image %}
-                        <div class="mb-3" style="text-align: center;">
-                            <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid">
-                        </div>
+                        {% if post.featured_image and post.featured_image != "none" %}
+                            <div class="mb-3" style="text-align: center;">
+                                <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid">
+                            </div>
                         {% endif %}
                         <p class="mb-3">{{ post.text|safe }}</p>
                     </div>
@@ -96,7 +99,7 @@
                             {% for blog_category in blog_categories %}
                             <li>
                                 <a href="{{ url_for('main.category_posts', blog_category_id=blog_category.id) }}" class="text-decoration-none">
-                                    <span class="ms-2">{{ blog_category.category | truncate(20) }}</span>
+                                    <span class="ms-2">{{ blog_category.name | truncate(20) }}</span>
                                 </a>
                             </li>
                             <hr>

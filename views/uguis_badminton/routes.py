@@ -92,9 +92,9 @@ def create_app():
         app.table_name = os.getenv("TABLE_NAME_USER")
         app.table_name_board = os.getenv("TABLE_NAME_BOARD")
         app.table_name_schedule = os.getenv("TABLE_NAME_SCHEDULE")
-        app.table = app.dynamodb.Table(app.table_name)           # dynamodb_resource → dynamodb
-        app.table_board = app.dynamodb.Table(app.table_name_board)     # dynamodb_resource → dynamodb
-        app.table_schedule = app.dynamodb.Table(app.table_name_schedule) # dynamodb_resource → dynamodb
+        app.table = app.dynamodb.Table(app.table_name)
+        app.table_board = app.dynamodb.Table(app.table_name_board)
+        app.table_schedule = app.dynamodb.Table(app.table_name_schedule)
 
         # Flask-Loginの設定
         login_manager.init_app(app)
