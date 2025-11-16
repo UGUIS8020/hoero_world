@@ -112,11 +112,18 @@
 
 {% block content %}
     
-<section id="dental-news-section" style="max-width: 1200px; margin: 60px auto; padding: 20px;">
+
     <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+        }
+
         .dental-news-header {
             background: white;
-            padding: 30px;
+            padding: 20px;
             border-radius: 12px;
             margin-bottom: 30px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -251,6 +258,14 @@
             }
         }
     </style>
+
+    <!-- パンくずナビ -->
+        <nav class="breadcrumb-nav" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+                <li class="breadcrumb-item active" aria-current="page">自家歯牙移植 News</li>
+            </ol>
+        </nav>
     
     <div class="dental-news-header">
         <h2>自家歯牙移植 最新情報</h2>
