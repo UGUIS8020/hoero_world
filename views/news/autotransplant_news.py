@@ -1,16 +1,18 @@
 from __future__ import annotations
-import base64, json, time, logging, traceback
-from flask import render_template, request, current_app
-from boto3.dynamodb.conditions import Key
+import base64, json, time, logging, traceback, os
+from flask import render_template, request, current_app, jsonify
 from botocore.exceptions import ClientError
 from urllib.parse import quote_plus
 import feedparser
 from hashlib import sha256 as _sha
 from . import bp
-from flask import render_template, request, current_app, jsonify
-import re 
+import requests
+import xml.etree.ElementTree as ET
+from datetime import datetime
+from boto3.dynamodb.conditions import Attr
 
 logger = logging.getLogger(__name__)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 # ========= 共通ユーティリティ =========
 def _d(msg: str):
@@ -24,6 +26,45 @@ def _d(msg: str):
     except Exception:
         print(msg)
 
+def _iso_now_utc():
+    """現在時刻をISO形式で取得"""
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+def _ensure_iso(v):
+    """DynamoDB が datetime を受け取れないため ISO 文字列に揃える"""
+    from datetime import datetime, date, timezone
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        else:
+            v = v.astimezone(timezone.utc)
+        return v.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(v, date):
+        return datetime(v.year, v.month, v.day, tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return str(v)
+
+def _dynamodb_sanitize(v):
+    """DynamoDB に渡す辞書を安全化（datetime→ISO 文字列 など）"""
+    from datetime import datetime, date, timezone
+    if isinstance(v, datetime):
+        if v.tzinfo is None:
+            v = v.replace(tzinfo=timezone.utc)
+        else:
+            v = v.astimezone(timezone.utc)
+        return v.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(v, date):
+        return datetime(v.year, v.month, v.day, tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(v, dict):
+        return {k: _dynamodb_sanitize(v2) for k, v2 in v.items()}
+    if isinstance(v, (list, tuple)):
+        return type(v)(_dynamodb_sanitize(x) for x in v)
+    if isinstance(v, set):
+        return list(_dynamodb_sanitize(x) for x in v)
+    return v
+
 # ========= DynamoDB I/O =========
 def _table():
     return current_app.config["DENTAL_TABLE"]
@@ -31,259 +72,377 @@ def _table():
 def _hash_url(url: str) -> str:
     return _sha(url.encode()).hexdigest()
 
-def put_unique_dental(item: dict) -> bool:
-    pk = f"URL#{_hash_url(item['url'])}"
+def ai_filter_and_classify(title: str, summary: str | None, lang: str = "ja") -> dict:
+    """AIで記事の関連度判定と分類（OpenAI版）"""
+    prompt = f"""以下の記事が「自家歯牙移植（tooth autotransplantation）」に関連するか判定してください。
+
+【記事情報】
+タイトル（見出し生成の元データ）: {title}
+要約（内容理解用、見出しには使わない）: {summary or "なし"}
+
+【判定基準】
+関連する内容：
+- 自家歯牙移植、歯牙移植、歯の移植に関する技術・研究・症例
+- ドナーレプリカ、3Dプリント、デジタルワークフローなどの関連技術
+- 移植用の製品・医療機器（アルベオシェーバーなど）
+- 親知らずや余剰歯を使った移植症例
+- 前歯への移植など具体的な症例報告
+- インプラントとの比較記事
+
+除外する内容：
+- 眼科、整形外科、美容外科など明らかに無関係な分野
+- 臓器移植など歯科以外の移植
+
+【記事分類】
+- research: 研究・一般記事
+- case: 症例報告
+- video: 動画・チュートリアル  
+- product: 製品情報・医療機器
+- market: 市場レポート・統計
+
+【出力要件】
+- ai_summary と headline_ja は必ず**日本語**で書いてください
+
+- ai_summary:
+  - タイトルと要約の**両方**を使って、記事全体の要点を30〜50字程度の日本語1文で要約してください。
+  - 可能であれば「どのような患者・歯」「どんな方法（3Dプリントやガイド手術など）」
+    「どんな結果・意義（長期予後や審美性の改善など）」が分かるようにしてください。
+  - タイトルの言い換えだけの短いフレーズにはしないでください。
+
+- headline_ja:
+  - 【タイトルのみ】を材料にして作成してください。要約から新しい情報を足したり、本文の内容を推測して追加しないでください。
+  - 30〜45文字程度の自然な日本語の見出しにしてください。
+  - 名詞の羅列ではなく、「〜を報告」「〜が示された」「〜により改善した」「〜の症例」などの表現を含む**文章調**にしてください。
+  - 原題の直訳ではなく、日本の歯科ニュースサイトや歯科雑誌に載るような読みやすい見出しにしてください。
+
+以下のJSON形式で回答してください：
+{{
+  "relevant": true/false,
+  "kind": "research/case/video/product/market",
+  "ai_summary": "上記の条件を満たす日本語1文の要約",
+  "headline_ja": "上記の条件を満たす日本語見出し",
+  "reason": "この記事を関連あり/なしと判断した理由を簡潔に（日本語）"
+}}
+
+DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
+
     try:
-        _table().put_item(
-            Item={
-                "pk": pk, "sk": "METADATA",
-                "url": item["url"], "title": item.get("title"),
-                "source": item.get("source"), "kind": item.get("kind"),
-                "lang": item.get("lang"), "published_at": item.get("published_at"),
-                "summary": item.get("summary"), "image_url": item.get("image_url"),
-                "author": item.get("author"),
-                "gsi1pk": f"KIND#{item.get('kind')}#LANG#{item.get('lang')}",
-                "gsi1sk": item.get("published_at") or "0001-01-01T00:00:00Z",
-                # 追加フィールド（存在すれば保存、無ければスキップでOK）
-                "ai_relevant": item.get("ai_relevant"),         # bool
-                "ai_kind": item.get("ai_kind"),                 # str
-                "ai_summary": item.get("ai_summary"),           # 140字など短要約
-                "ai_reason": item.get("ai_reason"),             # 採否の理由（管理用）
-                "ai_prompt_id": item.get("ai_prompt_id"),       # プロンプトのハッシュなど
-                "ai_score_semantic": item.get("ai_score_semantic"),  # 任意：前段スコア
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {OPENAI_API_KEY}"
             },
-            ConditionExpression="attribute_not_exists(pk)"
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 1000,
+                "temperature": 0.3
+            },
+            timeout=30
         )
-        return True
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            return False
-        raise
+        
+        if response.status_code != 200:
+            _d(f"[AI] API error: {response.status_code} - {response.text}")
+            return {
+                "relevant": False,
+                "kind": "research",
+                "ai_summary": "",
+                "ai_headline": "",
+                "reason": "API error",
+            }
+        
+        data = response.json()
+        
+        if "choices" not in data or len(data["choices"]) == 0:
+            _d(f"[AI] Unexpected response: {json.dumps(data, indent=2)}")
+            return {
+                "relevant": False,
+                "kind": "research",
+                "ai_summary": "",
+                "ai_headline": "",
+                "reason": "Unexpected API response",
+            }
+        
+        result_text = data["choices"][0]["message"]["content"].strip()
+        result_text = result_text.replace("```json", "").replace("```", "").strip()
+        result = json.loads(result_text)
+        
+        return {
+            "relevant": result.get("relevant", False),
+            "kind": result.get("kind", "research"),
+            "ai_summary": result.get("ai_summary", ""),
+            "ai_headline": result.get("headline_ja", ""),  # ★ ここで変換
+            "reason": result.get("reason", "")
+        }
+        
+    except Exception as e:
+        _d(f"[AI] Filter error: {e}")
+        traceback.print_exc()
+        return {
+            "relevant": False,
+            "kind": "research",
+            "ai_summary": "",
+            "ai_headline": "",
+            "reason": f"Error: {e}",
+        }
 
-def dental_query_items(kind="research", lang="ja", limit=40, last_evaluated_key=None):
-    kwargs = {
-        "IndexName": "gsi1",
-        "KeyConditionExpression": Key("gsi1pk").eq(f"KIND#{kind}#LANG#{lang}"),
-        "ScanIndexForward": False,
-        "Limit": limit,
-    }
-    if last_evaluated_key:
-        kwargs["ExclusiveStartKey"] = last_evaluated_key
-    resp = _table().query(**kwargs)
-    return resp.get("Items", []), resp.get("LastEvaluatedKey")
-
-# ========= 関連度フィルタ（自家歯牙移植に特化・強化版） =========
-JA_POS = [
-    "自家歯牙移植", "自家歯移植", "歯牙移植", "歯の移植", "移植歯",
-    "ドナーレプリカ", "デジタルドナーレプリカ", "レプリカ", "3d レプリカ", "3Ｄ レプリカ",
-    "レシピエント窩", "移植窩", "受容窩",
-    "歯根膜", "pd l", "口腔外科", "歯科", "口腔",
-    # 製品関連（会話から追加）
-    "アルベオシェーバー", "アルベオ・シェーバー", "sk シリーズ", "sk-スピンドル",
-    # 技術関連
-    "3dプリント", "3dプリンター", "デジタル歯科", "cad/cam",
-    # 症例関連
-    "前歯 移植", "上顎中切歯", "親知らず 前歯", "中切歯 移植",
-]
-EN_POS = [
-    "tooth autotransplantation", "autogenous tooth transplantation",
-    "tooth transplantation", "dental replica", "donor replica",
-    "replica-assisted", "recipient socket", "periodontal ligament", "pdl",
-    "oral", "dentistry", "dental",
-    # 製品・技術関連
-    "alveo shaver", "3d printed replica", "digital dentistry",
-    "cad/cam", "digital workflow",
-    # 症例関連
-    "anterior tooth", "central incisor", "maxillary incisor", "wisdom tooth anterior",
-]
-
-# 明確にノイズな領域（インプラントは除外リストから削除 - 比較記事は有用）
-JA_NEG = ["眼科", "緑内障", "白内障", "眼", "角膜", "股関節", "膝関節", "整形外科",
-          "ペースメーカー", "乳房", "美容外科", "豊胸"]
-EN_NEG = ["ophthalmology", "glaucoma", "cataract", "eye", "cornea",
-          "hip", "knee", "orthopedic", "pacemaker", "breast augmentation"]
-
-def _lc(s: str | None) -> str:
-    return (s or "").lower()
-
-# 主題判定に使う語（強化版）
-_CORE_JA = [
-    r"自家?歯牙?移植", r"歯牙移植", r"歯の移植", r"自家移植",
-    r"智歯.*移植", r"余剰歯.*移植", r"ドナー歯",
-    r"親知らず.*移植", r"第三大臼歯.*移植",
-]
-_SUPP_JA = [
-    r"レプリカ.*(移植|移動|窩|窩形成)", r"移植窩", r"歯根膜.*(温存|保存|再生)",
-    r"3D.?プリンタ?.*(移植|レプリカ|シミュレーション)",
-    r"アルベオ.?シェーバー", r"デジタル.*(ドナー|レプリカ|移植)",
-    r"(前歯|中切歯|上顎).*(移植|親知らず)", r"口腔外科.*(移植|再植)",
-]
-_PRODUCT_JA = [
-    r"アルベオ.?シェーバー", r"SK.?シリーズ", r"歯牙移植.*(器具|製品|バー)",
-    r"移植.*(3D|デジタル).*(プリント|レプリカ)",
-]
-
-_CORE_EN = [
-    r"tooth\s+autotransplant", r"autogenous\s+tooth\s+transplant",
-    r"tooth\s+transplantation", r"donor\s+tooth",
-    r"wisdom\s+tooth.*transplant", r"third\s+molar.*transplant",
-]
-_SUPP_EN = [
-    r"digital\s+replica.*(socket|site|graft|transplant)",
-    r"periodontal.*(ligament|PDL).*(preserv|healing|regenerat)",
-    r"supernumerary.*tooth.*transplant",
-    r"(anterior|incisor).*autotransplant",
-    r"3D.?(print|replica).*(transplant|donor)",
-]
-_PRODUCT_EN = [
-    r"alveo.?shaver", r"transplant.*(instrument|device|tool)",
-    r"digital.*replica.*system", r"3D.*print.*dental.*transplant",
-]
-
-# 参照語（主題判定の補助）
-_IMPLANT_JA = [r"インプラント"]
-_IMPLANT_EN = [r"\bimplant(s)?\b"]
-
-def _count_hits(patterns, text: str) -> int:
-    return sum(1 for p in patterns if re.search(p, text, re.IGNORECASE))
-
-def is_relevant(title: str | None, summary: str | None, lang: str = "ja") -> bool:
-    """
-    自家歯牙移植に関連するかを判定（強化版）
-    - 製品情報も含める
-    - 症例報告（前歯への移植など）も含める
-    - 技術情報（3Dプリント、デジタルワークフロー）も含める
-    """
-    text = f"{(title or '')} {(summary or '')}"
+def ai_collect_news(lang="ja", max_iterations=5):
+    """AIエージェントが自律的にニュース・論文を収集（Google News + PubMed）"""
+    collected_urls = set()
+    all_items = []
+    search_history = []
     
+    # 共通コンテキスト
+    base_context = """あなたは自家歯牙移植（tooth autotransplantation）に関する
+最新情報を収集する専門エージェントです。
+
+以下の観点で幅広く情報を収集してください：
+- 技術革新（3Dプリント、デジタルワークフロー、CAD/CAM）
+- 新製品・医療機器（アルベオシェーバー、レプリカシステムなど）
+- 臨床症例（特に前歯への移植、上顎中切歯、親知らずの活用など）
+- 研究論文（成功率、長期予後、PDL保存など）
+- 市場動向・統計データ
+- 比較記事（インプラント vs 自家歯牙移植など）"""
+
+    # ★日本語だけクエリを「ゆるく」する追加指示
     if lang == "ja":
-        core = _count_hits(_CORE_JA, text)
-        supp = _count_hits(_SUPP_JA, text)
-        prod = _count_hits(_PRODUCT_JA, text)
-        impl = _count_hits(_IMPLANT_JA, text)
-        neg = _count_hits(JA_NEG, text)
+        context = base_context + """
+
+【重要：日本語検索用の注意】
+- 日本語記事はヒットが少ないので、クエリは 2〜3 語程度にしてください。
+- 必ず「自家歯牙移植」「歯牙自家移植」「歯の自家移植」いずれかの基本語を含め、
+  それに 1 語だけキーワードを足す程度にしてください。
+  例: "自家歯牙移植 症例", "自家歯牙移植 予後", "歯の自家移植 研究"
+- 「3Dプリント」「CAD/CAM」「アルベオシェーバー」などニッチな語は、
+  全体の 1〜2 クエリにとどめてください。
+"""
     else:
-        core = _count_hits(_CORE_EN, text)
-        supp = _count_hits(_SUPP_EN, text)
-        prod = _count_hits(_PRODUCT_EN, text)
-        impl = _count_hits(_IMPLANT_EN, text)
-        neg = _count_hits(EN_NEG, text)
+        context = base_context
 
-    # 明確なノイズは除外
-    if neg > 0:
-        return False
+    # ===== メインの自律検索ループ =====
+    for iteration in range(max_iterations):
+        query_prompt = f"""{context}
 
-    # ルール:
-    # 1) コア語が1つでもあれば採用
-    if core >= 1:
-        return True
+【これまでの検索履歴】
+{json.dumps(search_history, ensure_ascii=False, indent=2) if search_history else "まだ検索していません"}
 
-    # 2) 製品情報：製品語が1つ以上 + (補助語1つ以上 または タイトルに「移植」)
-    if prod >= 1 and (supp >= 1 or re.search(r"移植|transplant", text, re.IGNORECASE)):
-        return True
+【収集済み記事数】{len(all_items)}件
 
-    # 3) コアが0でも、補助語が複数（>=2）で移植文脈が濃ければ採用
-    if core == 0 and supp >= 2:
-        return True
+次に実行すべき検索クエリを3つ提案してください。
+- 既存の検索と重複しない新しい切り口で探してください
+- {lang}言語（{'日本語' if lang == 'ja' else '英語'}）での検索クエリを生成してください
+- 具体的な製品名、技術名、症例タイプなどを含めてください
+- **検索クエリは「文章」ではなく検索エンジン向けのキーワード列にしてください**
+  （例: 日本語なら "自家歯牙移植 症例",
+       英語なら "tooth autotransplantation 3D printed replica"）
+- これらのクエリはニュースサイトや論文データベース（Google News / PubMed など）で利用されます
 
-    # 4) インプラント比較記事：インプラント語があっても、補助語が1つ以上あれば採用
-    if impl >= 1 and supp >= 1:
-        return True
+以下のJSON形式で回答してください：
+{{
+  "queries": [
+    {{"query": "検索クエリ1", "reason": "なぜこの検索が必要か"}},
+    {{"query": "検索クエリ2", "reason": "なぜこの検索が必要か"}},
+    {{"query": "検索クエリ3", "reason": "なぜこの検索が必要か"}}
+  ],
+  "strategy": "今回の検索戦略の説明"
+}}
 
-    return False
+DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
+        try:
+            # OpenAI API を呼び出し
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {OPENAI_API_KEY}"
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [{"role": "user", "content": query_prompt}],
+                    "max_tokens": 2000,
+                    "temperature": 0.7
+                },
+                timeout=30
+            )
+            
+            _d(f"[AI AGENT] API status code: {response.status_code}")
+            
+            if response.status_code != 200:
+                _d(f"[AI AGENT] API error response: {response.text}")
+                continue
+            
+            data = response.json()
+            
+            if "choices" not in data or len(data["choices"]) == 0:
+                _d(f"[AI AGENT] Unexpected response format: {json.dumps(data, indent=2)}")
+                continue
+                
+            result_text = data["choices"][0]["message"]["content"].strip()
+            result_text = result_text.replace("```json", "").replace("```", "").strip()
+            query_plan = json.loads(result_text)
+            
+            _d(f"[AI AGENT] Iteration {iteration+1}: {query_plan['strategy']}")
+            
+            for q_item in query_plan["queries"]:
+                query = q_item["query"]
+                reason = q_item["reason"]
+                
+                _d(f"[AI AGENT] Searching: {query}")
+                
+                search_results = []
 
+                # ① Google News
+                search_results.extend(_execute_google_search(query, lang))
 
-def classify_kind(title: str) -> str:
-    """記事種類の分類（強化版）"""
-    t = (title or "").lower()
+                # ② PubMed（英語のみ）
+                if lang == "en":
+                    pubmed_results = _execute_pubmed_search(query, max_results=20)
+                    search_results.extend(pubmed_results)
+                
+                for result_item in search_results:
+                    if not result_item.get("url"):
+                        continue
+                    if result_item["url"] in collected_urls:
+                        continue
+                    
+                    ai_result = ai_filter_and_classify(
+                        result_item["title"], 
+                        result_item.get("summary"), 
+                        lang
+                    )
+                    
+                    if ai_result["relevant"]:
+                        result_item["lang"] = lang
+                        result_item["kind"] = ai_result["kind"]
+                        result_item["ai_relevant"] = ai_result["relevant"]
+                        result_item["ai_kind"] = ai_result["kind"]
+                        result_item["ai_summary"] = ai_result["ai_summary"]
+                        result_item["ai_reason"] = ai_result["reason"]
+                        result_item["ai_search_query"] = query
+                        result_item["ai_headline"] = ai_result.get("ai_headline")
+                        
+                        all_items.append(result_item)
+                        collected_urls.add(result_item["url"])
+                        
+                        _d(
+                            f"[AI AGENT] ✓ Found: {result_item['title'][:60]}..."
+                            f" (kind={ai_result['kind']}, lang={lang})"
+                        )
+                
+                search_history.append({
+                    "iteration": iteration + 1,
+                    "query": query,
+                    "reason": reason,
+                    "found": len(search_results)
+                })
+                
+                time.sleep(1)
+                
+        except Exception as e:
+            _d(f"[AI AGENT] Error in iteration {iteration+1}: {e}")
+            traceback.print_exc()
+
+    # ===== フォールバック：日本語で1件も拾えていない場合 =====
+    if lang == "ja" and not all_items:
+        fallback_queries = [
+            "自家歯牙移植 症例",
+            "自家歯牙移植 予後 調査",
+            "歯の自家移植 研究"
+        ]
+        for query in fallback_queries:
+            _d(f"[AI AGENT] Fallback searching (ja): {query}")
+            search_results = _execute_google_search(query, "ja")
+
+            for result_item in search_results:
+                if not result_item.get("url"):
+                    continue
+                if result_item["url"] in collected_urls:
+                    continue
+
+                ai_result = ai_filter_and_classify(
+                    result_item["title"],
+                    result_item.get("summary"),
+                    "ja"
+                )
+
+                if not ai_result["relevant"]:
+                    continue
+
+                result_item["lang"] = "ja"
+                result_item["kind"] = ai_result["kind"]
+                result_item["ai_relevant"] = ai_result["relevant"]
+                result_item["ai_kind"] = ai_result["kind"]
+                result_item["ai_summary"] = ai_result["ai_summary"]
+                result_item["ai_reason"] = ai_result["reason"]
+                result_item["ai_search_query"] = query
+                result_item["ai_headline"] = ai_result.get("ai_headline")
+
+                all_items.append(result_item)
+                collected_urls.add(result_item["url"])
+                _d(
+                    f"[AI AGENT] ✓ Fallback Found: {result_item['title'][:60]}..."
+                    f" (kind={ai_result['kind']}, lang=ja)"
+                )
+
+        # ログ用に履歴も追加しておく
+        search_history.append({
+            "iteration": "fallback",
+            "query": " / ".join(fallback_queries),
+            "reason": "日本語モードで0件だったため固定クエリで再検索",
+            "found": len(all_items)
+        })
     
-    # 製品情報
-    if any(w in t for w in ["製品", "product", "器具", "instrument", "device", 
-                            "アルベオ", "alveo", "新発売", "release"]):
-        return "product"
+    # ===== DynamoDB へ保存 =====
+    saved = 0
+    for item in all_items:
+        if put_unique_dental(item):
+            saved += 1
+            _d(f"[AI AGENT] 💾 Saved: {item['title'][:60]}...")
     
-    # 症例報告
-    if any(w in t for w in ["症例", "case report", "clinical case", "症例報告"]):
-        return "case"
+    _d(f"[AI AGENT] ✅ Complete: total_found={len(all_items)}, saved={saved}")
     
-    # 動画・チュートリアル
-    if any(w in t for w in ["動画", "video", "tutorial", "technique", "手術", "surgery"]):
-        return "video"
-    
-    # 市場レポート
-    if any(w in t for w in ["市場", "market", "動向", "trend", "統計", "statistics"]):
-        return "market"
-    
-    # デフォルトは研究・一般記事
-    return "research"
+    return {
+        "total_found": len(all_items),
+        "saved": saved,
+        "search_history": search_history
+    }
 
-# ========= 収集器 =========
-def _iso_now_utc():
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-def fetch_google_news_dental(query="自家歯牙移植", lang="ja"):
-    """
-    Google News RSS検索（強化版）
-    製品情報、症例報告、技術情報も含める
-    """
+def _execute_google_search(query, lang="ja"):
+    """実際のGoogle News検索を実行"""
     if lang == "ja":
-        q = (
-            '('
-            '"自家歯牙移植" OR "自家歯移植" OR "歯牙移植" '
-            'OR "ドナー歯" OR "レプリカ 移植" OR "移植窩 形成" '
-            'OR "アルベオシェーバー" OR "3Dプリント 移植" '
-            'OR "前歯 移植" OR "上顎中切歯 移植"'
-            ') '
-            '("歯" OR "歯科" OR "口腔")'
-        )
         hl, gl, ceid = "ja", "JP", "JP:ja"
     else:
-        q = (
-            '('
-            '"tooth autotransplantation" OR "autogenous tooth transplantation" '
-            'OR "tooth transplantation" OR "donor tooth" OR "digital replica" '
-            'OR "alveo shaver" OR "3D printed replica" '
-            'OR "anterior autotransplantation" OR "wisdom tooth anterior"'
-            ') '
-            '(dental OR dentistry OR oral)'
-        )
         hl, gl, ceid = "en", "US", "US:en"
-
-    if query:
-        q = f'({q}) OR ("{query}")'
-
-    url = f"https://news.google.com/rss/search?q={quote_plus(q)}&hl={hl}&gl={gl}&ceid={ceid}"
-
-    start = time.time()
+    
+    url = f"https://news.google.com/rss/search?q={quote_plus(query)}&hl={hl}&gl={gl}&ceid={ceid}"
+    
     feed = feedparser.parse(url)
-    saved = 0
+    items = []
+    
     for e in feed.entries:
         link = getattr(e, "link", None)
         if not link:
             continue
+            
         title = (getattr(e, "title", "") or "").strip()
         summary = getattr(e, "summary", None)
-
-        if not is_relevant(title, summary, lang):
-            continue
-
-        kind = classify_kind(title)
-
+        
         pub = getattr(e, "published", None) or getattr(e, "updated", None)
         published_at = _iso_now_utc()
-        if pub:
+        if pub and getattr(e, "published_parsed", None):
             try:
-                if getattr(e, "published_parsed", None):
-                    import datetime, time as _time
-                    tm = e.published_parsed
-                    published_at = datetime.datetime.utcfromtimestamp(_time.mktime(tm)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                import datetime
+                import time as _time
+                tm = e.published_parsed
+                published_at = datetime.datetime.utcfromtimestamp(
+                    _time.mktime(tm)
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
             except Exception:
                 pass
-
-        item = {
-            "source": "google_news",
-            "kind": kind,
+        
+        items.append({
+            "source": "google_news_ai",
             "title": title,
             "url": link,
             "published_at": published_at,
@@ -291,71 +450,119 @@ def fetch_google_news_dental(query="自家歯牙移植", lang="ja"):
             "author": getattr(getattr(e, "source", None) or {}, "title", None),
             "image_url": None,
             "lang": lang,
-        }
-        if put_unique_dental(item):
-            saved += 1
-    _d(f"[COLLECT] GN {lang} saved={saved} (took {time.time()-start:.2f}s) url={url}")
-    return saved
+        })
+    
+    return items
 
-def fetch_pubmed_articles(query="autotransplantation"):
-    """PubMed記事の収集（サンプル拡張版）"""
-    sample = [
-        {
-            "source": "pubmed", "kind": "research",
-            "title": "Digital replica-assisted autotransplantation: A systematic review",
-            "url": "https://pubmed.ncbi.nlm.nih.gov/sample1",
-            "published_at": "2025-01-10T00:00:00Z",
-            "summary": "A comprehensive review of digital replica use in tooth autotransplantation...",
-            "author": "Journal of Oral Surgery",
-            "image_url": None, "lang": "en",
-        },
-        {
-            "source": "pubmed", "kind": "case",
-            "title": "Wisdom Tooth Autotransplantation for Maxillary Central Incisors Using 3D-Printed Replica",
-            "url": "https://pubmed.ncbi.nlm.nih.gov/38947626",
-            "published_at": "2024-07-01T00:00:00Z",
-            "summary": "Case report of wisdom tooth transplantation to anterior region...",
-            "author": "Journal of Oral Surgery",
-            "image_url": None, "lang": "en",
-        },
-    ]
-    count = 0
-    for item in sample:
-        if put_unique_dental(item):
-            count += 1
-            _d(f"[PUT][PubMed] saved title={item['title']!r}")
-    return count
 
-def fetch_youtube_dental(query="tooth autotransplantation", lang="en"):
-    if lang == "ja":
-        q = '自家歯牙移植|自家歯移植|歯牙移植|ドナー歯|レプリカ 移植|アルベオシェーバー'
-    else:
-        q = 'tooth autotransplantation|autogenous tooth transplantation|tooth transplantation|donor tooth|digital replica|alveo shaver'
-    url = f"https://www.youtube.com/feeds/videos.xml?search_query={quote_plus(q)}"
+def _execute_pubmed_search(query: str, max_results: int = 20):
+    """PubMed から論文情報を取得して、ニュースと同じフォーマットで返す"""
+    try:
+        # 1. ID リストを取得
+        r = requests.get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+            params={
+                "db": "pubmed",
+                "term": query,
+                "retmode": "json",
+                "retmax": max_results,
+                "sort": "pub+date",   # 発行日の新しい順
+            },
+            timeout=10,
+        )
+        r.raise_for_status()
+        data = r.json()
+        ids = data.get("esearchresult", {}).get("idlist", [])
+        if not ids:
+            return []
 
-    feed = feedparser.parse(url)
-    count = 0
-    for e in feed.entries:
-        link = getattr(e, "link", None)
-        if not link:
-            continue
-        title = (getattr(e, "title", "") or "").strip()
-        if not is_relevant(title, None, lang):
-            continue
-        thumb = None
-        media = getattr(e, "media_thumbnail", None)
-        if media and len(media) > 0:
-            thumb = media[0].get("url")
-        item = {
-            "source": "youtube_rss", "kind": "video",
-            "title": title, "url": link, "published_at": _iso_now_utc(),
-            "summary": None, "author": getattr(e, "author", None),
-            "image_url": thumb, "lang": lang,
-        }
-        if put_unique_dental(item):
-            count += 1
-    _d(f"[COLLECT] YT {lang} saved={count} url={url}")
-    return count
+        id_str = ",".join(ids)
+
+        # 2. 詳細情報（タイトル・アブストラクトなど）を XML で取得
+        r2 = requests.get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+            params={
+                "db": "pubmed",
+                "id": id_str,
+                "retmode": "xml",
+            },
+            timeout=20,
+        )
+        r2.raise_for_status()
+        root = ET.fromstring(r2.text)
+
+        def _parse_pubdate(pubdate_elem):
+            """PubDate 要素から ISO 文字列をできる範囲で作る"""
+            if pubdate_elem is None:
+                return _iso_now_utc()
+
+            year = pubdate_elem.findtext("Year")
+            month = pubdate_elem.findtext("Month") or "01"
+            day = pubdate_elem.findtext("Day") or "01"
+
+            # 月が "Jan" などの省略表記の場合に対応
+            month_map = {
+                "Jan": "01", "Feb": "02", "Mar": "03", "Apr": "04",
+                "May": "05", "Jun": "06", "Jul": "07", "Aug": "08",
+                "Sep": "09", "Oct": "10", "Nov": "11", "Dec": "12",
+            }
+            month = month_map.get(month, month)
+
+            try:
+                dt = datetime(int(year), int(month), int(day))
+                return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            except Exception:
+                return _iso_now_utc()
+
+        items = []
+
+        for art in root.findall(".//PubmedArticle"):
+            pmid_el = art.find(".//PMID")
+            pmid = pmid_el.text if pmid_el is not None else None
+
+            article = art.find(".//Article")
+            title = ""
+            if article is not None:
+                title_el = article.find("ArticleTitle")
+                if title_el is not None:
+                    # タグを含むことがあるので itertext で結合
+                    title = "".join(title_el.itertext()).strip()
+
+            abstract = ""
+            abstr_el = article.find("Abstract") if article is not None else None
+            if abstr_el is not None:
+                parts = []
+                for t in abstr_el.findall("AbstractText"):
+                    parts.append("".join(t.itertext()).strip())
+                abstract = " ".join(parts)
+
+            journal = ""
+            journal_el = article.find("Journal/Title") if article is not None else None
+            if journal_el is not None:
+                journal = journal_el.text
+
+            pubdate_el = art.find(".//PubDate")
+            published_at = _parse_pubdate(pubdate_elem=pubdate_el)
+
+            url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else None
+
+            items.append({
+                "source": "pubmed",
+                "title": title,
+                "url": url,
+                "published_at": published_at,
+                "summary": abstract,
+                "author": journal,   # or first author でもOK
+                "image_url": None,
+                "lang": "en",        # PubMed は基本英語扱い
+            })
+
+        return items
+
+    except Exception as e:
+        _d(f"[PUBMED] Error: {e}")
+        traceback.print_exc()
+        return []
 
 # ========= サービス =========
 def _enc_tok(lek: dict | None) -> str | None:
@@ -374,103 +581,6 @@ def list_news(kind="research", lang="ja", limit=40, tok=None):
     items, next_lek = dental_query_items(kind=kind, lang=lang, limit=limit, last_evaluated_key=lek)
     return items, _enc_tok(next_lek)
 
-def collect_autotransplant_news():
-    """
-    全収集を実行（強化版）
-    - 製品情報も収集
-    - 症例報告（前歯への移植など）も収集
-    - 技術情報（3Dプリント、デジタルワークフロー）も収集
-    """
-    results = {
-        "google_news_ja": 0,
-        "google_news_en": 0,
-        "pubmed": 0,
-        "youtube_ja": 0,
-        "youtube_en": 0,
-        "_errors": []
-    }
-
-    def _step(label, fn, *args, sleep_sec=1):
-        try:
-            before = time.time()
-            cnt = fn(*args)
-            _d(f"[COLLECT] {label}: saved={cnt} (took {time.time()-before:.2f}s)")
-            return cnt
-        except Exception as e:
-            msg = f"{label} failed: {e}"
-            results["_errors"].append(msg)
-            print("[ERROR]", msg)
-            traceback.print_exc()
-            return 0
-        finally:
-            if sleep_sec:
-                time.sleep(sleep_sec)
-
-    # Google News (ja) - クエリを拡張
-    results["google_news_ja"] += _step("GN ja 自家歯牙移植", fetch_google_news_dental, "自家歯牙移植", "ja")
-    results["google_news_ja"] += _step("GN ja 歯牙移植 症例", fetch_google_news_dental, "歯牙移植 症例", "ja")
-    results["google_news_ja"] += _step("GN ja ドナーレプリカ", fetch_google_news_dental, "ドナーレプリカ", "ja")
-    results["google_news_ja"] += _step("GN ja アルベオシェーバー", fetch_google_news_dental, "アルベオシェーバー 歯牙移植", "ja")
-    results["google_news_ja"] += _step("GN ja 前歯 移植", fetch_google_news_dental, "前歯 親知らず 移植", "ja")
-    results["google_news_ja"] += _step("GN ja 3Dプリント 移植", fetch_google_news_dental, "3Dプリント 歯牙移植", "ja")
-
-    # Google News (en) - クエリを拡張
-    results["google_news_en"] += _step("GN en autotransplantation", fetch_google_news_dental, "autotransplantation", "en")
-    results["google_news_en"] += _step("GN en tooth transplantation", fetch_google_news_dental, "tooth transplantation", "en")
-    results["google_news_en"] += _step("GN en digital replica", fetch_google_news_dental, "digital replica transplant", "en")
-    results["google_news_en"] += _step("GN en anterior autotransplant", fetch_google_news_dental, "anterior tooth autotransplantation", "en")
-
-    # PubMed（拡張サンプル）
-    results["pubmed"] += _step("PubMed autotransplantation", fetch_pubmed_articles, "autotransplantation")
-
-    # YouTube（必要に応じて有効化）
-    results["youtube_ja"] += _step("YT ja 自家歯牙移植", fetch_youtube_dental, "自家歯牙移植 手術", "ja")
-    results["youtube_en"] += _step("YT en tooth autotransplantation", fetch_youtube_dental, "tooth autotransplantation surgery", "en")
-
-    total = sum(v for k, v in results.items() if not k.startswith("_"))
-    _d(f"[COLLECT] total_saved={total} breakdown={results}")
-    return total, results
-
-@bp.route("/admin/cleanup_irrelevant", endpoint="news_admin_cleanup_irrelevant", strict_slashes=False)
-@bp.route("/admin/cleanup_irrelevant/", endpoint="news_admin_cleanup_irrelevant_slash", strict_slashes=False)
-def news_admin_cleanup_irrelevant():
-    """自家歯牙移植に関係ない記事を除去（強化版フィルタ適用）"""
-    target = [
-        ("research", "ja"), ("case", "ja"), ("video", "ja"), ("product", "ja"), ("market", "ja"),
-        ("research", "en"), ("case", "en"), ("video", "en"), ("product", "en"), ("market", "en"),
-    ]
-    removed = 0
-    checked = 0
-
-    for kind, lang in target:
-        lek = None
-        while True:
-            items, next_lek = dental_query_items(kind=kind, lang=lang, limit=40, last_evaluated_key=lek)
-            if not items and not next_lek:
-                break
-
-            for it in items or []:
-                checked += 1
-                title = it.get("title")
-                summary = it.get("summary")
-
-                if not is_relevant(title, summary, lang):
-                    try:
-                        pk, sk = it["pk"], it["sk"]
-                        _table().delete_item(Key={"pk": pk, "sk": sk})
-                        removed += 1
-                        _d(f"[CLEANUP] removed: {title}")
-                    except Exception as e:
-                        _d(f"[CLEANUP][WARN] delete failed pk={it.get('pk')} err={e}")
-
-            if not next_lek:
-                break
-            lek = next_lek
-
-    msg = f"[CLEANUP] checked={checked} removed={removed}"
-    _d(msg)
-    return msg
-
 # ========= ルート =========
 @bp.route("/news")
 def news():
@@ -485,19 +595,58 @@ def autotransplant_news():
     return render_template("pages/autotransplant_news.html",
                            rows=rows, kind=kind, lang=lang, page=1, next_tok=next_tok)
 
-@bp.route("/admin/run_autotransplant_news")
-def run_autotransplant_news():
-    total, results = collect_autotransplant_news()
-    items, _ = dental_query_items(kind="research", lang="ja", limit=1)
-    _d(f"[DEBUG] after collect: total={total}, first={items[0] if items else 'NONE'}")
-    return f"collect ok (total={total}, breakdown={results}, first_kind_ja={'HIT' if items else 'NONE'})"
-
 @bp.route("/api/latest")
 def news_api_latest():
     kind = request.args.get("kind", "research")
     lang = request.args.get("lang", "ja")
     limit = min(int(request.args.get("limit", 5)), 20)
 
+    # ★ ここから追加：lang=all のときは ja + en をまとめて返す
+    if lang == "all":
+        combined = []
+        for lg in ["ja", "en"]:
+            items, _ = dental_query_items(kind=kind, lang=lg, limit=limit)
+            combined.extend(items)
+
+        # published_at の新しい順にソート
+        combined.sort(key=lambda x: x.get("published_at", ""), reverse=True)
+
+        # URLで重複排除しつつ、最大 limit 件まで
+        seen = set()
+        payload = []
+        for it in combined:
+            url = it.get("url")
+            if not url or url in seen:
+                continue
+            seen.add(url)
+
+            # ★ 見出しの優先順位: ai_headline > ai_summary > title
+            headline = (
+                it.get("ai_headline")
+                or it.get("ai_summary")
+                or it.get("title")
+            )
+
+            payload.append({
+                "title": headline,
+                "url": url,
+                "published_at": (it.get("published_at") or "")[:10],
+                "kind": it.get("kind"),
+                "lang": it.get("lang"),
+                "source": it.get("source"),
+            })
+
+            if len(payload) >= limit:
+                break
+
+        return jsonify({
+            "kind": kind, "lang": "all",
+            "count": len(payload),
+            "updated_at": _iso_now_utc(),
+            "items": payload,
+        })
+
+    # ★ ここから下は今までのまま（lang が ja / en のとき）
     items, _ = dental_query_items(kind=kind, lang=lang, limit=limit, last_evaluated_key=None)
     payload = [
         {
@@ -516,17 +665,47 @@ def news_api_latest():
         "items": payload
     })
 
-# ========== テスト(1件投入) ==========
-@bp.route("/news/admin/put_demo_one")
-def put_demo_one():
-    item = {
-        "source": "demo", "kind": "research", "title": "デモ記事（表示テスト）",
-        "url": "https://example.com/demo-unique-001",
-        "published_at": "2025-01-01T00:00:00Z",
-        "summary": "demo", "author": "Demo", "image_url": None, "lang": "ja",
-    }
-    ok = put_unique_dental(item)
-    return f"demo put: {ok}"
+
+@bp.route("/api/all")
+def news_api_all():
+    """全ての記事を取得（全種類・全言語）"""
+    all_items = []
+    
+    # 全種類・全言語を取得
+    kinds = ["research", "case", "video", "product", "market"]
+    langs = ["ja", "en"]
+    
+    for kind in kinds:
+        for lang in langs:
+            items, _ = dental_query_items(kind=kind, lang=lang, limit=100)
+            all_items.extend(items)
+    
+    # 日付順にソート（新しい順）
+    all_items.sort(key=lambda x: x.get("published_at", ""), reverse=True)
+    
+    # 重複削除（URLベース）
+    seen_urls = set()
+    unique_items = []
+    for item in all_items:
+        if item["url"] not in seen_urls:
+            seen_urls.add(item["url"])
+            unique_items.append({
+                "title": item.get("title"),
+                "url": item.get("url"),
+                "published_at": (item.get("published_at") or "")[:10],
+                "kind": item.get("kind"),
+                "lang": item.get("lang"),
+                "ai_summary": item.get("ai_summary"),
+                "author": item.get("author"),
+                "image_url": item.get("image_url"),
+            })
+    
+    return jsonify({
+        "count": len(unique_items),
+        "updated_at": _iso_now_utc(),
+        "items": unique_items
+    })
+
 
 @bp.route("/admin/inspect")
 def news_admin_inspect():
@@ -550,3 +729,140 @@ def news_admin_debug_dump():
                     f"<small>{it.get('url','')}</small></li>")
     html.append("</ol>")
     return "".join(html)
+
+
+@bp.route("/admin/run_autotransplant_news")
+def run_autotransplant_news():
+    """AI収集を実行（既存のルートから呼び出し）"""
+    try:
+        # AI収集を実行
+        results_ja = ai_collect_news(lang="ja", max_iterations=5)
+        time.sleep(2)
+        results_en = ai_collect_news(lang="en", max_iterations=3)
+        
+        total = results_ja["saved"] + results_en["saved"]
+        
+        # 最初の記事を確認
+        items, _ = dental_query_items(kind="research", lang="ja", limit=1)
+        
+        _d(f"[DEBUG] after collect: total={total}, ja={results_ja['saved']}, en={results_en['saved']}")
+        
+        return f"""
+        <h1>AI収集完了！</h1>
+        <p>合計: {total}件の記事を保存しました</p>
+        <ul>
+            <li>日本語: {results_ja['saved']}件（検索{len(results_ja['search_history'])}回）</li>
+            <li>英語: {results_en['saved']}件（検索{len(results_en['search_history'])}回）</li>
+        </ul>
+        <p>最初の記事: {'あり' if items else 'なし'}</p>
+        <h3>検索履歴（日本語）:</h3>
+        <pre>{json.dumps(results_ja['search_history'], ensure_ascii=False, indent=2)}</pre>
+        <h3>検索履歴（英語）:</h3>
+        <pre>{json.dumps(results_en['search_history'], ensure_ascii=False, indent=2)}</pre>
+        <p><a href="/news/autotransplant_news?kind=research&lang=ja">日本語記事を見る</a></p>
+        <p><a href="/news/autotransplant_news?kind=research&lang=en">英語記事を見る</a></p>
+        """
+    except Exception as e:
+        traceback.print_exc()
+        return f"<h1>エラー</h1><pre>{traceback.format_exc()}</pre>"
+    
+
+@bp.route("/admin/clear_all_dental_news")
+def clear_all_dental_news():
+    """全記事を削除（テスト用）"""
+    try:
+        # 全記事を取得して削除
+        table = _table()
+        deleted = 0
+        
+        # 全種類・全言語をスキャン
+        for kind in ["research", "case", "video", "product", "market"]:
+            for lang in ["ja", "en"]:
+                lek = None
+                while True:
+                    items, next_lek = dental_query_items(kind=kind, lang=lang, limit=100, last_evaluated_key=lek)
+                    
+                    for item in items:
+                        table.delete_item(Key={"pk": item["pk"], "sk": item["sk"]})
+                        deleted += 1
+                    
+                    if not next_lek:
+                        break
+                    lek = next_lek
+        
+        return f"削除完了: {deleted}件の記事を削除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+    
+
+def dental_query_items(kind=None, lang=None, limit=40, last_evaluated_key=None):
+    table = current_app.config["DENTAL_TABLE"]
+
+    if not kind:
+        kind = "research"
+    if not lang:
+        lang = "ja"
+
+    pk = f"KIND#{kind}#LANG#{lang}"
+
+    scan_kwargs = {
+        # ★ GSI を使わずテーブル全体をスキャンして絞り込み
+        "FilterExpression": Attr("gsi1pk").eq(pk),
+        "Limit": limit,
+    }
+
+    if last_evaluated_key:
+        scan_kwargs["ExclusiveStartKey"] = last_evaluated_key
+
+    resp = table.scan(**scan_kwargs)
+    items = resp.get("Items", [])
+
+    # gsi1sk（= published_at）で新しい順にソート
+    items.sort(
+        key=lambda x: x.get("gsi1sk", "0000-00-00T00:00:00"),
+        reverse=True
+    )
+
+    return items, resp.get("LastEvaluatedKey")
+
+
+def put_unique_dental(item: dict) -> bool:
+    """歯科ニュース専用のDynamoDB保存関数（AI対応版）"""
+    pk = f"URL#{_hash_url(item['url'])}"
+    try:
+        _table().put_item(
+            Item=_dynamodb_sanitize({
+                "pk": pk, "sk": "METADATA",
+                "url": item["url"],
+                "title": item.get("title"),
+                "source": item.get("source"),
+                "kind": item.get("kind"),
+                "lang": item.get("lang"),
+                "published_at": (_ensure_iso(item.get("published_at")) or _iso_now_utc()),
+                "summary": item.get("summary"),
+                "image_url": item.get("image_url"),
+                "author": item.get("author"),
+                "gsi1pk": f"KIND#{item.get('kind')}#LANG#{item.get('lang')}",
+                "gsi1sk": _ensure_iso(item.get("published_at")) or "0000-00-00T00:00:00",
+                # AI 判定結果
+                "ai_relevant": item.get("ai_relevant"),
+                "ai_kind": item.get("ai_kind"),
+                "ai_summary": item.get("ai_summary"),
+                "ai_reason": item.get("ai_reason"),
+                "ai_search_query": item.get("ai_search_query"),
+                "ai_headline": item.get("ai_headline"),
+            }),
+            ConditionExpression="attribute_not_exists(pk)",
+        )
+        _d(f"[DB] ✅ Saved: {item.get('title','')[:50]}")
+        return True
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
+            _d("[DB] Skipped (already exists)")
+            return False
+        _d(f"[DB] Error in put_unique_dental: {e}")
+        return False
+
+
+
+

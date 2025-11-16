@@ -229,9 +229,14 @@ a:active { color: #b22222; text-decoration: none; }
       <ul id="autotransplant-headlines" class="autotransplant-headlines text-only" aria-label="自家歯牙移植の最新ニュース">
         {% for n in autotransplant_headlines %}
           <li>
-            <a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
-            {% if n.published_at %}<small class="news-date">{{ n.published_at[:10] }}</small>{% endif %}
-          </li>
+        <a href="{{ n.url }}" target="_blank" rel="noopener"
+          title="{{ n.ai_summary or '' }}">
+          {{ n.headline_ja or n.title }}
+        </a>
+        {% if n.published_at %}
+          <small class="news-date">{{ n.published_at[:10] }}</small>
+        {% endif %}
+      </li>
         {% endfor %}
       </ul>
     {% else %}
@@ -284,7 +289,7 @@ a:active { color: #b22222; text-decoration: none; }
   async function fetchHeadlines() {
     try {
       loading.hidden = false;
-      const res = await fetch('/news/api/latest?kind=research&lang=ja&limit=5', {cache:'no-store'});
+      const res = await fetch('/news/api/latest?kind=research&lang=all&limit=5', {cache:'no-store'});
       const data = await res.json();
 
       // UL 更新
