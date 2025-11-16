@@ -181,10 +181,7 @@
             </ul>
             
             <ul class="navbar-nav ms-auto">
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.raiden' %}active{% endif %}" href="{{ url_for('main.raiden') }}">歯科相談</a>
-              </li> 
-              
+                          
               <li class="nav-item">
               <a class="nav-link {{ 'active' if request.endpoint == 'news.autotransplant_news' else '' }}"
                 href="{{ url_for('news.autotransplant_news', kind='research', lang='ja') }}">
