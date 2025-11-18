@@ -615,30 +615,44 @@ a:active { color: #b22222; text-decoration: none; }
             <!-- ブログ投稿 -->
             <section id="blog_post">
                 <div class="row">
-                    {% for post in blog_posts.items %}
+                    {# ここを blog_posts ではなく top_blog_posts にする #}
+                    {% for post in top_blog_posts %}
                     <div class="col-md-6 mb-4">
                         <div class="card h-100">
                             <div class="card-body">
                                 {% if post.featured_image %}
                                 <div class="mb-3" style="text-align: center;">
                                     <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}"
-                                    class="img-fluid"
-                                    width="250"
-                                    height="250"
-                                    style="object-fit: scale-down;"
-                                    loading="lazy"
-                                    decoding="async"
-                                    alt="{{ post.title }}">
+                                         class="img-fluid"
+                                         width="250"
+                                         height="250"
+                                         style="object-fit: scale-down;"
+                                         loading="lazy"
+                                         decoding="async"
+                                         alt="{{ post.summary }}">
                                 </div>
                                 {% endif %}
+
                                 <h3>
-                                    <a href="{{ url_for('main.blog_post', blog_post_id=post.id) }}" class="card-title text-decoration-none">
-                                        <span class="fst-italic">{{ post.title | truncate(14) }}</span>
+                                    <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
+                                       class="card-title text-decoration-none">
+                                        <span class="fst-italic">
+                                            {{ post.title or post.summary | truncate(14) }}
+                                        </span>
                                     </a>
                                 </h3>
-                                <p>{{ post.date.strftime('%Y-%m-%d') }} by: {{ post.author.username | truncate(10) }}</p>
+
+                                <p>
+                                    {{ post.date[:10] if post.date }}
+                                    by: {{ post.author_name or 'Unknown' }}
+                                </p>
+
                                 <p class="card-text">{{ post.summary | truncate(40) }}</p>
-                                <a href="{{ url_for('main.blog_post', blog_post_id=post.id) }}" class="btn btn-Light">続きを読む…</a>
+
+                                <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
+                                   class="btn btn-light">
+                                    続きを読む…
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -672,7 +686,7 @@ a:active { color: #b22222; text-decoration: none; }
                     <ol class="list-unstyled">
                         {% for recent_post in recent_blog_posts %}
                         <li>
-                            <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.id) }}" class="text-decoration-none">
+                            <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.post_id) }}" class="text-decoration-none">
                                 {% if recent_post.featured_image and recent_post.featured_image != "none" %}
                                     <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}"
                                         class="img-fluid" width="90" height="50">

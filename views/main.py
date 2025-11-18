@@ -55,11 +55,45 @@ zip_handler_instance = ZipHandler()  # インスタンスを作成
 def index():
     form = BlogSearchForm()
 
-    # ブログ記事（現状のまま）
+    # RDB 側のブログ（必要ならこのまま残してOK）
     page = request.args.get('page', 1, type=int)
     blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
-    recent_blog_posts = blog_posts.items[:5]
     blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
+
+    # トップページ用 Dynamo 記事（カード表示）
+    items = list_recent_posts(limit=6)
+    top_blog_posts = []
+    for it in items:
+        try:
+            pid = int(it.get("post_id"))
+        except Exception:
+            continue
+        top_blog_posts.append(
+            SimpleNamespace(
+                post_id=pid,
+                title=it.get("title", ""),
+                summary=it.get("summary", ""),
+                date=it.get("date", ""),
+                author_name=it.get("author_name", ""),
+                featured_image=it.get("featured_image", ""),
+            )
+        )
+
+    # サイドバー「最新記事」用（件数だけ変えるなら別で）
+    items_recent = list_recent_posts(limit=5)
+    recent_blog_posts = []
+    for it in items_recent:
+        try:
+            pid = int(it.get("post_id"))
+        except Exception:
+            continue
+        recent_blog_posts.append(
+            SimpleNamespace(
+                post_id=pid,
+                title=it.get("title", ""),
+                featured_image=it.get("featured_image", ""),
+            )
+        )
 
     autotransplant_headlines = []
     try:
@@ -80,10 +114,11 @@ def index():
     return render_template(
         'main/index.html',
         blog_posts=blog_posts,
-        recent_blog_posts=recent_blog_posts,
+        top_blog_posts=top_blog_posts,
+        recent_blog_posts=recent_blog_posts,   # ← ここは Dynamo ベースに
         blog_categories=blog_categories,
         form=form,
-        autotransplant_headlines=autotransplant_headlines, 
+        autotransplant_headlines=autotransplant_headlines,
     )
 
 @bp.route('/category_maintenance', methods=['GET', 'POST'])
