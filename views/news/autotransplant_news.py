@@ -10,6 +10,74 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from boto3.dynamodb.conditions import Attr
+from flask_login import current_user, login_required
+from urllib.parse import quote
+
+
+@bp.route('/admin/delete_article')
+@login_required
+def admin_delete_article():
+    """特定記事を削除（管理者のみ）"""
+    if not current_user.is_administrator:
+        return "権限がありません", 403
+    
+    url = request.args.get('url')
+    
+    if not url:
+        return "URLパラメータが必要です", 400
+    
+    confirm = request.args.get('confirm')
+    
+    table = _table()
+    pk = f"URL#{_hash_url(url)}"
+    
+    try:
+        response = table.get_item(Key={"pk": pk, "sk": "METADATA"})
+        item = response.get('Item')
+        
+        if not item:
+            return f"記事が見つかりません: {url}", 404
+        
+        # 確認画面
+        if not confirm:
+            # ★ URLをエンコードして渡す
+            encoded_url = quote(url, safe='')
+            
+            html = f"""
+            <h1>記事削除の確認</h1>
+            <div style="border: 2px solid red; padding: 20px; margin: 20px 0;">
+                <h2>以下の記事を削除しますか？</h2>
+                <p><strong>Title:</strong> {item.get('title')}</p>
+                <p><strong>URL:</strong> {item.get('url')}</p>
+                <p><strong>Kind:</strong> {item.get('kind')} | <strong>Lang:</strong> {item.get('lang')}</p>
+                <p><strong>Published:</strong> {item.get('published_at')}</p>
+            </div>
+            <p>
+                <a href="/news/admin/delete_article?url={encoded_url}&confirm=yes" 
+                   style="background: red; color: white; padding: 10px 20px; text-decoration: none;">
+                   削除する
+                </a>
+                <a href="/news/autotransplant_news" 
+                   style="background: gray; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">
+                   キャンセル
+                </a>
+            </p>
+            """
+            return html
+        
+        # 実際に削除
+        table.delete_item(Key={"pk": pk, "sk": "METADATA"})
+        
+        return f"""
+        <h1>削除完了</h1>
+        <p>記事を削除しました: {item.get('title')}</p>
+        <p><a href="/news/autotransplant_news">一覧に戻る</a></p>
+        """
+        
+    except Exception as e:
+        import traceback
+        return f"<pre>{traceback.format_exc()}</pre>", 500
+    
 
 logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -72,59 +140,51 @@ def _table():
 def _hash_url(url: str) -> str:
     return _sha(url.encode()).hexdigest()
 
-def ai_filter_and_classify(title: str, summary: str | None, lang: str = "ja") -> dict:
-    """AIで記事の関連度判定と分類（OpenAI版）"""
-    prompt = f"""以下の記事が「自家歯牙移植（tooth autotransplantation）」に関連するか判定してください。
+def ai_filter_and_classify(title: str, summary: str = None, lang: str = "ja", url: str = None):
+    """AIを使って記事をフィルタリング＆分類"""
+    
+    prompt = f"""
+以下の記事が「自家歯牙移植（tooth autotransplantation）」に関連するかどうかを判定してください。
 
-【記事情報】
-タイトル（見出し生成の元データ）: {title}
-要約（内容理解用、見出しには使わない）: {summary or "なし"}
+タイトル: {title}
+要約: {summary or "なし"}
+言語: {lang}
+URL: {url or "なし"}
 
 【判定基準】
-関連する内容：
-- 自家歯牙移植、歯牙移植、歯の移植に関する技術・研究・症例
-- ドナーレプリカ、3Dプリント、デジタルワークフローなどの関連技術
-- 移植用の製品・医療機器（アルベオシェーバーなど）
-- 親知らずや余剰歯を使った移植症例
-- 前歯への移植など具体的な症例報告
-- インプラントとの比較記事
+✅ 関連する（relevant: true）：
+- 自家歯牙移植の手術、技術、症例
+- 移植歯の予後、成功率、生存率
+- 移植に使用する歯（親知らず、小臼歯など）
+- 移植時の歯根膜（PDL）保存技術
+- 移植後の骨・歯周組織再生
+- 3Dプリンティング、CADを使った移植用レプリカ
+- 移植歯の固定方法、リグロスなどの併用療法
 
-除外する内容：
-- 眼科、整形外科、美容外科など明らかに無関係な分野
-- 臓器移植など歯科以外の移植
+❌ 関連しない（relevant: false）：
+- **自家歯牙移植が主題として明確に含まれていない一般的な歯科研究**
+- 肉芽組織、創傷治癒、骨再生などが主題だが移植との関連が不明確
+- インプラント、ブリッジ、義歯などの他の治療法のみ
+- 研究者プロフィール、大学のデータベース
+- 歯科医院の料金表、診療案内
+- アーカイブページ（/archives/tag/、/archives/category/）
+- タグページ、カテゴリページ
 
-【記事分類】
-- research: 研究・一般記事
-- case: 症例報告
-- video: 動画・チュートリアル  
-- product: 製品情報・医療機器
-- market: 市場レポート・統計
+【重要】
+- タイトルや要約に「autotransplantation」「移植」「transplant」などが含まれていても、
+  それが**歯の移植**ではなく他の医療分野の移植である可能性があります
+- **自家歯牙移植との直接的な関連性**を慎重に確認してください
+- 疑わしい場合は relevant: false としてください
 
-【出力要件】
-- ai_summary と headline_ja は必ず**日本語**で書いてください
+【分類基準】（relevantがtrueの場合のみ）
+- research: 学術論文、研究報告
+- case: 症例報告、治療例
+- news: ニュース記事、一般向け情報
+- video: 動画コンテンツ
 
-- ai_summary:
-  - タイトルと要約の**両方**を使って、記事全体の要点を30〜50字程度の日本語1文で要約してください。
-  - 可能であれば「どのような患者・歯」「どんな方法（3Dプリントやガイド手術など）」
-    「どんな結果・意義（長期予後や審美性の改善など）」が分かるようにしてください。
-  - タイトルの言い換えだけの短いフレーズにはしないでください。
-
-- headline_ja:
-  - 【タイトルのみ】を材料にして作成してください。要約から新しい情報を足したり、本文の内容を推測して追加しないでください。
-  - 30〜45文字程度の自然な日本語の見出しにしてください。
-  - 名詞の羅列ではなく、「〜を報告」「〜が示された」「〜により改善した」「〜の症例」などの表現を含む**文章調**にしてください。
-  - 原題の直訳ではなく、日本の歯科ニュースサイトや歯科雑誌に載るような読みやすい見出しにしてください。
-
-以下のJSON形式で回答してください：
-{{
-  "relevant": true/false,
-  "kind": "research/case/video/product/market",
-  "ai_summary": "上記の条件を満たす日本語1文の要約",
-  "headline_ja": "上記の条件を満たす日本語見出し",
-  "reason": "この記事を関連あり/なしと判断した理由を簡潔に（日本語）"
-}}
-
-DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
+JSON形式で回答してください：
+{{"relevant": true/false, "kind": "research/case/news/video", "reason": "判定理由"}}
+"""
 
     try:
         response = requests.post(
@@ -172,7 +232,7 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
             "relevant": result.get("relevant", False),
             "kind": result.get("kind", "research"),
             "ai_summary": result.get("ai_summary", ""),
-            "ai_headline": result.get("headline_ja", ""),  # ★ ここで変換
+            "ai_headline": result.get("headline_ja", ""),
             "reason": result.get("reason", "")
         }
         
@@ -192,6 +252,10 @@ def ai_collect_news(lang="ja", max_iterations=5):
     collected_urls = set()
     all_items = []
     search_history = []
+    
+    # ★ Google Search API呼び出しカウンター
+    google_api_call_count = 0
+    MAX_GOOGLE_API_CALLS = 10  # 1回の収集で最大10回まで
     
     # 共通コンテキスト
     base_context = """あなたは自家歯牙移植（tooth autotransplantation）に関する
@@ -249,6 +313,7 @@ def ai_collect_news(lang="ja", max_iterations=5):
 }}
 
 DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
+        
         try:
             # OpenAI API を呼び出し
             response = requests.post(
@@ -292,43 +357,85 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
                 
                 search_results = []
 
-                # ① Google News
-                search_results.extend(_execute_google_search(query, lang))
+                # ① Google News RSS（10-15件程度）
+                google_news_results = _execute_google_search(query, lang)
+                search_results.extend(google_news_results)
 
-                # ② PubMed（英語のみ）
+                # ② Google Custom Search API（★ 制限付き）
+                if os.getenv("GOOGLE_API_KEY") and os.getenv("GOOGLE_CX_ID"):
+                    if google_api_call_count < MAX_GOOGLE_API_CALLS:
+                        google_api_results = _execute_google_search_api(query, lang, max_results=30)
+                        search_results.extend(google_api_results)
+                        google_api_call_count += 1
+                    else:
+                        _d(f"[Google Search API] Skipped - reached limit ({MAX_GOOGLE_API_CALLS} calls)")
+
+                # ③ PubMed（英語のみ、最大30件）
                 if lang == "en":
-                    pubmed_results = _execute_pubmed_search(query, max_results=20)
+                    pubmed_results = _execute_pubmed_search(query, max_results=30)
                     search_results.extend(pubmed_results)
+
+                # ④ YouTube RSS版（最大30件）
+                yt_rss_results = _execute_youtube_search(query, lang, max_results=30)
+                search_results.extend(yt_rss_results)
                 
+                # ⑤ YouTube Data API版（最大30件）
+                if os.getenv("YOUTUBE_API_KEY"):
+                    yt_api_results = _execute_youtube_search_api(query, lang, max_results=30)
+                    search_results.extend(yt_api_results)
+                
+                # ★ ここから検索結果の処理（インデントに注意！）
                 for result_item in search_results:
                     if not result_item.get("url"):
                         continue
                     if result_item["url"] in collected_urls:
                         continue
                     
+                    # ★ Google検索結果の場合は本文を取得してAI判定
+                    summary_for_ai = result_item.get("summary")
+                    
+                    if result_item.get("source") == "google_search_api":
+                        _d(f"[AI] Google search result - fetching full content")
+                        full_content = _fetch_content_for_ai(result_item["url"], max_chars=800)
+                        if full_content:
+                            _d(f"[AI] Fetched content ({len(full_content)} chars)")
+                            summary_for_ai = full_content
+                        else:
+                            _d(f"[AI] Failed to fetch, using snippet")
+                    
                     ai_result = ai_filter_and_classify(
                         result_item["title"], 
-                        result_item.get("summary"), 
-                        lang
+                        summary_for_ai,  # ← 本文またはスニペット
+                        lang,
+                        result_item.get("url")
                     )
                     
-                    if ai_result["relevant"]:
-                        result_item["lang"] = lang
-                        result_item["kind"] = ai_result["kind"]
-                        result_item["ai_relevant"] = ai_result["relevant"]
-                        result_item["ai_kind"] = ai_result["kind"]
-                        result_item["ai_summary"] = ai_result["ai_summary"]
-                        result_item["ai_reason"] = ai_result["reason"]
-                        result_item["ai_search_query"] = query
-                        result_item["ai_headline"] = ai_result.get("ai_headline")
-                        
-                        all_items.append(result_item)
-                        collected_urls.add(result_item["url"])
-                        
-                        _d(
-                            f"[AI AGENT] ✓ Found: {result_item['title'][:60]}..."
-                            f" (kind={ai_result['kind']}, lang={lang})"
-                        )
+                    if not ai_result["relevant"]:
+                        continue
+
+                    # 基本は AI の kind
+                    kind = ai_result.get("kind", "research")
+
+                    # YouTube から来たものは必ず video 扱い
+                    if result_item.get("source") in ["youtube", "youtube_api"]:
+                        kind = "video"
+                    
+                    result_item["lang"] = lang
+                    result_item["kind"] = kind
+                    result_item["ai_relevant"] = ai_result["relevant"]
+                    result_item["ai_kind"] = kind
+                    result_item["ai_summary"] = ai_result["ai_summary"]
+                    result_item["ai_reason"] = ai_result["reason"]
+                    result_item["ai_search_query"] = query
+                    result_item["ai_headline"] = ai_result.get("ai_headline")
+                    
+                    all_items.append(result_item)
+                    collected_urls.add(result_item["url"])
+                    
+                    _d(
+                        f"[AI AGENT] ✓ Found: {result_item['title'][:60]}..."
+                        f" (kind={kind}, lang={lang}, source={result_item.get('source')})"
+                    )
                 
                 search_history.append({
                     "iteration": iteration + 1,
@@ -353,36 +460,71 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
         for query in fallback_queries:
             _d(f"[AI AGENT] Fallback searching (ja): {query}")
             search_results = _execute_google_search(query, "ja")
+            
+            # Google Search API版を追加（★ 制限なし - フォールバックなので）
+            if os.getenv("GOOGLE_API_KEY") and os.getenv("GOOGLE_CX_ID"):
+                google_api = _execute_google_search_api(query, "ja", max_results=30)
+                search_results.extend(google_api)
+            
+            # YouTube RSS版を追加
+            yt_rss = _execute_youtube_search(query, "ja", max_results=30)
+            search_results.extend(yt_rss)
+            
+            # YouTube API版を追加
+            if os.getenv("YOUTUBE_API_KEY"):
+                yt_api = _execute_youtube_search_api(query, "ja", max_results=30)
+                search_results.extend(yt_api)
 
             for result_item in search_results:
                 if not result_item.get("url"):
                     continue
                 if result_item["url"] in collected_urls:
                     continue
-
+                
+                # ★ Google検索結果の場合は本文を取得してAI判定
+                summary_for_ai = result_item.get("summary")
+                
+                if result_item.get("source") == "google_search_api":
+                    _d(f"[AI] Google search result - fetching full content")
+                    full_content = _fetch_content_for_ai(result_item["url"], max_chars=800)
+                    if full_content:
+                        _d(f"[AI] Fetched content ({len(full_content)} chars)")
+                        summary_for_ai = full_content
+                    else:
+                        _d(f"[AI] Failed to fetch, using snippet")
+                
                 ai_result = ai_filter_and_classify(
-                    result_item["title"],
-                    result_item.get("summary"),
-                    "ja"
+                    result_item["title"], 
+                    summary_for_ai,  # ← 本文またはスニペット
+                    lang,
+                    result_item.get("url")
                 )
-
+                
                 if not ai_result["relevant"]:
                     continue
 
+                # 基本は AI の kind
+                kind = ai_result.get("kind", "research")
+
+                # YouTube（RSS版/API版）から来たものは必ず video 扱いに上書き
+                if result_item.get("source") in ["youtube", "youtube_api"]:
+                    kind = "video"
+                
                 result_item["lang"] = "ja"
-                result_item["kind"] = ai_result["kind"]
+                result_item["kind"] = kind
                 result_item["ai_relevant"] = ai_result["relevant"]
-                result_item["ai_kind"] = ai_result["kind"]
+                result_item["ai_kind"] = kind
                 result_item["ai_summary"] = ai_result["ai_summary"]
                 result_item["ai_reason"] = ai_result["reason"]
                 result_item["ai_search_query"] = query
                 result_item["ai_headline"] = ai_result.get("ai_headline")
-
+                
                 all_items.append(result_item)
                 collected_urls.add(result_item["url"])
+                
                 _d(
-                    f"[AI AGENT] ✓ Fallback Found: {result_item['title'][:60]}..."
-                    f" (kind={ai_result['kind']}, lang=ja)"
+                    f"[AI AGENT] ✓ Found: {result_item['title'][:60]}..."
+                    f" (kind={kind}, lang=ja, source={result_item.get('source')})"
                 )
 
         # ログ用に履歴も追加しておく
@@ -442,7 +584,7 @@ def _execute_google_search(query, lang="ja"):
                 pass
         
         items.append({
-            "source": "google_news_ai",
+            "source": "google_news",  # ✅ 修正
             "title": title,
             "url": link,
             "published_at": published_at,
@@ -452,7 +594,177 @@ def _execute_google_search(query, lang="ja"):
             "lang": lang,
         })
     
+    _d(f"[Google News RSS] Found {len(items)} articles for query: {query}")  # ✅ ログ追加
     return items
+
+def _execute_google_search_api(query, lang="ja", max_results=30):
+    """Google Custom Search API実行（エラーハンドリング付き）"""
+    api_key = os.getenv("GOOGLE_API_KEY")
+    cx_id = os.getenv("GOOGLE_CX_ID")
+    
+    if not api_key or not cx_id:
+        return []
+    
+    try:
+        url = "https://www.googleapis.com/customsearch/v1"
+        params = {
+            "key": api_key,
+            "cx": cx_id,
+            "q": query,
+            "num": min(max_results, 10),
+            "lr": f"lang_{lang}",
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        
+        # ★ 429エラー（レート制限）の処理
+        if response.status_code == 429:
+            _d(f"[Google Search API] Rate limit reached - skipping this query")
+            return []
+        
+        if response.status_code != 200:
+            _d(f"[Google Search API] Error: {response.status_code}")
+            return []
+        
+        data = response.json()
+        items = []
+        
+        for item in data.get("items", []):
+            items.append({
+                "source": "google_search_api",
+                "title": item.get("title", ""),
+                "url": item.get("link", ""),
+                "published_at": _iso_now_utc(),
+                "summary": item.get("snippet", ""),
+                "author": None,
+                "image_url": item.get("pagemap", {}).get("cse_image", [{}])[0].get("src"),
+                "lang": lang,
+            })
+        
+        _d(f"[Google Search API] Found {len(items)} articles")
+        return items
+        
+    except Exception as e:
+        _d(f"[Google Search API] Error: {e}")
+        return []
+
+def _execute_youtube_search(query, lang="ja", max_results=20):
+    """
+    YouTube 検索（RSS）から動画一覧を取得
+    返り値は他のニュースと同じフォーマット：
+    {source, title, url, published_at, summary, author, image_url, lang}
+    """
+    # YouTube 検索用 RSS フィード
+    # 例: https://www.youtube.com/feeds/videos.xml?search_query=%E8%87%AA%E5%AE%B6%E6%AD%AF%E7%89%99%E7%A7%BB%E6%A4%8D
+    url = f"https://www.youtube.com/feeds/videos.xml?search_query={quote_plus(query)}"
+
+    feed = feedparser.parse(url)
+    items = []
+
+    for e in feed.entries[:max_results]:
+        link = getattr(e, "link", None)
+        if not link:
+            continue
+
+        title = (getattr(e, "title", "") or "").strip()
+        summary = getattr(e, "summary", None)
+
+        # 投稿日
+        pub = getattr(e, "published", None) or getattr(e, "updated", None)
+        published_at = _iso_now_utc()
+        if pub and getattr(e, "published_parsed", None):
+            try:
+                import datetime
+                import time as _time
+                tm = e.published_parsed
+                published_at = datetime.datetime.utcfromtimestamp(
+                    _time.mktime(tm)
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+            except Exception:
+                pass
+
+        # チャンネル名
+        author = getattr(e, "author", None)
+
+        # サムネイル（あれば）
+        thumb = None
+        if "media_thumbnail" in e:
+            try:
+                thumb = e.media_thumbnail[0]["url"]
+            except Exception:
+                pass
+
+        items.append({
+            "source": "youtube",
+            "title": title,
+            "url": link,
+            "published_at": published_at,
+            "summary": summary,
+            "author": author,
+            "image_url": thumb,
+            "lang": lang,
+            # kind は後で強制的に "video" にする
+        })
+
+    return items
+
+def _execute_youtube_search_api(query: str, lang: str = "ja", max_results: int = 10) -> list:
+    """YouTube Data API版（より詳細な検索・APIキー必要）"""
+    api_key = os.getenv("YOUTUBE_API_KEY")
+    if not api_key:
+        _d("[YouTube API] API key not found, skipping")
+        return []
+    
+    try:
+        url = "https://www.googleapis.com/youtube/v3/search"
+        params = {
+            "part": "snippet",
+            "q": query,
+            "type": "video",
+            "maxResults": max_results,
+            "key": api_key,
+            "relevanceLanguage": lang,
+            "order": "date",  # 最新順
+            "regionCode": "JP" if lang == "ja" else "US"
+        }
+        
+        response = requests.get(url, params=params, timeout=15)
+        
+        if response.status_code != 200:
+            _d(f"[YouTube API] Error: {response.status_code} - {response.text}")
+            return []
+        
+        data = response.json()
+        items = []
+        
+        for item in data.get("items", []):
+            video_id = item["id"].get("videoId")
+            if not video_id:
+                continue
+            
+            snippet = item["snippet"]
+            
+            # 公開日時をISO形式に変換
+            published_at = snippet.get("publishedAt", "")
+            
+            items.append({
+                "source": "youtube_api",
+                "title": snippet.get("title", ""),
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "published_at": published_at,
+                "summary": snippet.get("description", "")[:200],
+                "author": snippet.get("channelTitle", ""),
+                "image_url": snippet.get("thumbnails", {}).get("high", {}).get("url", ""),
+                "lang": lang,
+            })
+        
+        _d(f"[YouTube API] Found {len(items)} videos for query: {query}")
+        return items
+        
+    except Exception as e:
+        _d(f"[YouTube API] Error: {e}")
+        traceback.print_exc()
+        return []
 
 
 def _execute_pubmed_search(query: str, max_results: int = 20):
@@ -769,30 +1081,73 @@ def run_autotransplant_news():
 
 @bp.route("/admin/clear_all_dental_news")
 def clear_all_dental_news():
-    """全記事を削除（テスト用）"""
+    """全記事を完全削除"""
     try:
-        # 全記事を取得して削除
-        table = _table()
+        table = current_app.config["DENTAL_TABLE"]
         deleted = 0
         
-        # 全種類・全言語をスキャン
-        for kind in ["research", "case", "video", "product", "market"]:
-            for lang in ["ja", "en"]:
-                lek = None
-                while True:
-                    items, next_lek = dental_query_items(kind=kind, lang=lang, limit=100, last_evaluated_key=lek)
-                    
-                    for item in items:
-                        table.delete_item(Key={"pk": item["pk"], "sk": item["sk"]})
-                        deleted += 1
-                    
-                    if not next_lek:
-                        break
-                    lek = next_lek
+        # テーブル全体をスキャン
+        scan_kwargs = {
+            'ProjectionExpression': 'pk, sk'
+        }
         
-        return f"削除完了: {deleted}件の記事を削除しました"
+        while True:
+            response = table.scan(**scan_kwargs)
+            items = response.get('Items', [])
+            
+            # バッチで削除
+            with table.batch_writer() as batch:
+                for item in items:
+                    batch.delete_item(Key={
+                        'pk': item['pk'],
+                        'sk': item['sk']
+                    })
+                    deleted += 1
+            
+            if 'LastEvaluatedKey' not in response:
+                break
+            scan_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
+        
+        return jsonify({
+            "status": "success",
+            "message": f"削除完了: {deleted}件"
+        })
+        
     except Exception as e:
-        return f"エラー: {e}"
+        import traceback
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+    
+@bp.route("/admin/count_dental_news")
+def count_dental_news():
+    """記事の総数を確認"""
+    try:
+        table = current_app.config["DENTAL_TABLE"]
+        
+        response = table.scan(Select='COUNT')
+        count = response.get('Count', 0)
+        
+        while 'LastEvaluatedKey' in response:
+            response = table.scan(
+                Select='COUNT',
+                ExclusiveStartKey=response['LastEvaluatedKey']
+            )
+            count += response.get('Count', 0)
+        
+        return jsonify({
+            "status": "success",
+            "table": os.getenv("DENTAL_TABLE_NAME", "dental-news"),
+            "total_count": count
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
     
 
 def dental_query_items(kind=None, lang=None, limit=40, last_evaluated_key=None):
@@ -805,23 +1160,22 @@ def dental_query_items(kind=None, lang=None, limit=40, last_evaluated_key=None):
 
     pk = f"KIND#{kind}#LANG#{lang}"
 
-    scan_kwargs = {
-        # ★ GSI を使わずテーブル全体をスキャンして絞り込み
-        "FilterExpression": Attr("gsi1pk").eq(pk),
+    # ★ scan ではなく query を使う（GSI1を利用）
+    query_kwargs = {
+        "IndexName": "gsi1",  # GSIの名前を確認してください
+        "KeyConditionExpression": "gsi1pk = :pk",
+        "ExpressionAttributeValues": {
+            ":pk": pk
+        },
+        "ScanIndexForward": False,  # 新しい順（gsi1skで降順）
         "Limit": limit,
     }
 
     if last_evaluated_key:
-        scan_kwargs["ExclusiveStartKey"] = last_evaluated_key
+        query_kwargs["ExclusiveStartKey"] = last_evaluated_key
 
-    resp = table.scan(**scan_kwargs)
+    resp = table.query(**query_kwargs)
     items = resp.get("Items", [])
-
-    # gsi1sk（= published_at）で新しい順にソート
-    items.sort(
-        key=lambda x: x.get("gsi1sk", "0000-00-00T00:00:00"),
-        reverse=True
-    )
 
     return items, resp.get("LastEvaluatedKey")
 
@@ -858,11 +1212,167 @@ def put_unique_dental(item: dict) -> bool:
         return True
     except ClientError as e:
         if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            _d("[DB] Skipped (already exists)")
+            _d(f"[DB] Skipped (already exists): {item.get('title','')[:50]}")  # ← タイトル追加
             return False
         _d(f"[DB] Error in put_unique_dental: {e}")
         return False
+    
+
+def _fetch_content_for_ai(url: str, max_chars: int = 500):
+    """
+    URLから本文を取得してAI判定用のテキストを返す
+    取得できない場合はNoneを返す
+    """
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 不要なタグを削除
+        for tag in soup(['script', 'style', 'nav', 'header', 'footer']):
+            tag.decompose()
+        
+        # 本文を抽出
+        text = soup.get_text(separator=' ', strip=True)
+        
+        # 空白を正規化
+        text = ' '.join(text.split())
+        
+        # 指定文字数まで切り取り
+        return text[:max_chars] if text else None
+        
+    except Exception as e:
+        _d(f"[FETCH CONTENT] Error fetching {url}: {e}")
+        return None
+    
+# 2. 最近の日本語記事を全部表示
+def list_recent_ja_articles(limit=50):
+    table = _table()
+    response = table.query(
+        IndexName="gsi1",
+        KeyConditionExpression="gsi1pk = :pk",
+        ExpressionAttributeValues={
+            ":pk": "KIND#case#LANG#ja"  # または "KIND#research#LANG#ja"
+        },
+        ScanIndexForward=False,  # 新しい順
+        Limit=limit
+    )
+    
+    for item in response['Items']:
+        print(f"{item.get('published_at')} - {item.get('title')}")
 
 
-
+@bp.route('/debug_china')
+def debug_china():
+    """dental-plazaの記事を確認"""
+    table = _table()
+    
+    response = table.scan()
+    
+    dental_plaza_items = []
+    for item in response['Items']:
+        url = item.get('url', '')
+        if 'dental-plaza' in url or '切歯骨' in item.get('title', ''):
+            dental_plaza_items.append(item)
+    
+    html = f"<h1>Dental Plaza / 切歯骨 Articles ({len(dental_plaza_items)}件)</h1>"
+    
+    for item in dental_plaza_items:
+        html += f"""
+        <div style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
+            <h3>{item.get('title')}</h3>
+            <p><strong>URL:</strong> <a href="{item.get('url')}" target="_blank">{item.get('url')}</a></p>
+            <p><strong>Kind:</strong> {item.get('kind')} | <strong>Lang:</strong> {item.get('lang')}</p>
+            <p><strong>Published:</strong> {item.get('published_at')}</p>
+            <p><strong>Search Query:</strong> {item.get('ai_search_query')}</p>
+            <p><strong>AI Reason:</strong> {item.get('ai_reason')}</p>
+        </div>
+        """
+    
+    if not dental_plaza_items:
+        html += "<p>該当する記事が見つかりませんでした。</p>"
+    
+    return html
+    
+@bp.route('/debug_article')
+def debug_article():
+    """特定記事のAI判定を確認"""
+    article_url = request.args.get('url')
+    
+    if not article_url:
+        return "URLパラメータが必要です。例: /news/debug_article?url=https://...", 400
+    
+    table = _table()
+    pk = f"URL#{_hash_url(article_url)}"
+    
+    try:
+        response = table.get_item(Key={"pk": pk, "sk": "METADATA"})
+        item = response.get('Item')
+        
+        if item:
+            html = f"""
+            <h1>AI判定結果</h1>
+            <h2>基本情報</h2>
+            <p><strong>Title:</strong> {item.get('title')}</p>
+            <p><strong>URL:</strong> <a href="{item.get('url')}" target="_blank">{item.get('url')}</a></p>
+            <p><strong>Source:</strong> {item.get('source')}</p>
+            <p><strong>Kind:</strong> {item.get('kind')}</p>
+            <p><strong>Lang:</strong> {item.get('lang')}</p>
+            <p><strong>Published:</strong> {item.get('published_at')}</p>
+            
+            <h2>収集時の要約</h2>
+            <p><strong>Summary:</strong> {item.get('summary')}</p>
+            
+            <h2>AI判定</h2>
+            <p><strong>AI Relevant:</strong> {item.get('ai_relevant')}</p>
+            <p><strong>AI Kind:</strong> {item.get('ai_kind')}</p>
+            <p><strong>AI Reason:</strong> {item.get('ai_reason')}</p>
+            <p><strong>AI Summary:</strong> {item.get('ai_summary')}</p>
+            <p><strong>Search Query:</strong> {item.get('ai_search_query')}</p>
+            """
+            return html
+        else:
+            return f"記事が見つかりません: {article_url}", 404
+            
+    except Exception as e:
+        import traceback
+        return f"<pre>{traceback.format_exc()}</pre>", 500
+    
+@bp.route('/debug_dental_plaza')
+def debug_dental_plaza():
+    """dental-plazaの記事を全てリスト"""
+    table = _table()
+    
+    response = table.scan()
+    
+    dental_plaza_items = []
+    for item in response['Items']:
+        url = item.get('url', '')
+        if 'dental-plaza' in url:
+            dental_plaza_items.append(item)
+    
+    html = f"<h1>Dental Plaza Articles ({len(dental_plaza_items)}件)</h1>"
+    
+    for item in dental_plaza_items:
+        html += f"""
+        <div style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
+            <h3>{item.get('title')}</h3>
+            <p><strong>URL:</strong> <a href="{item.get('url')}" target="_blank">{item.get('url')}</a></p>
+            <p><strong>Kind:</strong> {item.get('kind')} | <strong>Lang:</strong> {item.get('lang')}</p>
+            <p><strong>Published:</strong> {item.get('published_at')}</p>
+            <p><strong>Search Query:</strong> {item.get('ai_search_query')}</p>
+            <p><strong>AI Reason:</strong> {item.get('ai_reason')}</p>
+            <hr>
+            <p><a href="/news/debug_article?url={item.get('url')}" target="_blank">詳細を見る</a></p>
+        </div>
+        """
+    
+    return html
 

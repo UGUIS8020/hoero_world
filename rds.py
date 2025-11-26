@@ -24,11 +24,16 @@ try:
         for table in tables:
             table_name = table[0]
             print(f"\n=== テーブル: {table_name} ===")
-            
+
+            # ★ レコード件数の取得（ここを追加）
+            cursor.execute(f"SELECT COUNT(*) FROM `{table_name}`")
+            count = cursor.fetchone()[0]
+            print(f"レコード数: {count}")
+
             # テーブル構造の取得
-            cursor.execute(f"DESCRIBE {table_name}")
+            cursor.execute(f"DESCRIBE `{table_name}`")
             columns = cursor.fetchall()
-            
+                    
             print("カラム構造:")
             for column in columns:
                 field = column[0]
