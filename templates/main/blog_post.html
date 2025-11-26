@@ -24,7 +24,20 @@
             <!--ブログ投稿-->
             <section id="blog_post">
                 <div class="container py-2 bg-light">
-                    {% if post.featured_image and post.featured_image != "none" %}
+                    {% if post.featured_video %}
+                        <!-- 動画がある場合 -->
+                        <div class="mb-3" style="text-align: center;">
+                            <video
+                                controls
+                                muted          {# ← これを追加 #}
+                                playsinline    {# iOSでの挙動安定用（任意） #}
+                                style="max-width: 100%; height: auto;">
+                                <source src="{{ post.featured_video }}" type="video/mp4">
+                                お使いのブラウザは動画タグをサポートしていません。
+                            </video>
+                        </div>
+                    {% elif post.featured_image and post.featured_image != "none" %}
+                        <!-- 画像のみの場合 -->
                         <div class="mb-3" style="text-align: center;">
                             <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid">
                         </div>

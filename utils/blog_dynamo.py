@@ -23,6 +23,7 @@ def create_blog_post_in_dynamo(
     text: str,
     summary: str | None,
     featured_image: str | None,
+    featured_video: str | None,
     author_name: str | None,
     category_id: int | None,
     category_name: str | None,
@@ -41,6 +42,7 @@ def create_blog_post_in_dynamo(
         "text": text or "",
         "summary": summary or "",
         "featured_image": featured_image or "",
+        "featured_video": featured_video or "",
         "author_name": author_name or "",
         "category_id": str(category_id) if category_id is not None else "",
         "category_name": category_name or "",
@@ -79,3 +81,59 @@ def get_post_by_id(post_id: int):
     if not items:
         return None
     return items[0]
+
+def delete_post_by_id(post_id: int) -> bool:
+    """
+    post_id から該当アイテムを取得して DynamoDB から削除する
+    """
+    table = _table()
+    item = get_post_by_id(post_id)
+    if not item:
+        return False
+
+    table.delete_item(
+        Key={
+            "user_id": item["user_id"],          # PK
+            "post_id": str(post_id),            # SK (String)
+        }
+    )
+    return True
+
+
+def update_post_fields(post_id: int, fields: dict) -> bool:
+    """
+    fields で渡されたカラムだけを更新する
+    ex) {"title": "...", "summary": "..."}
+    """
+    table = _table()
+    item = get_post_by_id(post_id)
+    if not item:
+        return False
+
+    if not fields:
+        return True
+
+    update_expr_parts = []
+    expr_attr_names = {}
+    expr_attr_values = {}
+
+    # Dynamo の予約語対策として #n / :v を使う
+    for i, (k, v) in enumerate(fields.items()):
+        name_key = f"#f{i}"
+        value_key = f":v{i}"
+        update_expr_parts.append(f"{name_key} = {value_key}")
+        expr_attr_names[name_key] = k
+        expr_attr_values[value_key] = v
+
+    update_expr = "SET " + ", ".join(update_expr_parts)
+
+    table.update_item(
+        Key={
+            "user_id": item["user_id"],
+            "post_id": str(post_id),
+        },
+        UpdateExpression=update_expr,
+        ExpressionAttributeNames=expr_attr_names,
+        ExpressionAttributeValues=expr_attr_values,
+    )
+    return True

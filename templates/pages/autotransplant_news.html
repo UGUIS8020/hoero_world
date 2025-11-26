@@ -327,6 +327,9 @@
 let allDentalNews = [];
 let currentFilter = 'all';
 
+// ★ サーバー側から管理者フラグを渡す
+const isAdmin = {{ 'true' if current_user.is_authenticated and current_user.is_administrator else 'false' }};
+
 // 記事を読み込み
 async function loadDentalNews() {
     try {
@@ -384,6 +387,17 @@ function displayNews(items) {
         const kindLabel = kindLabels[item.kind] || '情報';
         const langFlag = item.lang === 'ja' ? '🇯🇵' : '🇬🇧';
         
+        // ★ 削除ボタン（管理者のみ）
+        const deleteButton = isAdmin ? `
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
+                <a href="/news/admin/delete_article?url=${encodeURIComponent(item.url)}" 
+                   style="display: inline-block; padding: 5px 12px; background: #dc3545; color: white; text-decoration: none; font-size: 12px; border-radius: 4px;"
+                   onclick="return confirm('この記事を削除しますか？\\n\\n${item.title.replace(/'/g, "\\'")}');">
+                   🗑️ 削除
+                </a>
+            </div>
+        ` : '';
+        
         return `
             <article class="news-card">
                 <div class="news-card-content">
@@ -406,6 +420,8 @@ function displayNews(items) {
                     ${item.author ? `
                         <p class="news-author">出典: ${item.author}</p>
                     ` : ''}
+                    
+                    ${deleteButton}
                 </div>
             </article>
         `;

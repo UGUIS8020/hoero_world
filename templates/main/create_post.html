@@ -51,15 +51,46 @@
                                     
                                     <br>
                                     {{ render_field(form.picture, class="form-control-file", onchange="previewImage(this)") }}
-                                </div>                                         
+                                </div> 
+                                
+                                <!-- 画像フィールドの後に追加 -->
+                                <div class="mb-3">
+                                    {{ form.video.label(class="form-control-label") }}
+                                    <br>
+                                    
+                                    <!-- 既存動画の表示 -->
+                                    {% if form.video.object_data %}
+                                        <div style="text-align: left;" id="existing-video">
+                                            <video controls style="max-width: 300px;">
+                                                <source src="{{ form.video.object_data }}" type="video/mp4">
+                                            </video>
+                                            <p><small class="text-muted">現在の動画</small></p>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- 新しい動画のプレビュー -->
+                                    <div id="video-preview" style="display: none; text-align: left;">
+                                        <video id="preview-video" controls style="max-width: 300px;">
+                                            <source id="preview-video-source" src="" type="video/mp4">
+                                        </video>
+                                        <p><small class="text-muted">プレビュー</small></p>
+                                    </div>
+                                    
+                                    <br>
+                                    {{ render_field(form.video, class="form-control-file", onchange="previewVideo(this)") }}
+                                </div>
                                  <div class="container mb-3">
                                     <div class="row">
                                         <div class="col-md-3">
                                             {{ form.submit(class="btn btn-success w-100") }}
                                         </div>
                                     </div>
-                                </div>                     
+                                </div>  
+                                <div id="uploadingMessage" class="alert alert-info mx-3 mb-3 d-none">
+                                    動画を処理中です。しばらくお待ちください…
+                                </div>                   
                             </form>
+                            
                         </div>
                     </div>
                 </div>
@@ -86,6 +117,76 @@
                 if (existingImage) existingImage.style.display = 'block';
             }
         }
+        </script>
+        <script>
+            function previewImage(input) {
+                const preview = document.getElementById('image-preview');
+                const previewImg = document.getElementById('preview-img');
+                const existingImage = document.getElementById('existing-image');
+                
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        preview.style.display = 'block';
+                        if (existingImage) existingImage.style.display = 'none';
+                    }
+                    reader.readAsDataURL(input.files[0]);
+                } else {
+                    preview.style.display = 'none';
+                    if (existingImage) existingImage.style.display = 'block';
+                }
+            }
+
+            // （もしまだ previewVideo を書いていなければ、簡単な版）
+            function previewVideo(input) {
+                const preview = document.getElementById('video-preview');
+                const video = document.getElementById('preview-video');
+                const source = document.getElementById('preview-video-source');
+                const existingVideo = document.getElementById('existing-video');
+
+                if (input.files && input.files[0]) {
+                    const fileURL = URL.createObjectURL(input.files[0]);
+                    source.src = fileURL;
+                    video.load();
+                    preview.style.display = 'block';
+                    if (existingVideo) existingVideo.style.display = 'none';
+                } else {
+                    preview.style.display = 'none';
+                    if (existingVideo) existingVideo.style.display = 'block';
+                }
+            }
+
+            // ここから「処理中です」表示の処理
+            document.addEventListener("DOMContentLoaded", function () {
+                const form = document.querySelector("#blog_post form");
+                const msg = document.getElementById("uploadingMessage");
+                let submitBtn = null;
+
+                if (form) {
+                    // form 内の submit ボタン（input または button）を取得
+                    submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
+                } else {
+                    return;
+                }
+
+                form.addEventListener("submit", function () {
+                    // メッセージ表示
+                    if (msg) {
+                        msg.classList.remove("d-none");
+                    }
+
+                    // ボタン連打防止＋ラベル変更
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        if (submitBtn.tagName.toLowerCase() === "button") {
+                            submitBtn.textContent = "アップロード中…";
+                        } else {
+                            submitBtn.value = "アップロード中…";
+                        }
+                    }
+                });
+            });
         </script>
     
 {% endblock %}
