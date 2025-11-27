@@ -228,15 +228,15 @@ a:active { color: #b22222; text-decoration: none; }
     {% if autotransplant_headlines %}
       <ul id="autotransplant-headlines" class="autotransplant-headlines text-only" aria-label="自家歯牙移植の最新ニュース">
         {% for n in autotransplant_headlines %}
-          <li>
-        <a href="{{ n.url }}" target="_blank" rel="noopener"
-          title="{{ n.ai_summary or '' }}">
-          {{ n.headline_ja or n.title }}
-        </a>
-        {% if n.published_at %}
-          <small class="news-date">{{ n.published_at[:10] }}</small>
-        {% endif %}
-      </li>
+        <li>
+          <a href="{{ n.url }}" target="_blank" rel="noopener"
+            title="{{ n.ai_summary or '' }}">
+            {{ n.ai_headline or n.title }}  {# ← headline_ja を ai_headline に変更 #}
+          </a>
+          {% if n.published_at %}
+            <small class="news-date">{{ n.published_at[:10] }}</small>
+          {% endif %}
+        </li>
         {% endfor %}
       </ul>
     {% else %}
@@ -806,6 +806,92 @@ document.addEventListener('DOMContentLoaded', function() {
         logoImg.style.opacity = '1';
     }
 });
+</script>
+<script>
+(function(){
+  const listEl = document.getElementById('autotransplant-headlines');
+  const lastUpdatedEl = document.getElementById('news-last-updated');
+  const btn = document.getElementById('news-refresh-btn');
+  const loading = document.getElementById('news-loading');
+  const empty = document.getElementById('news-empty');
+
+  async function fetchHeadlines() {
+    try {
+      loading.hidden = false;
+      
+      // 複数の種類を取得してマージ
+      const kinds = ['research', 'news', 'case'];
+      const allItems = [];
+      
+      for (const kind of kinds) {
+        const res = await fetch(`/news/api/latest?kind=${kind}&lang=ja&limit=10`, {cache:'no-store'});
+        const data = await res.json();
+        allItems.push(...(data.items || []));
+      }
+      
+      // 日付順にソート
+      allItems.sort((a, b) => (b.published_at || '').localeCompare(a.published_at || ''));
+      
+      // 重複排除
+      const seen = new Set();
+      const uniqueItems = [];
+      for (const item of allItems) {
+        if (!seen.has(item.url)) {
+          seen.add(item.url);
+          uniqueItems.push(item);
+          if (uniqueItems.length >= 5) break;
+        }
+      }
+
+      // UL 更新
+      listEl.innerHTML = '';
+      uniqueItems.forEach(it => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = it.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        
+        // ai_headline を優先、なければ title
+        a.textContent = it.ai_headline || it.title || '';
+        
+        // ツールチップにサマリーを設定
+        if (it.ai_summary) {
+          a.title = it.ai_summary;
+        }
+        
+        li.appendChild(a);
+        
+        if (it.published_at) {
+          const s = document.createElement('small');
+          s.className = 'news-date';
+          s.textContent = ' ' + it.published_at;
+          li.appendChild(s);
+        }
+        listEl.appendChild(li);
+      });
+
+      if (empty) empty.style.display = uniqueItems.length ? 'none' : '';
+
+      // 最終更新表示（ローカル時刻に整形）
+      const d = new Date();
+      const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+      const hh = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0');
+      lastUpdatedEl.textContent = `最終更新: ${y}-${m}-${day} ${hh}:${mm}`;
+    } catch (e) {
+      console.error('Failed to fetch headlines:', e);
+      lastUpdatedEl.textContent = '最終更新: 取得に失敗しました';
+    } finally {
+      loading.hidden = true;
+    }
+  }
+
+  btn.addEventListener('click', fetchHeadlines);
+  // 初回ロード
+  fetchHeadlines();
+  // 1時間おきに静かに更新
+  setInterval(fetchHeadlines, 60 * 60 * 1000);
+})();
 </script>
 
 {% endblock %}

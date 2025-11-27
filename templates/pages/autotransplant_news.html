@@ -211,6 +211,7 @@
         }
         
         .badge-research { background: #38a169; }
+        .badge-news { background: #00a8cc; }
         .badge-case { background: #d69e2e; }
         .badge-video { background: #e53e3e; }
         .badge-product { background: #805ad5; }
@@ -289,6 +290,9 @@
         <div class="news-filters">
             <button class="filter-btn active" data-filter="all" onclick="filterNews('all', this)">
                 全て
+            </button>
+            <button class="filter-btn" data-filter="news" onclick="filterNews('news', this)">
+                📰 ニュース
             </button>
             <button class="filter-btn" data-filter="research" onclick="filterNews('research', this)">
                 📄 研究論文
@@ -378,6 +382,7 @@ function displayNews(items) {
     const kindLabels = {
         'research': '研究論文',
         'case': '症例報告',
+        'news': 'ニュース',
         'product': '製品情報',
         'video': '動画',
         'market': '市場レポート'

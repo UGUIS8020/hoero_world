@@ -141,10 +141,11 @@ def _hash_url(url: str) -> str:
     return _sha(url.encode()).hexdigest()
 
 def ai_filter_and_classify(title: str, summary: str = None, lang: str = "ja", url: str = None):
-    """AIを使って記事をフィルタリング＆分類"""
+    """AIを使って記事をフィルタリング＆分類し、サマリーと見出しを生成"""
     
     prompt = f"""
-以下の記事が「自家歯牙移植（tooth autotransplantation）」に関連するかどうかを判定してください。
+以下の記事が「自家歯牙移植（tooth autotransplantation）」に関連するかどうかを判定し、
+関連する場合は魅力的な見出しと要約を生成してください。
 
 タイトル: {title}
 要約: {summary or "なし"}
@@ -182,8 +183,20 @@ URL: {url or "なし"}
 - news: ニュース記事、一般向け情報
 - video: 動画コンテンツ
 
-JSON形式で回答してください：
-{{"relevant": true/false, "kind": "research/case/news/video", "reason": "判定理由"}}
+【見出しと要約の生成】（relevantがtrueの場合のみ）
+- ai_headline: 魅力的で簡潔な見出し（30文字以内、{'日本語' if lang == 'ja' else '英語'}で）
+- ai_summary: 記事の要点をまとめた要約（100-150文字、{'日本語' if lang == 'ja' else '英語'}で）
+
+JSON形式で回答してください（relevant が false の場合、ai_headline と ai_summary は空文字列で構いません）：
+{{
+  "relevant": true/false,
+  "kind": "research/case/news/video",
+  "reason": "判定理由",
+  "ai_headline": "魅力的な見出し",
+  "ai_summary": "記事の要約"
+}}
+
+DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON.
 """
 
     try:
@@ -196,7 +209,7 @@ JSON形式で回答してください：
             json={
                 "model": "gpt-4o-mini",
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 1000,
+                "max_tokens": 1500,  # サマリー生成のため増やす
                 "temperature": 0.3
             },
             timeout=30
@@ -226,13 +239,25 @@ JSON形式で回答してください：
         
         result_text = data["choices"][0]["message"]["content"].strip()
         result_text = result_text.replace("```json", "").replace("```", "").strip()
-        result = json.loads(result_text)
+        
+        try:
+            result = json.loads(result_text)
+        except json.JSONDecodeError as e:
+            _d(f"[AI] JSON parse error: {e}")
+            _d(f"[AI] Raw response: {result_text}")
+            return {
+                "relevant": False,
+                "kind": "research",
+                "ai_summary": "",
+                "ai_headline": "",
+                "reason": f"JSON parse error: {e}",
+            }
         
         return {
             "relevant": result.get("relevant", False),
             "kind": result.get("kind", "research"),
             "ai_summary": result.get("ai_summary", ""),
-            "ai_headline": result.get("headline_ja", ""),
+            "ai_headline": result.get("ai_headline", ""),
             "reason": result.get("reason", "")
         }
         
@@ -249,9 +274,17 @@ JSON形式で回答してください：
 
 def ai_collect_news(lang="ja", max_iterations=5):
     """AIエージェントが自律的にニュース・論文を収集（Google News + PubMed）"""
-    collected_urls = set()
+    
+    # ★ 最初にDynamoDBから既存URLを読み込んでキャッシュ
+    collected_urls = _load_existing_urls_from_db()
+    _d(f"[CACHE] Starting with {len(collected_urls)} existing URLs in cache")
+    
     all_items = []
     search_history = []
+    
+    # ★ Google Search API呼び出しカウンター
+    google_api_call_count = 0
+    MAX_GOOGLE_API_CALLS = 10
     
     # ★ Google Search API呼び出しカウンター
     google_api_call_count = 0
@@ -549,6 +582,42 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
         "saved": saved,
         "search_history": search_history
     }
+
+
+def _load_existing_urls_from_db():
+    """DynamoDBから既存のURLをすべて取得してセットで返す（2回目以降のコスト削減）"""
+    table = _table()
+    existing_urls = set()
+    
+    scan_kwargs = {
+        'ProjectionExpression': '#url',
+        'FilterExpression': 'attribute_exists(#url)',
+        'ExpressionAttributeNames': {
+            '#url': 'url'
+        }
+    }
+    
+    try:
+        while True:
+            response = table.scan(**scan_kwargs)
+            
+            for item in response.get('Items', []):
+                if 'url' in item:
+                    existing_urls.add(item['url'])
+            
+            if 'LastEvaluatedKey' not in response:
+                break
+            scan_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
+        
+        _d(f"[CACHE] Loaded {len(existing_urls)} existing URLs from DynamoDB")
+        
+    except Exception as e:
+        _d(f"[CACHE] Error loading existing URLs: {e}")
+        traceback.print_exc()
+        # エラーが起きても空のセットを返して処理を続行
+    
+    return existing_urls
+
 
 def _execute_google_search(query, lang="ja"):
     """実際のGoogle News検索を実行"""
@@ -913,7 +982,7 @@ def news_api_latest():
     lang = request.args.get("lang", "ja")
     limit = min(int(request.args.get("limit", 5)), 20)
 
-    # ★ ここから追加：lang=all のときは ja + en をまとめて返す
+    # ★ lang=all のときは ja + en をまとめて返す
     if lang == "all":
         combined = []
         for lg in ["ja", "en"]:
@@ -932,12 +1001,8 @@ def news_api_latest():
                 continue
             seen.add(url)
 
-            # ★ 見出しの優先順位: ai_headline > ai_summary > title
-            headline = (
-                it.get("ai_headline")
-                or it.get("ai_summary")
-                or it.get("title")
-            )
+            # ★ 見出しの優先順位: ai_headline > title
+            headline = it.get("ai_headline") or it.get("title")
 
             payload.append({
                 "title": headline,
@@ -946,6 +1011,8 @@ def news_api_latest():
                 "kind": it.get("kind"),
                 "lang": it.get("lang"),
                 "source": it.get("source"),
+                "ai_headline": it.get("ai_headline"),  # ← 追加
+                "ai_summary": it.get("ai_summary"),    # ← 追加
             })
 
             if len(payload) >= limit:
@@ -958,18 +1025,26 @@ def news_api_latest():
             "items": payload,
         })
 
-    # ★ ここから下は今までのまま（lang が ja / en のとき）
+    # ★ lang が ja / en のとき（修正版）
     items, _ = dental_query_items(kind=kind, lang=lang, limit=limit, last_evaluated_key=None)
-    payload = [
-        {
-            "title": it.get("title"),
+    
+    payload = []
+    for it in items:
+        if not it.get("title") or not it.get("url"):
+            continue
+            
+        # ★ 見出しの優先順位: ai_headline > title
+        headline = it.get("ai_headline") or it.get("title")
+        
+        payload.append({
+            "title": headline,
             "url": it.get("url"),
             "published_at": (it.get("published_at") or "")[:10],
             "kind": it.get("kind"),
-        }
-        for it in items
-        if it.get("title") and it.get("url")
-    ]
+            "ai_headline": it.get("ai_headline"),  # ← 追加
+            "ai_summary": it.get("ai_summary"),    # ← 追加
+        })
+    
     return jsonify({
         "kind": kind, "lang": lang,
         "count": len(payload),
@@ -984,7 +1059,7 @@ def news_api_all():
     all_items = []
     
     # 全種類・全言語を取得
-    kinds = ["research", "case", "video", "product", "market"]
+    kinds = ["research", "case", "news", "video", "product", "market"]  # ← "news" を追加
     langs = ["ja", "en"]
     
     for kind in kinds:
@@ -1376,3 +1451,51 @@ def debug_dental_plaza():
     
     return html
 
+@bp.route("/admin/check_chinese_article")
+def check_chinese_article():
+    """中国記事の存在確認"""
+    table = current_app.config["DENTAL_TABLE"]
+    
+    # 全記事をスキャンして中国関連を検索
+    response = table.scan(
+        FilterExpression="contains(title, :keyword)",
+        ExpressionAttributeValues={
+            ':keyword': '中国'
+        }
+    )
+    
+    return jsonify({
+        "found": len(response.get('Items', [])),
+        "items": response.get('Items', [])
+    })
+
+
+@bp.route("/admin/count_by_kind")
+def count_by_kind():
+    """種類別の記事数を確認"""
+    table = current_app.config["DENTAL_TABLE"]
+    
+    kind_counts = {}
+    langs = ["ja", "en"]
+    
+    for lang in langs:
+        for kind in ["research", "case", "news", "video", "product", "market"]:
+            items, count = dental_query_items(kind=kind, lang=lang, limit=1000)
+            key = f"{kind}_{lang}"
+            kind_counts[key] = len(items)
+    
+    # 全体の統計
+    total_ja = sum(v for k, v in kind_counts.items() if k.endswith('_ja'))
+    total_en = sum(v for k, v in kind_counts.items() if k.endswith('_en'))
+    
+    return jsonify({
+        "by_kind_and_lang": kind_counts,
+        "summary": {
+            "total_ja": total_ja,
+            "total_en": total_en,
+            "total": total_ja + total_en
+        },
+        "news_ja": kind_counts.get("news_ja", 0),
+        "news_en": kind_counts.get("news_en", 0),
+        "total_news": kind_counts.get("news_ja", 0) + kind_counts.get("news_en", 0)
+    })
