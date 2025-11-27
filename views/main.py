@@ -135,14 +135,27 @@ def index():
     autotransplant_headlines = []
     try:
         from .news.autotransplant_news import dental_query_items
-        items, _ = dental_query_items(kind="research", lang="ja", limit=5)
+        
+        # 複数の種類を取得
+        all_items = []
+        for kind in ["research", "news", "case"]:  # newsを追加
+            items, _ = dental_query_items(kind=kind, lang="ja", limit=10)
+            all_items.extend(items)
+        
+        # 日付順にソート
+        all_items.sort(key=lambda x: x.get("published_at", ""), reverse=True)
+        
+        # 上位5件を取得
         autotransplant_headlines = [
             {
                 "title": it.get("title"),
                 "url": it.get("url"),
                 "published_at": (it.get("published_at") or "")[:10],
+                "ai_headline": it.get("ai_headline"),
+                "ai_summary": it.get("ai_summary"),
+                "headline_ja": it.get("ai_headline"),  # テンプレート互換性
             }
-            for it in items
+            for it in all_items[:5]
             if it.get("title") and it.get("url")
         ]
     except Exception as e:
