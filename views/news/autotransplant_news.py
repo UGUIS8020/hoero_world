@@ -170,6 +170,7 @@ URL: {url or "なし"}
 - 歯科医院の料金表、診療案内
 - アーカイブページ（/archives/tag/、/archives/category/）
 - タグページ、カテゴリページ
+- 論文メタデータのみのページ（CiNii、researchmap等
 
 【重要】
 - タイトルや要約に「autotransplantation」「移植」「transplant」などが含まれていても、
@@ -274,6 +275,21 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON.
 
 def ai_collect_news(lang="ja", max_iterations=5):
     """AIエージェントが自律的にニュース・論文を収集（Google News + PubMed）"""
+
+    # ★ 除外するURLパターン（ここに追加）
+    EXCLUDED_PATTERNS = [
+        '/archives/tag/',           # 確実に不要
+        '/archives/category/',      # 確実に不要
+        '/author/',                 # 確実に不要（著者ページ）
+        '/feed',                    # 確実に不要（RSSフィード）
+        '?share=',                  # 確実に不要（シェアリンク）
+        '/wp-admin',               # 確実に不要（管理画面）
+        '/wp-login',               # 確実に不要（ログイン）
+        '/archives/tag/',
+        '/archives/category/',
+        '/department/',
+        '/about/',
+    ]
     
     # ★ 最初にDynamoDBから既存URLを読み込んでキャッシュ
     collected_urls = _load_existing_urls_from_db()
@@ -300,7 +316,9 @@ def ai_collect_news(lang="ja", max_iterations=5):
 - 臨床症例（特に前歯への移植、上顎中切歯、親知らずの活用など）
 - 研究論文（成功率、長期予後、PDL保存など）
 - 市場動向・統計データ
-- 比較記事（インプラント vs 自家歯牙移植など）"""
+- 比較記事（インプラント vs 自家歯牙移植など）
+- **海外ニュース（中国、韓国、欧米などの日本語記事）**  # ← 追加
+"""
 
     # ★日本語だけクエリを「ゆるく」する追加指示
     if lang == "ja":
@@ -421,7 +439,14 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
                 for result_item in search_results:
                     if not result_item.get("url"):
                         continue
-                    if result_item["url"] in collected_urls:
+                    
+                    # ★ 除外パターンチェック（追加）
+                    url = result_item["url"]
+                    if any(pattern in url for pattern in EXCLUDED_PATTERNS):
+                        _d(f"[FILTER] Skipped excluded URL: {url[:80]}...")
+                        continue
+                    
+                    if url in collected_urls:
                         continue
                     
                     # ★ Google検索結果の場合は本文を取得してAI判定
@@ -511,6 +536,13 @@ DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON."""
             for result_item in search_results:
                 if not result_item.get("url"):
                     continue
+                
+                # ★ 除外パターンチェック（追加）
+                url = result_item["url"]
+                if any(pattern in url for pattern in EXCLUDED_PATTERNS):
+                    _d(f"[FILTER] Skipped excluded URL: {url[:80]}...")
+                    continue
+                
                 if result_item["url"] in collected_urls:
                     continue
                 
