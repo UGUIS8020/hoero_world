@@ -36,6 +36,9 @@
     font-size: 20px; color: #333; margin-bottom: 15px;
     border-bottom: 1px solid #ddd; padding-bottom: 5px;
   }
+  .news-page .news-section h3 {
+    font-size: 18px; color: #333; margin-bottom: 10px;
+  }
   .news-page .link-buttons { text-align: center; margin: 30px 0; }
   .news-page .link-buttons a {
     display: inline-block; margin: 10px; padding: 12px 24px;
@@ -55,8 +58,34 @@
   </nav>
 
   <div class="news-container">
+    <!-- 最新のお知らせ -->
     <article>
-      <h1 class="news-title">自家歯牙移植のページを更新しました</h1>
+      <h1 class="news-title">自家歯牙移植 最新Newsページを公開しました</h1>
+      <p class="news-date"><time datetime="2025-11-30">2025年11月30日</time></p>
+
+      <div class="news-content">
+        <p>自家歯牙移植に関する最新の研究論文、ニュース、動画を自動収集・配信する専用ページを公開しました。</p>
+        <p>国内外の学術情報をリアルタイムで確認できます。</p>
+      </div>
+
+      <div class="news-section">
+        <h2>主な機能</h2>
+        <ul>
+          <li>Google News、PubMed、YouTubeなど最新情報</li>
+          <li>研究論文、一般ニュース、動画を分類表示</li>          
+        </ul>
+      </div>
+
+      <div class="link-buttons">
+        <a href="{{ url_for('news.autotransplant_news', kind='research', lang='ja') }}">自家歯牙移植 最新News</a>
+      </div>
+    </article>
+
+    <hr style="margin: 40px 0; border: none; border-top: 1px solid #ddd;">
+
+    <!-- 過去のお知らせ -->
+    <article class="news-item">
+      <h2 class="news-title">自家歯牙移植のページを更新しました</h2>
       <p class="news-date"><time datetime="2025-09-20">2025年9月20日</time></p>
 
       <div class="news-content">
@@ -78,7 +107,6 @@
 
     <hr style="margin: 40px 0; border: none; border-top: 1px solid #ddd;">
 
-    <!-- 過去のお知らせ -->
     <article class="news-item">
       <h2 class="news-title">自家歯牙移植Q&A更新のお知らせ</h2>
       <p class="news-date"><time datetime="2025-08-20">2025年8月20日</time></p>
