@@ -175,20 +175,9 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.info' %}active{% endif %}" href="{{ url_for('main.info') }}">会社情報</a>
               </li>
-
              
               
             </ul>
-            
-            <ul class="navbar-nav ms-auto">
-                          
-              <li class="nav-item">
-              <a class="nav-link {{ 'active' if request.endpoint == 'news.autotransplant_news' else '' }}"
-                href="{{ url_for('news.autotransplant_news', kind='research', lang='ja') }}">
-                自家歯牙移植News
-              </a>
-            </li>             
-              
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.root_replica' %}active{% endif %}" href="{{ url_for('pages.root_replica') }}">自家歯牙移植用レプリカ</a>
@@ -212,8 +201,6 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.missing_teeth_nation') }}">MTN-V2</a>
               </li>
-
-              
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'stl_board.index' %}active{% endif %}" href="{{ url_for('stl_board.index') }}">STL</a>
