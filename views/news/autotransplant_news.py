@@ -961,6 +961,7 @@ def _execute_pubmed_search(query: str, max_results: int = 20):
 
             items.append({
                 "source": "pubmed",
+                "pmid": pmid,
                 "title": title,
                 "url": url,
                 "published_at": published_at,
