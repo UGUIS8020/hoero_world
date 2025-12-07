@@ -39,7 +39,8 @@ from flask_mail import Mail, Message
 
 # ローカルモジュール
 from extensions import db, mail
-from models.common import BlogCategory, BlogPost, Inquiry
+from models.dynamodb_category import list_blog_categories_all  # ← 変更
+from models.dynamodb_inquiry import InquiryDDB
 from models.main import (
     BlogCategoryForm,
     BlogPostForm,
@@ -54,6 +55,9 @@ from utils.blog_dynamo import (
     get_post_by_id,
     list_recent_posts,
     update_post_fields,
+    list_posts_by_category,
+    list_all_posts,
+    paginate_posts,
 )
 from utils.common_utils import (
     ZipHandler,
@@ -91,11 +95,14 @@ zip_handler_instance = ZipHandler()  # インスタンスを作成
 @bp.route('/')
 def index():
     form = BlogSearchForm()
-
-    # RDB 側のブログ（必要ならこのまま残してOK）
     page = request.args.get('page', 1, type=int)
-    blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
-    blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
+    
+    # DynamoDB から全投稿を取得してページネーション
+    all_posts = list_all_posts(limit=1000)
+    blog_posts = paginate_posts(all_posts, page=page, per_page=10)
+    
+    # DynamoDB からカテゴリを取得
+    blog_categories = list_blog_categories_all()
 
     # トップページ用 Dynamo 記事（カード表示）
     items = list_recent_posts(limit=6)
@@ -116,7 +123,7 @@ def index():
             )
         )
 
-    # サイドバー「最新記事」用（件数だけ変えるなら別で）
+    # サイドバー「最新記事」用
     items_recent = list_recent_posts(limit=5)
     recent_blog_posts = []
     for it in items_recent:
@@ -136,16 +143,13 @@ def index():
     try:
         from .news.autotransplant_news import dental_query_items
         
-        # 複数の種類を取得
         all_items = []
-        for kind in ["research", "news", "case"]:  # newsを追加
+        for kind in ["research", "news", "case"]:
             items, _ = dental_query_items(kind=kind, lang="ja", limit=10)
             all_items.extend(items)
         
-        # 日付順にソート
         all_items.sort(key=lambda x: x.get("published_at", ""), reverse=True)
         
-        # 上位5件を取得
         autotransplant_headlines = [
             {
                 "title": it.get("title"),
@@ -153,7 +157,7 @@ def index():
                 "published_at": (it.get("published_at") or "")[:10],
                 "ai_headline": it.get("ai_headline"),
                 "ai_summary": it.get("ai_summary"),
-                "headline_ja": it.get("ai_headline"),  # テンプレート互換性
+                "headline_ja": it.get("ai_headline"),
             }
             for it in all_items[:5]
             if it.get("title") and it.get("url")
@@ -165,7 +169,7 @@ def index():
         'main/index.html',
         blog_posts=blog_posts,
         top_blog_posts=top_blog_posts,
-        recent_blog_posts=recent_blog_posts,   # ← ここは Dynamo ベースに
+        recent_blog_posts=recent_blog_posts,
         blog_categories=blog_categories,
         form=form,
         autotransplant_headlines=autotransplant_headlines,
@@ -1299,48 +1303,41 @@ def inquiry():
         flash('申し訳ございませんが、現在お問い合わせフォームは一時的に停止中です。', 'warning')
         return redirect(url_for('main.inquiry'))
 
-    # if request.method == 'POST':
-    #     print("フォームデータ:", form.data)
-    #     print("バリデーション結果:", form.validate())
-    #     print("バリデーションエラー:", form.errors)
-
     if form.validate_on_submit():
         # ハニーポットチェック
         if request.form.get('website'):  # 空であるべき
             flash('不正な送信が検出されました。', 'danger')
-            return redirect(url_for('main.inquiry'))  # 'main.'を追加
+            return redirect(url_for('main.inquiry'))
         
         # reCAPTCHA検証
         recaptcha_response = request.form.get('g-recaptcha-response')
         if not recaptcha_response or not verify_recaptcha(recaptcha_response):
-            flash('reCAPTCHA認証が必要です。', 'danger')  # 'error' → 'danger'
-            return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id)  # パス修正
+            flash('reCAPTCHA認証が必要です。', 'danger')
+            return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id)
 
-        # DB保存
-        inquiry = Inquiry(
+        # DynamoDB保存
+        inquiry = InquiryDDB.create(
             name=form.name.data,
             email=form.email.data,
             title=form.title.data,
             text=form.text.data
         )
-        db.session.add(inquiry)
-        db.session.commit()
 
         # メール送信（管理者 + 自動返信）
         try:
             # 管理者への通知
             msg = Message(
-                subject=f"【お問い合わせ】{inquiry.title}",
+                subject=f"【お問い合わせ】{inquiry['title']}",
                 sender=os.getenv("MAIL_INQUIRY_SENDER"),
                 recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")]
             )
             msg.body = f"""以下の内容でお問い合わせがありました：
 
-■名前: {inquiry.name}
-■メール: {inquiry.email}
-■件名: {inquiry.title}
+■名前: {inquiry['name']}
+■メール: {inquiry['email']}
+■件名: {inquiry['title']}
 ■内容:
-{inquiry.text}
+{inquiry['text']}
 
 ■日時: {datetime.now(timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')}
 ■送信者IP: {request.environ.get('REMOTE_ADDR', 'unknown')}
@@ -1351,16 +1348,16 @@ def inquiry():
             auto_reply = Message(
                 subject="【渋谷歯科技工所】お問い合わせありがとうございました",
                 sender=os.getenv("MAIL_INQUIRY_SENDER"),
-                recipients=[inquiry.email]
+                recipients=[inquiry['email']]
             )
-            auto_reply.body = f"""{inquiry.name} 様
+            auto_reply.body = f"""{inquiry['name']} 様
 
 このたびはお問い合わせいただきありがとうございます。
 以下の内容で受け付けました。
 
-件名: {inquiry.title}
+件名: {inquiry['title']}
 内容:
-{inquiry.text}
+{inquiry['text']}
 
 担当者より折り返しご連絡いたします。
 今しばらくお待ちください。
@@ -1399,28 +1396,33 @@ email:shibuya8020@gmail.com
 @login_required
 def inquiry_maintenance():
     page = request.args.get('page', 1, type=int)
-    inquiries = Inquiry.query.order_by(Inquiry.id.desc()).paginate(page=page, per_page=10)
+    inquiries = InquiryDDB.paginate(page=page, per_page=10)
     return render_template('main/inquiry_maintenance.html', inquiries=inquiries)
 
-@bp.route('/<int:inquiry_id>/display_inquiry')
+
+@bp.route('/inquiry/<inquiry_id>/display')
 @login_required
 def display_inquiry(inquiry_id):
-    inquiry = Inquiry.query.get_or_404(inquiry_id)
+    inquiry = InquiryDDB.get_by_id(inquiry_id)
+    if not inquiry:
+        abort(404)
     form = InquiryForm()
-    form.name.data = inquiry.name
-    form.email.data = inquiry.email
-    form.title.data = inquiry.title
-    form.text.data = inquiry.text
+    form.name.data = inquiry["name"]
+    form.email.data = inquiry["email"]
+    form.title.data = inquiry["title"]
+    form.text.data = inquiry["text"]
     return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id)
 
-@bp.route('/<int:inquiry_id>/delete_inquiry', methods=['GET', 'POST'])
+
+@bp.route('/inquiry/<inquiry_id>/delete', methods=['GET', 'POST'])
 @login_required
 def delete_inquiry(inquiry_id):
-    inquiries = Inquiry.query.get_or_404(inquiry_id)
+    inquiry = InquiryDDB.get_by_id(inquiry_id)
+    if not inquiry:
+        abort(404)
     if not current_user.is_administrator:
         abort(403)
-    db.session.delete(inquiries)
-    db.session.commit()
+    InquiryDDB.delete(inquiry_id)
     flash('お問い合わせが削除されました')
     return redirect(url_for('main.inquiry_maintenance'))
 

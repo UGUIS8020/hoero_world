@@ -59,14 +59,18 @@ AWS_REGION = os.getenv("AWS_REGION", "ap-northeast-1")
 DENTAL_TABLE_NAME = os.getenv("DENTAL_TABLE_NAME", "dental-news")
 BLOG_POSTS_TABLE_NAME = os.getenv("BLOG_POSTS_TABLE_NAME", "hoero-blog-posts")
 HOERO_USERS_TABLE_NAME = os.getenv("HOERO_USERS_TABLE_NAME", "hoero-users")
+INQUIRY_TABLE_NAME = os.getenv("INQUIRY_TABLE_NAME", "hoero-inquiry")
+BLOG_CATEGORIES_TABLE_NAME = os.getenv("BLOG_CATEGORIES_TABLE_NAME", "hoero-blog-categories")
 
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 
+flask_app.config["INQUIRY_TABLE"] = dynamodb.Table(INQUIRY_TABLE_NAME)
 flask_app.config["AWS_REGION"] = AWS_REGION
 flask_app.config["DENTAL_TABLE"] = dynamodb.Table(DENTAL_TABLE_NAME)
 flask_app.config["BLOG_POSTS_TABLE_NAME"] = BLOG_POSTS_TABLE_NAME
 flask_app.config["BLOG_POSTS_TABLE"] = dynamodb.Table(BLOG_POSTS_TABLE_NAME)
 flask_app.config["HOERO_USERS_TABLE"] = dynamodb.Table(HOERO_USERS_TABLE_NAME)
+flask_app.config["BLOG_CATEGORIES_TABLE"] = dynamodb.Table(BLOG_CATEGORIES_TABLE_NAME)
 
 # デバッグ出力
 sys.stdout.write(f"DEBUG: AWS_REGION = {AWS_REGION}\n")

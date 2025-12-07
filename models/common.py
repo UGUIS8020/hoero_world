@@ -132,23 +132,6 @@ class BlogCategory(db.Model):
         # lazy='dynamic' の場合は self.posts.count()
         return db.session.query(BlogPost.id).filter_by(category_id=self.id).count()
 
-class Inquiry(db.Model):
-    __tablename__ = 'inquiry'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64))
-    email = db.Column(db.String(64))
-    title = db.Column(db.String(140))
-    text = db.Column(db.Text)
-    date = db.Column(db.DateTime, default=datetime.now(timezone('Asia/Tokyo')))
-
-    def __init__(self, name, email, title, text):
-        self.name = name
-        self.email = email
-        self.title = title
-        self.text = text
-
-    def __repr__(self):
-        return f"InquiryID: {self.id}, Name: {self.name}, Text: {self.text} \n"
     
 class STLPost(db.Model):
     __tablename__ = 'stl_posts'

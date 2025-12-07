@@ -25,4 +25,21 @@
         </div>
     </section>
 
+    {% if current_user.is_authenticated and current_user.is_administrator %}
+        <section id="admin-links" class="mt-4">
+            <div class="container">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">管理者メニュー</h5>
+                    </div>
+                    <div class="card-body">
+                        <a href="{{ url_for('main.inquiry_maintenance') }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">
+                            お問い合わせ管理
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
 {% endblock %}
