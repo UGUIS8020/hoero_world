@@ -181,3 +181,23 @@ def paginate_posts(items, page=1, per_page=10):
         "prev_num": page - 1 if page > 1 else None,
         "next_num": page + 1 if end < total else None,
     }
+
+def list_posts_by_user(user_id: int, limit: int = 100):
+    """ユーザー別の投稿を取得"""
+    table = _table()
+    resp = table.scan(
+        FilterExpression=Attr("user_id").eq(str(user_id))
+    )
+    items = resp.get("Items", [])
+    
+    def _key(x):
+        v = x.get("created_at_ts", 0)
+        if isinstance(v, Decimal):
+            return float(v)
+        try:
+            return float(v)
+        except Exception:
+            return 0.0
+    
+    items.sort(key=_key, reverse=True)
+    return items[:limit]

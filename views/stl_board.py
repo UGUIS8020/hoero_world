@@ -9,13 +9,29 @@ from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, TextAreaField, SubmitField
 from wtforms.validators import DataRequired, Length
 import trimesh
-from extensions import db
-from models.common import STLPost, STLComment, STLLike
-import pymeshlab
 from trimesh.visual.material import PBRMaterial
 from dotenv import load_dotenv
 import boto3
-import os
+import pymeshlab
+from types import SimpleNamespace
+
+from utils.stl_dynamo import (
+    create_stl_post,
+    get_stl_post_by_id,
+    list_stl_posts,
+    delete_stl_post,
+    paginate_stl_posts,
+    create_stl_comment,
+    get_comments_by_post,
+    get_all_comments,
+    delete_comments_by_post,
+    create_stl_like,
+    get_like_by_post_and_user,
+    delete_stl_like,
+    get_likes_by_post,
+    get_all_likes,
+    delete_likes_by_post,
+)
 
 load_dotenv()
 
@@ -32,83 +48,71 @@ BUCKET_NAME = os.getenv("BUCKET_NAME")
 # STL掲示板用のブループリント
 bp = Blueprint('stl_board', __name__, url_prefix='/stl_board')
 
+
 # STL投稿用フォーム
 class STLPostForm(FlaskForm):
     title = StringField('タイトル', validators=[], default='Untitled')
     content = TextAreaField('内容', render_kw={'placeholder': 'POST入力'})
     stl_file = FileField('STLファイル', validators=[
-        FileAllowed(['stl'], 'STLファイルのみ許可されています')    
+        FileAllowed(['stl'], 'STLファイルのみ許可されています')
     ])
     submit = SubmitField('投稿する')
 
-# STLサイズ軽量化関数（ログ付き） TODO Lambdaに移植予定
+
 def reduce_stl_size(input_file_path, output_file_path, target_faces=50000):
-    """
-    STLファイルを読み込んで、三角形数を削減して保存する関数
-    target_faces: 目標とする三角形数（例: 50000個）
-    """
+    """STLファイルを読み込んで、三角形面数を削減して保存する関数"""
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(input_file_path)
-
     current_faces = ms.current_mesh().face_number()
 
     if current_faces > target_faces:
-        print(f"[軽量化開始] 元の三角形数: {current_faces} → 目標: {target_faces}")
+        print(f"[軽量化開始] 入力三角形面数: {current_faces} → 目標: {target_faces}")
         ms.meshing_decimation_quadric_edge_collapse(targetfacenum=target_faces)
         new_faces = ms.current_mesh().face_number()
-        print(f"[軽量化完了] 変換後の三角形数: {new_faces}")
+        print(f"[軽量化完了] 変換後の三角形面数: {new_faces}")
     else:
-        print(f"[軽量化不要] 三角形数: {current_faces}（{target_faces} 以下）")
+        print(f"[軽量化不要] 三角形面数: {current_faces} ({target_faces} 以下)")
 
     ms.save_current_mesh(output_file_path, binary=True)
-
     return {
         'original_faces': current_faces,
         'new_faces': ms.current_mesh().face_number()
     }
 
+
 def convert_stl_to_gltf(input_stl_path, output_gltf_path):
     try:
-        # STLファイルを読み込み
         mesh = trimesh.load_mesh(input_stl_path)
-
-        # 質感を指定（例：赤っぽい金属）
         material = PBRMaterial(
             name="RedMetal",
-            baseColorFactor=[0.8, 0.0, 0.0, 1.0],  # RGBA（赤）
+            baseColorFactor=[0.8, 0.0, 0.0, 1.0],
             metallicFactor=1.0,
             roughnessFactor=0.2
         )
-
-        # マテリアルを適用
         mesh.visual.material = material
-
-        # シーンに追加してエクスポート
         scene = trimesh.Scene()
         scene.add_geometry(mesh)
-
         glb_data = scene.export(file_type='glb')
 
         with open(output_gltf_path, 'wb') as f:
             f.write(glb_data)
-
         return True
     except Exception as e:
         print(f"変換エラー: {e}")
         return False
 
-# STL掲示板ページ
+
 @bp.route('/', methods=['GET', 'POST'])
 def index():
     form = STLPostForm()
-    selected_post_id = request.args.get('post_id', type=int)
+    selected_post_id = request.args.get('post_id')
     page = request.args.get('page', 1, type=int)
 
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash("投稿するにはログインが必要です", "warning")
             return redirect(url_for("users.login"))
-        
+
         stl_file = form.stl_file.data
         glb_filename = None
         glb_file_path = None
@@ -130,7 +134,7 @@ def index():
                         reduced_temp_path = temp_path.replace(".stl", "_reduced.stl")
                         reduce_stl_size(temp_path, reduced_temp_path)
                         upload_stl_path = reduced_temp_path
-                        flash('ファイルが大きいため自動的に軽量化しました（約5MB以内）', 'warning')
+                        flash('ファイルが大きいため自動的に軽量化しました（元5MB以下）', 'warning')
                     else:
                         upload_stl_path = temp_path
 
@@ -144,9 +148,7 @@ def index():
                             glb_data,
                             BUCKET_NAME,
                             glb_s3_key,
-                            ExtraArgs={
-                                'ContentType': 'model/gltf-binary',                                
-                            }
+                            ExtraArgs={'ContentType': 'model/gltf-binary'}
                         )
 
                     os.remove(temp_path)
@@ -165,33 +167,60 @@ def index():
                 flash('STLファイルのみアップロードできます', 'danger')
                 return redirect(url_for('stl_board.index'))
 
-        post = STLPost(
+        # DynamoDB に保存
+        post_id = create_stl_post(
             title=form.title.data,
             content=form.content.data,
-            user_id=2,  # テスト用固定値
+            user_id=current_user.id,
             stl_filename=glb_filename,
             stl_file_path=glb_file_path
         )
-        db.session.add(post)
-        db.session.commit()
         flash('投稿が作成されました', 'success')
         return redirect(url_for('stl_board.index'))
 
-    posts = STLPost.query.filter(STLPost.stl_file_path.isnot(None)).order_by(
-        STLPost.created_at.desc()
-    ).paginate(page=page, per_page=5)
-
-    # ⭐ ここから追記します！
-    for post in posts.items:
-        if post.stl_file_path:
-            post.s3_presigned_url = f"https://shibuya8020.s3.amazonaws.com/{post.stl_file_path}"
+    # DynamoDB から投稿を取得
+    posts_data = paginate_stl_posts(page=page, per_page=5)
+    
+    # SimpleNamespace に変換してテンプレート互換性を保つ
+    posts_items = []
+    for it in posts_data["items"]:
+        post_obj = SimpleNamespace(
+            post_id=it.get("post_id"),
+            title=it.get("title", ""),
+            content=it.get("content", ""),
+            user_id=int(it.get("user_id", 0)),
+            stl_filename=it.get("stl_filename", ""),
+            stl_file_path=it.get("stl_file_path", ""),
+            created_at=it.get("created_at", ""),
+            s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{it.get('stl_file_path', '')}" if it.get("stl_file_path") else None
+        )
+        posts_items.append(post_obj)
+    
+    posts = SimpleNamespace(
+        items=posts_items,
+        page=posts_data["page"],
+        pages=posts_data["pages"],
+        has_prev=posts_data["has_prev"],
+        has_next=posts_data["has_next"],
+        prev_num=posts_data["prev_num"],
+        next_num=posts_data["next_num"],
+    )
 
     selected_post = None
     if selected_post_id:
-        selected_post = STLPost.query.get_or_404(selected_post_id)
+        post_item = get_stl_post_by_id(selected_post_id)
+        if post_item:
+            selected_post = SimpleNamespace(
+                post_id=post_item.get("post_id"),
+                title=post_item.get("title", ""),
+                content=post_item.get("content", ""),
+                user_id=int(post_item.get("user_id", 0)),
+                stl_file_path=post_item.get("stl_file_path", ""),
+                s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{post_item.get('stl_file_path', '')}" if post_item.get("stl_file_path") else None
+            )
 
-    comments = STLComment.query.all()
-    likes = STLLike.query.all()
+    comments = get_all_comments()
+    likes = get_all_likes()
 
     return render_template('pages/stl_board.html',
                            form=form,
@@ -201,62 +230,67 @@ def index():
                            comments=comments,
                            likes=likes)
 
-@bp.route('/add_comment/<int:post_id>', methods=['POST'])
+
+@bp.route('/add_comment/<post_id>', methods=['POST'])
 @login_required
 def add_comment(post_id):
     content = request.form.get('content')
-    parent_id = request.form.get('parent_id')  # 返信対象があれば
+    parent_id = request.form.get('parent_id')
 
     if not content:
         flash('コメント内容を入力してください', 'danger')
         return redirect(url_for('stl_board.index', post_id=post_id))
 
-    comment = STLComment(
-        content=content,
+    create_stl_comment(
         post_id=post_id,
         user_id=current_user.id,
+        content=content,
         parent_comment_id=parent_id if parent_id else None
     )
-    db.session.add(comment)
-    db.session.commit()
     flash('コメントを追加しました', 'success')
     return redirect(url_for('stl_board.index', post_id=post_id))
 
-@bp.route('/like_post/<int:post_id>', methods=['POST'])
+
+@bp.route('/like_post/<post_id>', methods=['POST'])
 @login_required
 def like_post(post_id):
-    post = STLPost.query.get_or_404(post_id)
-    
-    existing_like = STLLike.query.filter_by(post_id=post_id, user_id=current_user.id).first()
+    post = get_stl_post_by_id(post_id)
+    if not post:
+        abort(404)
+
+    existing_like = get_like_by_post_and_user(post_id, current_user.id)
     if existing_like:
-        db.session.delete(existing_like)
-        db.session.commit()
+        delete_stl_like(existing_like["like_id"])
         flash('いいねを取り消しました', 'info')
     else:
-        like = STLLike(post_id=post_id, user_id=current_user.id)
-        db.session.add(like)
-        db.session.commit()
+        create_stl_like(post_id=post_id, user_id=current_user.id)
         flash('いいねしました', 'success')
 
     return redirect(url_for('stl_board.index', post_id=post_id))
 
-@bp.route('/delete/<int:post_id>', methods=['POST'])
+
+@bp.route('/delete/<post_id>', methods=['POST'])
 @login_required
 def delete_post(post_id):
-    post = STLPost.query.get_or_404(post_id)
+    post = get_stl_post_by_id(post_id)
+    if not post:
+        abort(404)
 
     # 投稿者 or 管理者でなければ403
-    if current_user.id != post.user_id and not current_user.administrator:
+    if current_user.id != int(post.get("user_id", 0)) and not current_user.administrator:
         abort(403)
 
     try:
         # S3から削除
-        if post.stl_file_path:           
-            s3.delete_object(Bucket=BUCKET_NAME, Key=post.stl_file_path)
+        if post.get("stl_file_path"):
+            s3.delete_object(Bucket=BUCKET_NAME, Key=post["stl_file_path"])
 
-        # DBから削除
-        db.session.delete(post)
-        db.session.commit()
+        # 関連するコメントといいねも削除
+        delete_comments_by_post(post_id)
+        delete_likes_by_post(post_id)
+        
+        # 投稿を削除
+        delete_stl_post(post_id)
         flash('投稿を削除しました', 'success')
     except Exception as e:
         flash(f'削除時にエラーが発生しました: {str(e)}', 'danger')
@@ -264,21 +298,27 @@ def delete_post(post_id):
     return redirect(url_for('stl_board.index'))
 
 
-# STLファイルのダウンロード
 @bp.route('/download/<filename>')
 def download(filename):
     upload_folder = os.path.join(current_app.static_folder, 'uploads', 'stl')
     return send_from_directory(upload_folder, filename)
 
-@bp.route('/post/<int:post_id>')
+
+@bp.route('/post/<post_id>')
 def view_post(post_id):
-    post = STLPost.query.get_or_404(post_id)
-    
-    # S3 URLの設定（index関数と同様）
-    if post.stl_file_path:
-        post.s3_presigned_url = f"https://shibuya8020.s3.amazonaws.com/{post.stl_file_path}"
-    
-    comments = STLComment.query.filter_by(post_id=post_id).all()
-    
-    # 'pages/'フォルダ内のテンプレートを指定
-    return render_template('pages/view_STL_post.html', post=post, comments=comments)
+    post_item = get_stl_post_by_id(post_id)
+    if not post_item:
+        abort(404)
+
+    post = SimpleNamespace(
+        post_id=post_item.get("post_id"),
+        title=post_item.get("title", ""),
+        content=post_item.get("content", ""),
+        user_id=int(post_item.get("user_id", 0)),
+        stl_file_path=post_item.get("stl_file_path", ""),
+        s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{post_item.get('stl_file_path', '')}" if post_item.get("stl_file_path") else None
+    )
+
+    comments = get_comments_by_post(post_id)
+
+    return render_template('pages/stl_post_detail.html', post=post, comments=comments)

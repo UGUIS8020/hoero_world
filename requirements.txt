@@ -25,3 +25,4 @@ selenium==4.38.0
 moviepy==2.2.1
 openai==2.9.0
 qdrant_client==1.16.1
+imageio-ffmpeg==0.4.8

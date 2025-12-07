@@ -78,7 +78,8 @@ class User(db.Model, UserMixin):
         return " ".join(filter(None, parts))
            
     def count_posts(self, userid):
-        return BlogPost.query.filter_by(user_id=userid).count()
+        from utils.blog_dynamo import list_posts_by_user
+        return len(list_posts_by_user(userid))
 
 class BlogPost(db.Model):
     __tablename__ = 'blog_post'
@@ -129,52 +130,7 @@ class BlogCategory(db.Model):
 
     # インスタンスメソッドなら id を引数に取らず self.id を使う
     def count_posts(self):
-        # lazy='dynamic' の場合は self.posts.count()
-        return db.session.query(BlogPost.id).filter_by(category_id=self.id).count()
+        from utils.blog_dynamo import list_posts_by_category
+        return len(list_posts_by_category(self.id))
 
     
-class STLPost(db.Model):
-    __tablename__ = 'stl_posts'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    content = db.Column(db.Text, nullable=True)
-    stl_filename = db.Column(db.String(255), nullable=True)
-    stl_file_path = db.Column(db.String(255), nullable=True)  
-    gltf_file_path = db.Column(db.String(255), nullable=True)      
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    
-    # リレーションシップ
-    author = db.relationship('User', backref=db.backref('stl_posts', lazy='dynamic'))
-
-class STLComment(db.Model):
-    __tablename__ = 'stl_comments'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    post_id = db.Column(db.Integer, db.ForeignKey('stl_posts.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    parent_comment_id = db.Column(db.Integer, db.ForeignKey('stl_comments.id'), nullable=True)
-    
-    # リレーションシップ
-    post = db.relationship('STLPost', backref=db.backref('comments', lazy='dynamic'))
-    author = db.relationship('User', backref=db.backref('stl_comments', lazy='dynamic'))
-    parent_comment = db.relationship('STLComment', remote_side=[id], backref='replies')
-
-class STLLike(db.Model):
-    __tablename__ = 'stl_likes'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('stl_posts.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    # リレーションシップ
-    post = db.relationship('STLPost', backref=db.backref('likes', lazy='dynamic'))
-    user = db.relationship('User', backref=db.backref('stl_likes', lazy='dynamic'))
-    
-    def __repr__(self):
-        return f'<STLPost {self.title}>'

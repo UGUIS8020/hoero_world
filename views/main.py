@@ -1231,35 +1231,76 @@ def search():
         searchtext = form.searchtext.data
     elif request.method == 'GET':
         form.searchtext.data = ""
-    # ブログ記事の取得
+    
+    # DynamoDB からブログ記事を取得して検索
     page = request.args.get('page', 1, type=int)
-    blog_posts = BlogPost.query.filter((BlogPost.text.contains(searchtext)) | (BlogPost.title.contains(searchtext)) | (BlogPost.summary.contains(searchtext))).order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
-
-    # 最新記事の取得
-    recent_blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).limit(5).all()
-
-    # カテゴリの取得
-    blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
-
+    all_posts = list_all_posts(limit=1000)
+    
+    # 検索フィルタリング
+    if searchtext:
+        filtered_posts = [
+            p for p in all_posts 
+            if searchtext.lower() in p.get("title", "").lower() 
+            or searchtext.lower() in p.get("text", "").lower()
+            or searchtext.lower() in p.get("summary", "").lower()
+        ]
+    else:
+        filtered_posts = all_posts
+    
+    blog_posts = paginate_posts(filtered_posts, page=page, per_page=10)
+    
+    # 最新記事
+    recent_items = list_recent_posts(limit=5)
+    recent_blog_posts = [
+        SimpleNamespace(
+            post_id=int(it.get("post_id")),
+            title=it.get("title", ""),
+            featured_image=it.get("featured_image", ""),
+        )
+        for it in recent_items
+    ]
+    
+    # カテゴリ
+    blog_categories = list_blog_categories_all()
+    
     return render_template('main/index.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, form=form, searchtext=searchtext)
 
 @bp.route('/<int:blog_category_id>/category_posts')
 def category_posts(blog_category_id):
     form = BlogSearchForm()
-
-    # カテゴリ名の取得
-    blog_category = BlogCategory.query.filter_by(id=blog_category_id).first_or_404()
-
-    # ブログ記事の取得
+    
+    # DynamoDB からカテゴリ情報を取得
+    categories = list_blog_categories_all()
+    blog_category = None
+    for cat in categories:
+        if int(cat.get("category_id", 0)) == blog_category_id:
+            blog_category = SimpleNamespace(
+                id=int(cat["category_id"]),
+                name=cat.get("name", ""),
+            )
+            break
+    if not blog_category:
+        abort(404)
+    
+    # カテゴリ別のブログ記事を取得
     page = request.args.get('page', 1, type=int)
-    blog_posts = BlogPost.query.filter_by(category_id=blog_category_id).order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
-
-    # 最新記事の取得
-    recent_blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).limit(5).all()
-
-    # カテゴリの取得
-    blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
-
+    category_items = list_posts_by_category(blog_category_id)
+    blog_posts = paginate_posts(category_items, page=page, per_page=10)
+    
+    # 最新記事
+    recent_items = list_recent_posts(limit=5)
+    recent_blog_posts = [
+        SimpleNamespace(
+            post_id=int(it.get("post_id")),
+            title=it.get("title", ""),
+            featured_image=it.get("featured_image", ""),
+        )
+        for it in recent_items
+    ]
+    
+    # カテゴリ一覧
+    blog_categories = list_blog_categories_all()
+    
     return render_template('main/index.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, blog_category=blog_category, form=form)
 
 def verify_recaptcha(response_token):

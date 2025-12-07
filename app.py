@@ -61,6 +61,9 @@ BLOG_POSTS_TABLE_NAME = os.getenv("BLOG_POSTS_TABLE_NAME", "hoero-blog-posts")
 HOERO_USERS_TABLE_NAME = os.getenv("HOERO_USERS_TABLE_NAME", "hoero-users")
 INQUIRY_TABLE_NAME = os.getenv("INQUIRY_TABLE_NAME", "hoero-inquiry")
 BLOG_CATEGORIES_TABLE_NAME = os.getenv("BLOG_CATEGORIES_TABLE_NAME", "hoero-blog-categories")
+STL_POSTS_TABLE_NAME = os.getenv("STL_POSTS_TABLE_NAME", "hoero-stl-posts")
+STL_COMMENTS_TABLE_NAME = os.getenv("STL_COMMENTS_TABLE_NAME", "hoero-stl-comments")
+STL_LIKES_TABLE_NAME = os.getenv("STL_LIKES_TABLE_NAME", "hoero-stl-likes")
 
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 
@@ -71,6 +74,9 @@ flask_app.config["BLOG_POSTS_TABLE_NAME"] = BLOG_POSTS_TABLE_NAME
 flask_app.config["BLOG_POSTS_TABLE"] = dynamodb.Table(BLOG_POSTS_TABLE_NAME)
 flask_app.config["HOERO_USERS_TABLE"] = dynamodb.Table(HOERO_USERS_TABLE_NAME)
 flask_app.config["BLOG_CATEGORIES_TABLE"] = dynamodb.Table(BLOG_CATEGORIES_TABLE_NAME)
+flask_app.config["STL_POSTS_TABLE"] = dynamodb.Table(STL_POSTS_TABLE_NAME)
+flask_app.config["STL_COMMENTS_TABLE"] = dynamodb.Table(STL_COMMENTS_TABLE_NAME)
+flask_app.config["STL_LIKES_TABLE"] = dynamodb.Table(STL_LIKES_TABLE_NAME)
 
 # デバッグ出力
 sys.stdout.write(f"DEBUG: AWS_REGION = {AWS_REGION}\n")

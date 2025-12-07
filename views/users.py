@@ -1,10 +1,14 @@
 from flask import render_template, url_for, redirect, session, flash, request, abort
 from flask_login import login_user, logout_user, login_required, current_user
-from models.common import User, BlogPost, BlogCategory
+from models.common import User, BlogPost
+from models.dynamodb_category import list_blog_categories_all
 from models.users import RegistrationForm, LoginForm, UpdateUserForm
 from models.main import BlogSearchForm
 from flask import Blueprint
 from extensions import db
+
+from utils.blog_dynamo import list_posts_by_user, list_recent_posts, paginate_posts
+from types import SimpleNamespace
 
 bp = Blueprint('users', __name__, url_prefix='/users', template_folder='hoero_world/templates', static_folder='hoero_world/static')
 
@@ -145,14 +149,23 @@ def user_posts(user_id):
     # ユーザーの取得
     user = User.query.filter_by(id=user_id).first_or_404()
 
-    # ブログ記事の取得
+    # DynamoDB からブログ記事を取得
     page = request.args.get('page', 1, type=int)
-    blog_posts = BlogPost.query.filter_by(user_id=user_id).order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
+    user_posts_items = list_posts_by_user(user_id)
+    blog_posts = paginate_posts(user_posts_items, page=page, per_page=10)
 
-    # 最新記事の取得
-    recent_blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).limit(5).all()
+    # 最新記事
+    recent_items = list_recent_posts(limit=5)
+    recent_blog_posts = [
+        SimpleNamespace(
+            post_id=int(it.get("post_id")),
+            title=it.get("title", ""),
+            featured_image=it.get("featured_image", ""),
+        )
+        for it in recent_items
+    ]
 
     # カテゴリの取得
-    blog_categories = BlogCategory.query.order_by(BlogCategory.id.asc()).all()
+    blog_categories = list_blog_categories_all()
 
     return render_template('users/index_users.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, user=user, form=form)    
