@@ -235,10 +235,10 @@
               </li> 
 
               <li class="nav-item">
-              <a href="{{ url_for('users.account', user_id=current_user.id) }}"
-                class="navbar-text ms-3 no-underline {% if current_user.administrator %}admin-name{% else %}user-name{% endif %}">
-                {{ current_user.display_name[:10] }}
-              </a>
+                <a href="{{ url_for('users.account_me') }}"
+                  class="navbar-text ms-3 no-underline {% if current_user.administrator %}admin-name{% else %}user-name{% endif %}">
+                  {{ current_user.display_name[:10] }}
+                </a>
               </li>
 
               {% else %}
