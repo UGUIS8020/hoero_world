@@ -48,25 +48,42 @@
                                 <tbody>
                                     {% for user in users.items %}
                                     <tr>
-                                        <td>{{ user.id }}</td>
-                                        <td>{{ display_name | truncate(10) }}</td>
+                                        {# 1列目: 単純に連番でOK #}
+                                        <td>{{ loop.index }}</td>
+
+                                        {# 2列目: ユーザー名 #}
+                                        <td>{{ user.display_name | truncate(10) }}</td>
+
+                                        {# 3列目: メールアドレス #}
                                         <td>{{ user.email | truncate(20) }}</td>
-                                        <td>{{ user.administrator }}</td>
-                                        <td>{{ user.count_posts(user.user_id) }}</td>
+
+                                        {# 4列目: 管理者フラグ（True / False を ○ / - にしてもよい） #}
                                         <td>
-                                            {% if user.email == current_user.email %}
-                                                <!-- 自分自身のときだけ、DynamoDB版アカウント編集へ -->
-                                                <a href="{{ url_for('users.account_me') }}" class="btn btn-secondary">
-                                                編集
-                                                </a>
-                                            {% else %}
-                                                <!-- まだ他ユーザー編集は未対応なのでダミー表示 -->
-                                                <span class="text-muted">-</span>
-                                            {% endif %}
-                                            </td>
+                                        {% if user.is_administrator %}
+                                            管理者
+                                        {% else %}
+                                            一般
+                                        {% endif %}
+                                        </td>
+
+                                        {# 5列目: ブログ投稿数（事前に user.post_count を作ってあればそのまま表示） #}
+                                        <td>{{ user.post_count }}</td>
+
+                                        {# 6列目: 変更ボタン #}
+                                        <td>
+                                        {% if user.email == current_user.email %}
+                                            <!-- 自分自身のときだけ、DynamoDB版アカウント編集へ -->
+                                            <a href="{{ url_for('users.account_me') }}" class="btn btn-secondary">
+                                            編集
+                                            </a>
+                                        {% else %}
+                                            <!-- まだ他ユーザー編集は未対応なのでダミー表示 -->
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
-                                </tbody>
+                                    </tbody>
                             </table>
                         </div>    
                     </div>

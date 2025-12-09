@@ -88,51 +88,40 @@ def logout():
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
-    # ログイン中の一般ユーザーは登録ページに入れない（管理者 or 未ログインのみ）
     if current_user.is_authenticated and not current_user.is_administrator:
         return redirect(url_for('main.index'))
 
     form = RegistrationForm()
 
     if form.validate_on_submit():
-        users_table = current_app.config["HOERO_USERS_TABLE"]
-        email = form.email.data.strip()
+        table = current_app.config["HOERO_USERS_TABLE"]
+
         now = datetime.now(timezone.utc).isoformat()
+        password_hash = generate_password_hash(form.password.data)
 
-        # ① すでに同じ user_id（= email）のユーザーがいないかチェック
-        existing = users_table.get_item(Key={"user_id": email})
-        if "Item" in existing:
-            flash("このメールアドレスのユーザーはすでに存在します。", "danger")
-            return render_template("users/register.html", form=form)
-
-        # ② パスワードハッシュを作成
-        password_hash = generate_password_hash(form.password.data)  # method はデフォルトでOK
-
-        # ③ DynamoDB に保存する item を作成（user_id = email）
         item = {
-            "user_id": email,                 # ← PK（ログインID）
-            "email": email,
+            "user_id": form.email.data,      # ← ログインID = email
+            "email": form.email.data,
             "display_name": form.display_name.data,
-            "sender_name": form.sender_name.data or form.display_name.data,
-            "full_name": form.full_name.data,
-            "phone": form.phone.data,
-            "postal_code": form.postal_code.data,
-            "prefecture": form.prefecture.data,
-            "address": form.address.data,
-            "building": form.building.data,
+            "sender_name": form.sender_name.data or "",
+            "full_name": form.full_name.data or "",
+            "phone": form.phone.data or "",
+            "postal_code": form.postal_code.data or "",
+            "prefecture": form.prefecture.data or "",
+            "address": form.address.data or "",
+            "building": form.building.data or "",
             "password_hash": password_hash,
-            "administrator": 0,               # 新規ユーザーは通常ユーザー
+            "administrator": 0,
             "created_at": now,
             "updated_at": now,
         }
 
-        # ④ DynamoDB に put
-        users_table.put_item(Item=item)
+        table.put_item(Item=item)
 
-        flash("ユーザー登録が完了しました。ログインしてください。", "success")
-        return redirect(url_for("users.login"))
+        flash('ユーザー登録が完了しました。ログインしてください。', 'success')
+        return redirect(url_for('users.login'))
 
-    return render_template("users/register.html", form=form)
+    return render_template('users/register.html', form=form)
 
 @bp.route('/user_maintenance')
 @login_required
@@ -322,33 +311,33 @@ def account(user_id):
         
     return render_template('users/account.html', form=form, user=user)
 
-@bp.route('/<int:user_id>/delete', methods=['GET', 'POST'])
-@login_required
-def delete_user(user_id):
-    user =User.query.get_or_404(user_id)
-    if not current_user.is_administrator:
-        abort(403)
-    if user.is_administrator:
-        flash('管理者は削除できません')
-        return redirect(url_for('users.account', user_id=user_id))
-    db.session.delete(user)
-    db.session.commit()
-    flash('ユーザーアカウントが削除されました')
-    return redirect(url_for('users.user_maintenance'))
 
-@bp.route('/<int:user_id>/user_posts')
+@bp.route('/<user_id>/user_posts')  # ★ int をやめて文字列
 @login_required
 def user_posts(user_id):
     form = BlogSearchForm()
-    # ユーザーの取得
-    user = User.query.filter_by(id=user_id).first_or_404()
 
-    # DynamoDB からブログ記事を取得
+    # DynamoDB からユーザー情報取得
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    resp = users_table.get_item(Key={"user_id": user_id})
+    item = resp.get("Item")
+    if not item:
+        abort(404)
+
+    # テンプレート用に SimpleNamespace に変換
+    user = SimpleNamespace(
+        user_id=item["user_id"],
+        display_name=item.get("display_name", ""),
+        email=item.get("user_id", ""),
+        sender_name=item.get("sender_name", ""),
+    )
+
+    # ブログ記事取得（ここは既存の Dynamo ロジックでOK）
     page = request.args.get('page', 1, type=int)
-    user_posts_items = list_posts_by_user(user_id)
+    user_posts_items = list_posts_by_user(user_id)  # 引数は email を渡す
     blog_posts = paginate_posts(user_posts_items, page=page, per_page=10)
 
-    # 最新記事
+    blog_categories = list_blog_categories_all()
     recent_items = list_recent_posts(limit=5)
     recent_blog_posts = [
         SimpleNamespace(
@@ -359,7 +348,11 @@ def user_posts(user_id):
         for it in recent_items
     ]
 
-    # カテゴリの取得
-    blog_categories = list_blog_categories_all()
-
-    return render_template('users/index_users.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, user=user, form=form)    
+    return render_template(
+        'users/index_users.html',
+        blog_posts=blog_posts,
+        recent_blog_posts=recent_blog_posts,
+        blog_categories=blog_categories,
+        user=user,
+        form=form,
+    )    
