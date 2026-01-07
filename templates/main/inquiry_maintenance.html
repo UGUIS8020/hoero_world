@@ -33,15 +33,15 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for inquiry in inquiries.items %}
+                                    {% for inquiry in inquiries["items"] %}
                                     <tr>
-                                        <td>{{ inquiry.id }}</td>
-                                        <td>{{ inquiry.name | truncate(10) }}</td>
-                                        <td>{{ inquiry.email | truncate(20) }}</td>
-                                        <td>{{ inquiry.date.strftime('%Y/%m/%d') }}</td>
-                                        <td>{{ inquiry.title | truncate(20) }}</td>
-                                        <td>{{ inquiry.text | truncate(30) }}</td>
-                                        <td><a href="{{ url_for('main.display_inquiry', inquiry_id=inquiry.id) }}" class="btn btn-secondary">
+                                        <td>{{ inquiry["id"][:8] }}...</td>
+                                        <td>{{ inquiry["name"] | truncate(10) }}</td>
+                                        <td>{{ inquiry["email"] | truncate(20) }}</td>
+                                        <td>{{ inquiry["date"][:10] }}</td>
+                                        <td>{{ inquiry["title"] | truncate(20) }}</td>
+                                        <td>{{ inquiry["text"] | truncate(30) }}</td>
+                                        <td><a href="{{ url_for('main.display_inquiry', inquiry_id=inquiry['id']) }}" class="btn btn-secondary">
                                             詳細
                                         </a></td>
                                     </tr>
@@ -57,23 +57,24 @@
 
     <nav class="my-2" aria-label="Page navigation">
         <ul class="pagination justify-content-center">
-          <li {% if inquiries.has_prev %}class="page-item"{% else %} class="page-item disabled"{% endif %}><a class="page-link" href="{% if inquiries.has_prev %}{{ url_for('main.inquiry_maintenance', page=inquiries.prev_num) }}{% else %}#{% endif %}">前へ</a></li>
+            <li class="page-item {% if not inquiries.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{% if inquiries.has_prev %}{{ url_for('main.inquiry_maintenance', page=inquiries.prev_num) }}{% else %}#{% endif %}">前へ</a>
+            </li>
 
-          {% for page_num in inquiries.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}  
-            {% if page_num %}
-                {% if inquiries.page == page_num %}
-                    <li class="page-item disabled"><a class="page-link" href="#">{{ page_num }}</a></li>
-                {% else %}
+            {% for page_num in range(1, inquiries.pages + 1) %}
+                {% if page_num == inquiries.page %}
+                    <li class="page-item active"><a class="page-link" href="#">{{ page_num }}</a></li>
+                {% elif page_num == 1 or page_num == inquiries.pages or (page_num >= inquiries.page - 2 and page_num <= inquiries.page + 2) %}
                     <li class="page-item"><a class="page-link" href="{{ url_for('main.inquiry_maintenance', page=page_num) }}">{{ page_num }}</a></li>
+                {% elif page_num == inquiries.page - 3 or page_num == inquiries.page + 3 %}
+                    <li class="page-item disabled"><a class="page-link" href="#">&hellip;</a></li>
                 {% endif %}
-            {% else %}
-                <li class="page-item disabled"><a class="page-link" href="#">&hellip;</a></li>
-            {% endif %}
-          {% endfor %}
+            {% endfor %}
 
-          <li {% if inquiries.has_next %}class="page-item"{% else %} class="page-item disabled"{% endif %}><a class="page-link" href="{% if inquiries.has_next %}{{ url_for('main.inquiry_maintenance', page=inquiries.next_num) }}{% else %}#{% endif %}">次へ</a></li>
+            <li class="page-item {% if not inquiries.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{% if inquiries.has_next %}{{ url_for('main.inquiry_maintenance', page=inquiries.next_num) }}{% else %}#{% endif %}">次へ</a>
+            </li>
         </ul>
     </nav>
-
 
 {% endblock %}

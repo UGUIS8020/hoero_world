@@ -32,6 +32,13 @@
                                     </script>
                                 </div> 
                                 <div class="mb-3">
+                                    {{ form.youtube_url.label(class="form-control-label") }}
+                                    {{ render_field(form.youtube_url, class="form-control", placeholder="https://www.youtube.com/watch?v=xxxxxxxxxxx または https://youtu.be/xxxxxxxxxxx") }}
+                                    <small class="text-muted">
+                                        YouTubeリンクを貼ると、投稿ページで埋め込み表示します。
+                                    </small>
+                                </div>
+                                <div class="mb-3">
                                     {{ form.picture.label(class="form-control-label") }}
                                     <br>
                                     
@@ -97,27 +104,7 @@
             </div>
         </div>
     </section>
-
-    <script>
-        function previewImage(input) {
-            const preview = document.getElementById('image-preview');
-            const previewImg = document.getElementById('preview-img');
-            const existingImage = document.getElementById('existing-image');
-            
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewImg.src = e.target.result;
-                    preview.style.display = 'block';
-                    if (existingImage) existingImage.style.display = 'none';
-                }
-                reader.readAsDataURL(input.files[0]);
-            } else {
-                preview.style.display = 'none';
-                if (existingImage) existingImage.style.display = 'block';
-            }
-        }
-        </script>
+    
         <script>
             function previewImage(input) {
                 const preview = document.getElementById('image-preview');

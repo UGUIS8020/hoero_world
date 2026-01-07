@@ -152,6 +152,24 @@ a:active { color: #b22222; text-decoration: none; }
 
 <!-- メインヘッダー -->
 <section class="dental-header">
+  <!-- 管理者メニュー -->
+{% if current_user.is_authenticated and current_user.is_administrator %}
+<ul>         
+    <li class="nav-item">
+    <a class="nav-link {% if request.endpoint == 'main.meziro' %}active{% endif %}" href="{{ url_for('main.meziro') }}">MEZIRO</a>
+    </li>
+    <li class="nav-item">
+    <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
+    </li> 
+    <li class="nav-item">
+    <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
+    </li>  
+</ul>                                    
+{% endif %}
+
+
+
+
     <div class="logo">
         <img src="{{ url_for('static', filename='main/top/logo.png') }}" 
         alt="渋谷歯科技工所ロゴ" 
@@ -169,21 +187,6 @@ a:active { color: #b22222; text-decoration: none; }
     </div>
 </section> 
 
-<!-- 管理者メニュー -->
-{% if current_user.is_authenticated and current_user.is_administrator %}
-<ul>         
-    <li class="nav-item">
-    <a class="nav-link {% if request.endpoint == 'main.meziro' %}active{% endif %}" href="{{ url_for('main.meziro') }}">MEZIRO</a>
-    </li>
-    <li class="nav-item">
-    <a class="nav-link {% if request.endpoint == 'main.ugu_box' %}active{% endif %}" href="{{ url_for('main.ugu_box') }}">UGU_BOX</a>
-    </li> 
-    <li class="nav-item">
-    <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
-    </li>  
-</ul>                                    
-{% endif %}
-
 <!-- 連絡先情報 -->
 <h2>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h2>
 <h2><a href="tel:0489618151">Tel 048-961-8151</a></h2>
@@ -200,8 +203,158 @@ a:active { color: #b22222; text-decoration: none; }
   </div>
 </a>
 
-<h2>技工製品</h2>
-<h2>補綴全般 CAD/CAM全般 ノンクラスプデンチャー バイオブロック IOS対応</h2>           
+
+
+
+
+<!-- ブログセクション -->
+<div class="container my-3">
+  <div class="row mb-2 justify-content-center">
+    <!-- コンテンツ（中央・10/12） -->
+    <div class="col-12 col-md-10">
+
+      <!-- ブログ投稿 -->
+      <section id="blog_post">
+        <p>最新記事</p>
+        <div class="row">
+          {# ここを blog_posts ではなく top_blog_posts にする #}
+          {% for post in top_blog_posts %}
+          <div class="col-md-6 mb-4">
+            <div class="card h-100">
+              <div class="card-body">                
+
+                {# =========================
+                   サムネ表示：YouTube → 動画 → 画像
+                   ========================= #}
+
+                {% if post.youtube_id %}
+                  <!-- YouTube：サムネ画像＋再生アイコン -->
+                  <div class="mb-3" style="text-align: center; position: relative;">
+                    <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
+                       style="display: inline-block; position: relative; width: 250px; height: 140px;">
+
+                      <img
+                        src="https://img.youtube.com/vi/{{ post.youtube_id }}/mqdefault.jpg"
+                        class="img-fluid"
+                        width="250"
+                        height="140"
+                        style="object-fit: cover;"
+                        loading="lazy"
+                        decoding="async"
+                        alt="{{ post.summary }}"
+                      >
+
+                      <!-- 再生アイコンを中央にオーバーレイ -->
+                      <div style="position: absolute; top: 50%; left: 50%;
+                                  transform: translate(-50%, -50%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="white" viewBox="0 0 16 16">
+                          <path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
+                        </svg>
+                      </div>
+
+                      <!-- 「YouTube」ラベル -->
+                      <div style="position: absolute; bottom: 8px; right: 8px;
+                                  background: rgba(0,0,0,0.7); color: white;
+                                  padding: 4px 8px; border-radius: 3px; font-size: 12px;">
+                        YouTube
+                      </div>
+                    </a>
+                  </div>                  
+
+                {% elif post.featured_video %}
+                  <!-- 動画(mp4等)がある場合：サムネ画像＋再生アイコン -->
+                  <div class="mb-3" style="text-align: center; position: relative;">
+                    <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
+                       style="display: inline-block; position: relative; width: 250px; height: 250px;">
+
+                      {% if post.featured_thumbnail %}
+                        <img src="{{ url_for('static', filename='featured_image/' + post.featured_thumbnail) }}"
+                             class="img-fluid"
+                             width="250"
+                             height="250"
+                             style="object-fit: cover;"
+                             loading="lazy"
+                             decoding="async"
+                             alt="{{ post.summary }}">
+                      {% else %}
+                        <!-- サムネが無い場合のフォールバック -->
+                        <div style="background-color: #000; width: 250px; height: 250px;
+                                    display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="white" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                            <path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
+                          </svg>
+                        </div>
+                      {% endif %}
+
+                      <!-- 再生アイコン -->
+                      <div style="position: absolute; top: 50%; left: 50%;
+                                  transform: translate(-50%, -50%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="white" viewBox="0 0 16 16">
+                          <path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
+                        </svg>
+                      </div>
+
+                      <!-- 「動画」ラベル -->
+                      <div style="position: absolute; bottom: 10px; right: 10px;
+                                  background: rgba(0,0,0,0.7); color: white;
+                                  padding: 5px 10px; border-radius: 3px;">
+                        動画
+                      </div>
+                    </a>
+                  </div>
+
+                {% elif post.featured_image %}
+                  <!-- 画像のみの場合 -->
+                  <div class="mb-3" style="text-align: center;">
+                    <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}"
+                         class="img-fluid"
+                         width="250"
+                         height="250"
+                         style="object-fit: scale-down;"
+                         loading="lazy"
+                         decoding="async"
+                         alt="{{ post.summary }}">
+                  </div>
+                {% endif %}
+
+                <h3>
+                  <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
+                     class="card-title text-decoration-none">
+                    <span class="fst-italic">
+                      {{ post.title or post.summary | truncate(14) }}
+                    </span>
+                  </a>
+                </h3>
+
+                <p>
+                  {{ post.date[:10] if post.date }}
+                  by: {{ post.author_name or 'Unknown' }}
+                </p>
+
+                <p class="card-text">{{ post.summary | truncate(40) }}</p>
+
+                <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
+                   class="btn btn-light">
+                  続きを読む…
+                </a>
+
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+         
 
 <!-- 自家歯牙移植セクション -->
 <a href="{{ url_for('pages.root_replica') }}" target="_self">
@@ -618,182 +771,7 @@ a:active { color: #b22222; text-decoration: none; }
   </div>
 </div>
 
-<!-- ブログセクション -->
-<div class="container my-3">
-    <div class="row mb-2">
-        <!-- コンテンツ -->
-        <div class="col-md-8">
-            <!-- ブログ投稿 -->
-            <section id="blog_post">
-                <div class="row">
-                    {# ここを blog_posts ではなく top_blog_posts にする #}
-                    {% for post in top_blog_posts %}
-                    <div class="col-md-6 mb-4">
-                        <div class="card h-100">
-                            <div class="card-body">
-                              {% if post.featured_video %}
-                              <!-- 動画がある場合：サムネ画像＋再生アイコン -->
-                              <div class="mb-3" style="text-align: center; position: relative;">
-                                  <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
-                                    style="display: inline-block; position: relative;">
-                                      {% if post.featured_thumbnail %}
-                                          <img src="{{ url_for('static', filename='featured_image/' + post.featured_thumbnail) }}"
-                                              class="img-fluid"
-                                              width="250"
-                                              height="250"
-                                              style="object-fit: cover;"
-                                              loading="lazy"
-                                              decoding="async"
-                                              alt="{{ post.summary }}">
-                                      {% else %}
-                                          {# サムネがまだ無い場合のフォールバック（今の黒背景のままでもOK） #}
-                                          <div style="background-color: #000; width: 250px; height: 250px;
-                                                      display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                                              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="white" viewBox="0 0 16 16">
-                                                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                                  <path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
-                                              </svg>
-                                          </div>
-                                      {% endif %}
 
-                                      <!-- 再生アイコンを中央にオーバーレイ -->
-                                      <div style="position: absolute; top: 50%; left: 50%;
-                                                  transform: translate(-50%, -50%);">
-                                          <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="white" viewBox="0 0 16 16">
-                                              <path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
-                                          </svg>
-                                      </div>
-
-                                      <!-- 「動画」ラベル -->
-                                      <div style="position: absolute; bottom: 10px; right: 10px;
-                                                  background: rgba(0,0,0,0.7); color: white;
-                                                  padding: 5px 10px; border-radius: 3px;">
-                                          動画
-                                      </div>
-                                  </a>
-                              </div>
-                          {% elif post.featured_image %}
-                              <!-- 画像のみの場合 -->
-                              <div class="mb-3" style="text-align: center;">
-                                  <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}"
-                                      class="img-fluid"
-                                      width="250"
-                                      height="250"
-                                      style="object-fit: scale-down;"
-                                      loading="lazy"
-                                      decoding="async"
-                                      alt="{{ post.summary }}">
-                              </div>
-                          {% endif %}
-
-                                <h3>
-                                    <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
-                                       class="card-title text-decoration-none">
-                                        <span class="fst-italic">
-                                            {{ post.title or post.summary | truncate(14) }}
-                                        </span>
-                                    </a>
-                                </h3>
-
-                                <p>
-                                    {{ post.date[:10] if post.date }}
-                                    by: {{ post.author_name or 'Unknown' }}
-                                </p>
-
-                                <p class="card-text">{{ post.summary | truncate(40) }}</p>
-
-                                <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}"
-                                   class="btn btn-light">
-                                    続きを読む…
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </section>
-        </div>
-        
-        <!-- サイドバー -->
-        <div class="col-md-4">
-            <div class="position-sticky" style="top: 2rem;">
-                <!-- 検索欄 -->
-                <div class="container-fluid mb-3">
-                    <form action="{{ url_for('main.search') }}" class="d-flex" method="POST">
-                        {{ form.hidden_tag() }}
-                        {{ render_field(form.searchtext, class="form-control me-2", placeholder="検索するテキストを入力") }}
-                        {{ form.submit(class="btn btn-outline-success") }}
-                    </form>
-                </div>
-                
-                <!-- 会社情報 -->
-                <div class="p-4 mb-2 bg-light">
-                    <h4 class="fst-italic">サイト情報</h4>
-                    <p>当サイトは現在テスト運用中です。</p>
-                </div>
-                
-                <!-- 最新記事 -->
-                <div class="p-4">
-                    <h4 class="fst-italic">RECENT POST <span class="ms-2 fs-6">最新記事</span></h4>
-                    <hr>
-                    <ol class="list-unstyled">
-                        {% for recent_post in recent_blog_posts %}
-                        <li>
-                            <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.post_id) }}" class="text-decoration-none">
-                                {% if recent_post.featured_image and recent_post.featured_image != "none" %}
-                                    <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}"
-                                        class="img-fluid" width="90" height="50">
-                                {% endif %}
-                                <span class="ms-2">{{ recent_post.title | truncate(14) }}</span>
-                            </a>
-                        </li>
-                        <hr>
-                        {% endfor %}
-                    </ol>
-                </div>
-                
-                <!-- カテゴリ一覧 -->
-                <div class="p-4">
-                    <h4 class="fst-italic">CATEGORY <span class="ms-2 fs-6">カテゴリ一覧</span></h4>
-                    <hr>
-                    <ol class="list-unstyled">
-                        {% for blog_category in blog_categories %}
-                        <li>
-                            <a href="{{ url_for('main.category_posts', blog_category_id=blog_category.id) }}" class="text-decoration-none">
-                                <span class="ms-2">{{ blog_category.category | truncate(20) }}</span>
-                            </a>
-                        </li>
-                        <hr>
-                        {% endfor %}
-                    </ol>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- ページネーション -->
-    <div class="row mb-2">
-        <nav class="my-2" aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-              <li {% if blog_posts.has_prev %}class="page-item"{% else %} class="page-item disabled"{% endif %}><a class="page-link" href="{% if blog_posts.has_prev %}{{ url_for('main.index', page=blog_posts.prev_num) }}{% else %}#{% endif %}">前へ</a></li>
-    
-              {% for page_num in blog_posts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}  
-                {% if page_num %}
-                    {% if blog_posts.page == page_num %}
-                        <li class="page-item disabled"><a class="page-link" href="#">{{ page_num }}</a></li>
-                    {% else %}
-                        <li class="page-item"><a class="page-link" href="{{ url_for('main.index', page=page_num) }}">{{ page_num }}</a></li>
-                    {% endif %}
-                {% else %}
-                    <li class="page-item disabled"><a class="page-link" href="#">&hellip;</a></li>
-                {% endif %}
-              {% endfor %}
-    
-              <li {% if blog_posts.has_next %}class="page-item"{% else %} class="page-item disabled"{% endif %}><a class="page-link" href="{% if blog_posts.has_next %}{{ url_for('main.index', page=blog_posts.next_num) }}{% else %}#{% endif %}">次へ</a></li>
-            </ul>
-        </nav>
-    </div>
-</div>
 
 <!-- YouTube動画の遅延読み込み用JavaScript -->
 <script>

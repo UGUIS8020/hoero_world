@@ -174,10 +174,9 @@
               
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.info' %}active{% endif %}" href="{{ url_for('main.info') }}">会社情報</a>
-              </li>
-             
+              </li>           
               
-            </ul>
+            
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.root_replica' %}active{% endif %}" href="{{ url_for('pages.root_replica') }}">自家歯牙移植用レプリカ</a>
@@ -236,10 +235,10 @@
               </li> 
 
               <li class="nav-item">
-              <a href="{{ url_for('users.account', user_id=current_user.id) }}"
-                class="navbar-text ms-3 no-underline {% if current_user.administrator %}admin-name{% else %}user-name{% endif %}">
-                {{ current_user.display_name[:10] }}
-              </a>
+                <a href="{{ url_for('users.account_me') }}"
+                  class="navbar-text ms-3 no-underline {% if current_user.administrator %}admin-name{% else %}user-name{% endif %}">
+                  {{ current_user.display_name[:10] }}
+                </a>
               </li>
 
               {% else %}

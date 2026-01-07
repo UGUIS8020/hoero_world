@@ -1,6 +1,22 @@
 {% extends "common/base.html" %}
 {% block content %}
 
+<style>
+.recent-thumb{
+  width: 90px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.post-body{
+  white-space: pre-wrap;   /* 改行を反映 */
+  word-break: break-word;  /* 長文URLなどのはみ出し対策 */
+}
+</style>
+
 <header id="page-header">        
     <div class="container my-3 bg-light">
         <div class="row">
@@ -21,29 +37,90 @@
     <div class="row mb-2">
         <!--コンテンツ-->
         <div class="col-md-8">
+
             <!--ブログ投稿-->
             <section id="blog_post">
                 <div class="container py-2 bg-light">
-                    {% if post.featured_video %}
-                        <!-- 動画がある場合 -->
-                        <div class="mb-3" style="text-align: center;">
-                            <video
-                                controls
-                                muted          {# ← これを追加 #}
-                                playsinline    {# iOSでの挙動安定用（任意） #}
-                                style="max-width: 100%; height: auto;">
-                                <source src="{{ post.featured_video }}" type="video/mp4">
-                                お使いのブラウザは動画タグをサポートしていません。
-                            </video>
+                    {% if post.youtube_embed_url %}
+                        <!-- YouTubeがある場合（APIで生成：自動再生＋常時ミュート） -->
+                        <div class="mb-3 ratio ratio-16x9">
+                            <div id="yt-player" data-embed-url="{{ post.youtube_embed_url }}"></div>
                         </div>
+
+                        <script>
+                        (function () {
+                            const el = document.getElementById("yt-player");
+                            if (!el) return;
+
+                            // post.youtube_embed_url は "https://www.youtube.com/embed/VIDEO_ID" を想定
+                            const embedUrl = el.dataset.embedUrl || "";
+                            const m = embedUrl.match(/\/embed\/([A-Za-z0-9_-]{6,})/);
+                            if (!m) return;
+                            const videoId = m[1];
+
+                            function createPlayer() {
+                            const player = new YT.Player("yt-player", {
+                                videoId: videoId,
+                                playerVars: {
+                                autoplay: 1,
+                                mute: 1,
+                                playsinline: 1,
+                                rel: 0,
+                                modestbranding: 1
+                                },
+                                events: {
+                                onReady: function (e) {
+                                    e.target.mute();
+                                    e.target.playVideo();
+                                },
+                                onStateChange: function (e) {
+                                    // 再生のたびに必ずミュート（2回目で爆音になる事故防止）
+                                    if (e.data === YT.PlayerState.PLAYING) {
+                                    e.target.mute();
+                                    }
+                                }
+                                }
+                            });
+
+                            // デバッグしたい時用（不要なら消してOK）
+                            window._ytPlayer = player;
+                            }
+
+                            // APIがすでにロード済みなら即生成、未ロードなら読み込み
+                            if (window.YT && YT.Player) {
+                            createPlayer();
+                            return;
+                            }
+
+                            // onYouTubeIframeAPIReady はグローバルに必要
+                            window.onYouTubeIframeAPIReady = function () {
+                            createPlayer();
+                            };
+
+                            const tag = document.createElement("script");
+                            tag.src = "https://www.youtube.com/iframe_api";
+                            document.head.appendChild(tag);
+                        })();
+                        </script>
+
+                    {% elif post.featured_video %}
+                        <!-- mp4等の動画がある場合 -->
+                        <div class="mb-3" style="text-align: center;">
+                        <video controls muted playsinline style="max-width: 100%; height: auto;">
+                            <source src="{{ post.featured_video }}" type="video/mp4">
+                            お使いのブラウザは動画タグをサポートしていません。
+                        </video>
+                        </div>
+
                     {% elif post.featured_image and post.featured_image != "none" %}
                         <!-- 画像のみの場合 -->
                         <div class="mb-3" style="text-align: center;">
-                            <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid">
+                        <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" class="img-fluid">
                         </div>
                     {% endif %}
-                    <p class="mb-3">{{ post.text | safe }}</p>
-                </div>
+
+                    <div class="post-body mb-3">{{ post.text }}</div>
+                    </div>
             </section>
 
             <!--メニュー-->
@@ -106,14 +183,19 @@
                     <ol class="list-unstyled">
                         {% for recent_post in recent_blog_posts %}
                         <li>
-                            <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.id) }}"
-                               class="text-decoration-none">
-                                {% if recent_post.featured_image and recent_post.featured_image != "none" %}
-                                    <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}"
-                                         class="img-fluid" width="90" height="50">
-                                {% endif %}
-                                <span class="ms-2">{{ recent_post.title | truncate(14) }}</span>
-                            </a>
+                        <a href="{{ url_for('main.blog_post', blog_post_id=recent_post.id) }}"
+                            class="text-decoration-none d-flex align-items-center gap-2">
+
+                            {% if recent_post.featured_image and recent_post.featured_image != "none" %}
+                            <img src="{{ url_for('static', filename='featured_image/' + recent_post.featured_image) }}"
+                                class="recent-thumb" alt="{{ recent_post.title }}">
+                            {% elif recent_post.youtube_id %}
+                            <img src="https://img.youtube.com/vi/{{ recent_post.youtube_id }}/hqdefault.jpg"
+                                class="recent-thumb" alt="{{ recent_post.title }}">
+                            {% endif %}
+
+                            <span class="ms-2">{{ recent_post.title | truncate(14) }}</span>
+                        </a>
                         </li>
                         <hr>
                         {% endfor %}

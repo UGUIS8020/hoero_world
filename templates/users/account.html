@@ -1,41 +1,42 @@
 {% extends "common/base.html" %}
 {% block content %}
     {% if current_user.is_administrator %}
-    <section id="menu">
-        <div class="container my-3 py-4 bg-light">
-            <div class="row">
-                <div class="col-md-3">
-                    <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#del_modal">
-                        削除
-                    </button>
-                </div>
+    {# RDS時代のユーザー削除UI。DynamoDB移行中のため一旦無効化 #}
+{#
+<section id="menu">
+    <div class="container my-3 py-4 bg-light">
+        <div class="row">
+            <div class="col-md-3">
+                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#del_modal">
+                    削除
+                </button>
             </div>
         </div>
-        <div class="modal fade" id="del_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="exampleModalLabel">削除確認</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <!-- 削除ボタンを追加 -->
-                
-                <div class="modal-body">
-                  <p>このユーザーを削除しますか？</p>
-                </div>        
+    </div>
+    <div class="modal fade" id="del_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">削除確認</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                  <form action="{{ url_for('users.delete_user', user_id=user.id) }}" method="POST">
-                    <!-- ここにCSRFトークンを追加 -->
-                    {{ form.csrf_token if form else csrf_token() }}
-                    <input type="submit" class="btn btn-danger" value="削除">
-                  </form>
-                </div>
-              </div>
+            <div class="modal-body">
+              <p>このユーザーを削除しますか？</p>
+            </div>        
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+              <form action="{{ url_for('users.delete_user', user_id=user.id) }}" method="POST">
+                {{ form.csrf_token if form else csrf_token() }}
+                <input type="submit" class="btn btn-danger" value="削除">
+              </form>
             </div>
           </div>
-    </section>
+        </div>
+      </div>
+</section>
+#}
     {% endif %}
 
     <section id="user_update">
@@ -108,9 +109,13 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+          {# RDS時代の削除フォーム。DynamoDB版に移行中のため一旦無効化 #}
+          {#
           <form action="{{ url_for('users.delete_user', user_id=form.id) }}" method="POST">
+              {{ form.csrf_token if form else csrf_token() }}
               <input type="submit" class="btn btn-danger" value="削除">
           </form>
+          #}
         </div>
       </div>
     </div>

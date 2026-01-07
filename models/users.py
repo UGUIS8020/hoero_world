@@ -1,18 +1,23 @@
+from flask import current_app
 from flask_wtf import FlaskForm
 from wtforms import ValidationError, StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo
-from models.common import User
+from boto3.dynamodb.conditions import Attr
+
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('ログイン')
 
+
 class RegistrationForm(FlaskForm):
-    email = StringField('メールアドレス', validators=[DataRequired(), Email(message='正しいメールアドレスを入力してください')])
-    # usernameをdisplay_nameに変更
+    email = StringField(
+        'メールアドレス',
+        validators=[DataRequired(), Email(message='正しいメールアドレスを入力してください')]
+    )
     display_name = StringField('ユーザー名', validators=[DataRequired()])
-    # 他のフィールドも追加
+
     sender_name = StringField('送信者名（医院名・技工所名）')
     full_name = StringField('氏名')
     phone = StringField('電話番号')
@@ -20,19 +25,33 @@ class RegistrationForm(FlaskForm):
     prefecture = StringField('都道府県')
     address = StringField('住所')
     building = StringField('建物名・部屋番号')
-    
-    password = PasswordField('パスワード(8文字以上)', validators=[DataRequired(), EqualTo('pass_confirm', message='パスワードが一致していません')])
+
+    password = PasswordField(
+        'パスワード(8文字以上)',
+        validators=[DataRequired(), EqualTo('pass_confirm', message='パスワードが一致していません')]
+    )
     pass_confirm = PasswordField('パスワード(確認)', validators=[DataRequired()])
     submit = SubmitField('登録')
 
     def validate_display_name(self, field):
-        # usernameをdisplay_nameに変更
-        if User.query.filter_by(display_name=field.data).first():
+        table = current_app.config["HOERO_USERS_TABLE"]
+        name = field.data.strip()
+
+        resp = table.scan(
+            FilterExpression=Attr("display_name").eq(name),
+            ProjectionExpression="user_id"
+        )
+        if resp.get("Items"):
             raise ValidationError('入力されたユーザー名は既に使われています。')
 
     def validate_email(self, field):
-        if User.query.filter_by(email=field.data).first():
-            raise ValidationError('入力されたメールアドレスは既に登録されています。') 
+        table = current_app.config["HOERO_USERS_TABLE"]
+        email = field.data.strip()
+
+        resp = table.get_item(Key={"user_id": email})
+        if "Item" in resp:
+            raise ValidationError('入力されたメールアドレスは既に登録されています。')
+
 
 class UpdateUserForm(FlaskForm):
     display_name = StringField('ユーザー名', validators=[DataRequired()])
@@ -44,18 +63,37 @@ class UpdateUserForm(FlaskForm):
     prefecture = StringField('都道府県')
     address = StringField('住所')
     building = StringField('建物名・部屋番号')
+
     password = PasswordField('新パスワード(8文字以上)', validators=[])
-    pass_confirm = PasswordField('新パスワード(確認)', validators=[EqualTo('password', message='パスワードが一致していません')])
+    pass_confirm = PasswordField(
+        '新パスワード(確認)',
+        validators=[EqualTo('password', message='パスワードが一致していません')]
+    )
     submit = SubmitField('更新')
 
     def __init__(self, user_id, *args, **kwargs):
         super(UpdateUserForm, self).__init__(*args, **kwargs)
+        # user_id は「元の email (= hoero-users.user_id)」
         self.id = user_id
 
     def validate_email(self, field):
-        if User.query.filter(User.id != self.id).filter_by(email=field.data).first():
+        new_email = field.data.strip()
+        if new_email == self.id:
+            return  # 変更なしならチェック不要
+
+        table = current_app.config["HOERO_USERS_TABLE"]
+        resp = table.get_item(Key={"user_id": new_email})
+        if "Item" in resp:
             raise ValidationError('入力されたメールアドレスは既に登録されています。')
 
     def validate_display_name(self, field):
-        if User.query.filter(User.id != self.id).filter_by(display_name=field.data).first():
+        table = current_app.config["HOERO_USERS_TABLE"]
+        name = field.data.strip()
+
+        resp = table.scan(
+            FilterExpression=Attr("display_name").eq(name),
+            ProjectionExpression="user_id"
+        )
+        # 自分自身は OK にしたい場合は、resp の中身と self.id を見てフィルタする形にしてもよいです
+        if resp.get("Items"):
             raise ValidationError('入力されたユーザー名は既に使われています。')

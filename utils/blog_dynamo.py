@@ -24,6 +24,7 @@ def create_blog_post_in_dynamo(
     summary: str | None,
     featured_image: str | None,
     featured_video: str | None,
+    youtube_url: str | None,          # ← 追加
     author_name: str | None,
     category_id: int | None,
     category_name: str | None,
@@ -43,6 +44,7 @@ def create_blog_post_in_dynamo(
         "summary": summary or "",
         "featured_image": featured_image or "",
         "featured_video": featured_video or "",
+        "youtube_url": (youtube_url or "").strip(),   # ← 追加
         "author_name": author_name or "",
         "category_id": str(category_id) if category_id is not None else "",
         "category_name": category_name or "",
@@ -137,3 +139,67 @@ def update_post_fields(post_id: int, fields: dict) -> bool:
         ExpressionAttributeValues=expr_attr_values,
     )
     return True
+
+def list_posts_by_category(category_id: int, limit: int = 100):
+    """カテゴリ別の投稿を取得"""
+    table = _table()
+    resp = table.scan(
+        FilterExpression=Attr("category_id").eq(str(category_id))
+    )
+    items = resp.get("Items", [])
+    
+    def _key(x):
+        v = x.get("created_at_ts", 0)
+        if isinstance(v, Decimal):
+            return float(v)
+        try:
+            return float(v)
+        except Exception:
+            return 0.0
+    
+    items.sort(key=_key, reverse=True)
+    return items[:limit]
+
+
+def list_all_posts(limit: int = 1000):
+    """全投稿を取得（新しい順）"""
+    return list_recent_posts(limit=limit)
+
+
+def paginate_posts(items, page=1, per_page=10):
+    """投稿リストをページネーション"""
+    total = len(items)
+    start = (page - 1) * per_page
+    end = start + per_page
+    
+    return {
+        "items": items[start:end],
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "pages": (total + per_page - 1) // per_page if total > 0 else 1,
+        "has_prev": page > 1,
+        "has_next": end < total,
+        "prev_num": page - 1 if page > 1 else None,
+        "next_num": page + 1 if end < total else None,
+    }
+
+def list_posts_by_user(user_id: int, limit: int = 100):
+    """ユーザー別の投稿を取得"""
+    table = _table()
+    resp = table.scan(
+        FilterExpression=Attr("user_id").eq(str(user_id))
+    )
+    items = resp.get("Items", [])
+    
+    def _key(x):
+        v = x.get("created_at_ts", 0)
+        if isinstance(v, Decimal):
+            return float(v)
+        try:
+            return float(v)
+        except Exception:
+            return 0.0
+    
+    items.sort(key=_key, reverse=True)
+    return items[:limit]
