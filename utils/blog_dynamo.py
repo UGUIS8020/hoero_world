@@ -24,6 +24,7 @@ def create_blog_post_in_dynamo(
     summary: str | None,
     featured_image: str | None,
     featured_video: str | None,
+    youtube_url: str | None,          # ← 追加
     author_name: str | None,
     category_id: int | None,
     category_name: str | None,
@@ -43,6 +44,7 @@ def create_blog_post_in_dynamo(
         "summary": summary or "",
         "featured_image": featured_image or "",
         "featured_video": featured_video or "",
+        "youtube_url": (youtube_url or "").strip(),   # ← 追加
         "author_name": author_name or "",
         "category_id": str(category_id) if category_id is not None else "",
         "category_name": category_name or "",

@@ -3,6 +3,8 @@ from wtforms import StringField, SubmitField, ValidationError, TextAreaField, Se
 from wtforms.validators import DataRequired, Email
 from flask_wtf.file import FileField, FileAllowed
 from models.dynamodb_category import list_blog_categories_all, category_name_exists
+from wtforms import StringField
+from wtforms.validators import Optional, Length
 
 
 class InquiryForm(FlaskForm):
@@ -44,6 +46,12 @@ class BlogPostForm(FlaskForm):
         validate_choice=False
     )
     summary = StringField('要約')
+
+    youtube_url = StringField(
+        'YouTube URL（任意）',
+        validators=[Optional(), Length(max=300)]
+    )
+
     text = TextAreaField('本文', validators=[DataRequired()])
     picture = FileField(
         'アイキャッチ画像',

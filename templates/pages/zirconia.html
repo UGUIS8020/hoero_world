@@ -114,13 +114,29 @@
     flex-basis: 100%; /* フレックスボックス内での幅 */
     margin: 0px 0px 0px 0px; 
   }
+
+  .img-center{
+    display: flex;
+    justify-content: center; /* 横方向の中央 */
+    align-items: center;
+    gap: 16px;               /* 画像間の余白 */
+    flex-wrap: wrap;         /* スマホで折り返す */
+    margin: 50px;
+  }
+  
   </style>
 
 <h1>Zirconia</h1>
 
-<div>
-    <div class="box4">
-     <h3>グラデーションジルコニア</h3> 
+<div class="box4">
+
+  <div class="img-wrap img-center">    
+      <img src="{{ url_for('static', filename='pages/zirconia/top003.webp') }}"
+           alt="ジルコニア001"
+           width="600" height="306"
+           loading="lazy" decoding="async">    
+  </div>
+</div>
        
         
      <div class="box-zirconia mt-3">

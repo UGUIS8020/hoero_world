@@ -8,6 +8,7 @@ import tempfile
 import zipfile
 from datetime import datetime, time, timezone
 from urllib.parse import unquote
+import re
 
 # サードパーティライブラリ
 import boto3
@@ -92,26 +93,61 @@ BUCKET_NAME = os.getenv("BUCKET_NAME")
 # ZIPハンドラーのインスタンス作成
 zip_handler_instance = ZipHandler()  # インスタンスを作成
 
+from urllib.parse import urlparse, parse_qs
+
+def extract_youtube_id(url: str | None) -> str:
+    if not url:
+        return ""
+    u = url.strip()
+
+    # youtu.be/VIDEOID
+    if "youtu.be/" in u:
+        return u.split("youtu.be/")[1].split("?")[0].split("/")[0]
+
+    p = urlparse(u)
+    host = (p.netloc or "").lower()
+    path = (p.path or "")
+
+    if "youtube.com" in host:
+        # /shorts/VIDEOID
+        if "/shorts/" in path:
+            return path.split("/shorts/")[1].split("?")[0].split("/")[0]
+
+        # /embed/VIDEOID
+        if "/embed/" in path:
+            return path.split("/embed/")[1].split("?")[0].split("/")[0]
+
+        # watch?v=VIDEOID
+        qs = parse_qs(p.query)
+        if qs.get("v"):
+            return qs["v"][0]
+
+    return ""
+
+
 @bp.route('/')
 def index():
     form = BlogSearchForm()
     page = request.args.get('page', 1, type=int)
-    
-    # DynamoDB から全投稿を取得してページネーション
+
     all_posts = list_all_posts(limit=1000)
     blog_posts = paginate_posts(all_posts, page=page, per_page=10)
-    
-    # DynamoDB からカテゴリを取得
+
     blog_categories = list_blog_categories_all()
 
     # トップページ用 Dynamo 記事（カード表示）
-    items = list_recent_posts(limit=6)
+    items = list_recent_posts(limit=2)
     top_blog_posts = []
     for it in items:
         try:
             pid = int(it.get("post_id"))
         except Exception:
             continue
+
+        # ★ここで投稿ごとに youtube_id を生成する
+        youtube_url = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
+        yid = it.get("youtube_id", "") or extract_youtube_id(youtube_url)
+
         top_blog_posts.append(
             SimpleNamespace(
                 post_id=pid,
@@ -119,11 +155,18 @@ def index():
                 summary=it.get("summary", ""),
                 date=it.get("date", ""),
                 author_name=it.get("author_name", ""),
+
                 featured_image=it.get("featured_image", ""),
+                featured_video=it.get("featured_video", ""),
+                featured_thumbnail=it.get("featured_thumbnail", ""),
+
+                youtube_id=yid,
+                youtube_embed_url=it.get("youtube_embed_url", ""),
+                youtube_url=it.get("youtube_url", ""),
             )
         )
 
-    # サイドバー「最新記事」用
+         # サイドバー「最新記事」用
     items_recent = list_recent_posts(limit=5)
     recent_blog_posts = []
     for it in items_recent:
@@ -316,6 +359,10 @@ def create_post():
 
             author_name = current_user.display_name
 
+            # 追加：YouTube URL（未入力なら空文字）
+            youtube_url = (form.youtube_url.data or "").strip()
+            print("YouTube URL:", youtube_url)
+
             # ★ カテゴリが存在しない／未設定でもOKにする
             if form.category.choices:
                 category_id = form.category.data
@@ -331,7 +378,8 @@ def create_post():
                 text=form.text.data,
                 summary=form.summary.data or "",
                 featured_image=pic,
-                featured_video=video,  # ← 今は定義された video 変数を使用
+                featured_video=video,
+                youtube_url=youtube_url,          # ← 追加
                 author_name=author_name,
                 category_id=category_id,
                 category_name=category_name,
@@ -1098,33 +1146,70 @@ def meziro_mark_complete():
         return jsonify(success=False, message=f'タグ更新失敗: {e}'), 500
 
 
-def _blog_table():
-    return current_app.config["BLOG_POSTS_TABLE"]
+def to_youtube_embed(url: str | None) -> str:
+    if not url:
+        return ""
+
+    url = url.strip()
+
+    # embed
+    if "youtube.com/embed/" in url:
+        return url.split("?")[0]
+
+    # shorts
+    m = re.search(r"youtube\.com/shorts/([A-Za-z0-9_-]{6,})", url)
+    if m:
+        return f"https://www.youtube.com/embed/{m.group(1)}"
+
+    # live
+    m = re.search(r"youtube\.com/live/([A-Za-z0-9_-]{6,})", url)
+    if m:
+        return f"https://www.youtube.com/embed/{m.group(1)}"
+
+    # youtu.be
+    m = re.search(r"youtu\.be/([A-Za-z0-9_-]{6,})", url)
+    if m:
+        return f"https://www.youtube.com/embed/{m.group(1)}"
+
+    # watch?v=
+    m = re.search(r"[?&]v=([A-Za-z0-9_-]{6,})", url)
+    if m:
+        return f"https://www.youtube.com/embed/{m.group(1)}"
+
+    return ""
 
 @bp.route('/<int:blog_post_id>/blog_post')
 def blog_post(blog_post_id):
     form = BlogSearchForm()
 
-    # ① DynamoDB から対象の投稿を取得
     item = get_post_by_id(blog_post_id)
     if not item:
-        # ここで 404 になるのは「Dynamo にも無いとき」だけ
         abort(404)
 
-    # ② テンプレートで扱いやすいように属性アクセスできるオブジェクトに変換
+    # ★ 追加：DynamoからYouTube URLを取り出して embed URLに変換
+    youtube_url = item.get("youtube_url", "")
+    youtube_embed_url = to_youtube_embed(youtube_url)
+
+    print("youtube_url:", youtube_url)
+    print("youtube_embed_url:", youtube_embed_url)
+
     post = SimpleNamespace(
-        id=int(item.get("post_id")),                # URL で使う id
+        id=int(item.get("post_id")),
         title=item.get("title", ""),
         text=item.get("text", ""),
         summary=item.get("summary", ""),
         featured_image=item.get("featured_image", ""),
         featured_video=item.get("featured_video", ""),
-        date=item.get("date", ""),                  # "2025-11-16T06:01:28+00:00" など
+
+        # ★ 追加：テンプレで使う
+        youtube_url=youtube_url,
+        youtube_embed_url=youtube_embed_url,
+
+        date=item.get("date", ""),
         author_name=item.get("author_name", ""),
         category_name=item.get("category_name", ""),
-    )
+    )   
 
-    # ③ 最近の投稿も Dynamo から
     recent_items = list_recent_posts(limit=5)
     recent_blog_posts = []
     for it in recent_items:
@@ -1132,15 +1217,20 @@ def blog_post(blog_post_id):
             pid = int(it.get("post_id"))
         except Exception:
             continue
+
+        # ★ 追加：YouTube ID 抽出（urlでもembedでもOK）
+        yurl = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
+        yid = extract_youtube_id(yurl)
+
         recent_blog_posts.append(
             SimpleNamespace(
                 id=pid,
                 title=it.get("title", ""),
                 featured_image=it.get("featured_image", ""),
+                youtube_id=yid,  # ★ 追加
             )
         )
 
-    # ④ カテゴリ一覧は、いったん空でもOK（必要になったら Dynamo から作る）
     blog_categories = []
 
     return render_template(
@@ -1151,11 +1241,12 @@ def blog_post(blog_post_id):
         form=form
     )
 
+
 @bp.route('/<int:blog_post_id>/delete_post', methods=['POST'])
 @login_required
 def delete_post(blog_post_id):
     # ① Dynamo から該当記事取得（なければ 404）
-    item = get_post_by_id(blog_post_id)
+    item = get_post_by_id(blog_post_id)    
     if not item:
         abort(404)
 
@@ -1180,10 +1271,6 @@ def update_post(blog_post_id):
     if not item:
         abort(404)
 
-    # 必要なら権限チェック
-    # if item.get("user_id") != str(current_user.id):
-    #     abort(403)
-
     form = BlogPostForm()
 
     if form.validate_on_submit():
@@ -1191,18 +1278,19 @@ def update_post(blog_post_id):
             "title": form.title.data,
             "summary": form.summary.data,
             "text": form.text.data,
-            # category_id をどう持つかは設計次第で
             "category_id": str(form.category.data) if form.category.data else "",
-            # name も更新したいなら:
-            # "category_name": ???,
+            "youtube_url": (form.youtube_url.data or "").strip(),  # ★追加
         }
 
-        # 画像を新規アップロードした場合のみ差し替え
+        # 画像更新
         if form.picture.data:
             new_filename = add_featured_image(form.picture.data)
             fields["featured_image"] = new_filename
 
-        # 動画を扱うならここで fields["featured_video"] も同様に
+        # 動画更新（★追加）
+        if form.video.data:
+            new_video_url = add_featured_video(form.video.data)
+            fields["featured_video"] = new_video_url
 
         update_post_fields(blog_post_id, fields)
 
@@ -1210,16 +1298,23 @@ def update_post(blog_post_id):
         return redirect(url_for('main.blog_post', blog_post_id=blog_post_id))
 
     elif request.method == 'GET':
-        # 既存データでフォームを初期化
         form.title.data = item.get("title", "")
         form.summary.data = item.get("summary", "")
         form.text.data = item.get("text", "")
-        # category_id or category_name の持ち方に合わせて
-        form.category.data = item.get("category_id") or item.get("category_name")
+        form.youtube_url.data = item.get("youtube_url", "")  # ★追加
 
-        # create_post.html の「既存画像表示」用
+        # category_id は Dynamo だと文字列なので int に直す
+        cid = item.get("category_id", "")
+        try:
+            form.category.data = int(cid) if cid else None
+        except Exception:
+            form.category.data = None
+
+        # 既存画像・動画の表示用
         if hasattr(form.picture, "object_data"):
             form.picture.object_data = item.get("featured_image", "")
+        if hasattr(form.video, "object_data"):
+            form.video.object_data = item.get("featured_video", "")
 
     return render_template('main/create_post.html', form=form)
 
