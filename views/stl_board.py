@@ -51,7 +51,7 @@ bp = Blueprint('stl_board', __name__, url_prefix='/stl_board')
 
 # STL投稿用フォーム
 class STLPostForm(FlaskForm):
-    title = StringField('タイトル', validators=[], default='Untitled')
+    title = StringField('タイトル', validators=[])
     content = TextAreaField('内容', render_kw={'placeholder': 'POST入力'})
     stl_file = FileField('STLファイル', validators=[
         FileAllowed(['stl'], 'STLファイルのみ許可されています')
@@ -109,6 +109,7 @@ def index():
     page = request.args.get('page', 1, type=int)
 
     if form.validate_on_submit():
+        # ... (投稿処理は変更なし)
         if not current_user.is_authenticated:
             flash("投稿するにはログインが必要です", "warning")
             return redirect(url_for("users.login"))
@@ -178,20 +179,79 @@ def index():
         flash('投稿が作成されました', 'success')
         return redirect(url_for('stl_board.index'))
 
+    # ★ ユーザーテーブルを取得    
+    users_table = current_app.config.get("HOERO_USERS_TABLE")
+    
+    # ★ コメントといいねを全件取得（一度だけ）
+    all_comments = get_all_comments()
+    all_likes = get_all_likes()
+    
     # DynamoDB から投稿を取得
     posts_data = paginate_stl_posts(page=page, per_page=5)
     
     # SimpleNamespace に変換してテンプレート互換性を保つ
     posts_items = []
     for it in posts_data["items"]:
+        post_id = it.get("post_id")
+        
+        # ユーザー情報を取得
+        user_id = str(it.get("user_id", 0))
+        author = SimpleNamespace(
+            id=user_id,
+            display_name="Unknown User",
+            email=""
+        )
+        
+        if users_table:
+            try:
+                user_response = users_table.get_item(Key={"user_id": user_id})
+                user_data = user_response.get("Item", {})
+                if user_data:
+                    author = SimpleNamespace(
+                        id=user_id,
+                        display_name=user_data.get("display_name", "Unknown User"),
+                        email=user_data.get("email", "")
+                    )
+            except Exception as e:
+                print(f"ユーザー情報取得エラー (user_id: {user_id}): {e}")
+        
+        # created_atをdatetimeオブジェクトに変換
+        created_at_str = it.get("created_at", "")
+        created_at = None
+        if created_at_str:
+            try:
+                created_at = datetime.datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+            except:
+                created_at = datetime.datetime.utcnow()
+        else:
+            created_at = datetime.datetime.utcnow()
+        
+        # ★ この投稿のコメントといいねをフィルタ
+        post_comments = [c for c in all_comments if c.get("post_id") == post_id]
+        post_likes = [l for l in all_likes if l.get("post_id") == post_id]
+        
+        # ★ likesとcommentsをリストラッパーとして作成（selfを追加）
+        likes_wrapper = type('LikesWrapper', (), {
+            'count': lambda self: len(post_likes),  # ← selfを追加
+            'all': lambda self: post_likes  # ← selfを追加
+        })()
+
+        comments_wrapper = type('CommentsWrapper', (), {
+            'count': lambda self: len(post_comments),  # ← selfを追加
+            'all': lambda self: post_comments  # ← selfを追加
+        })()
+        
         post_obj = SimpleNamespace(
-            post_id=it.get("post_id"),
+            post_id=post_id,
             title=it.get("title", ""),
             content=it.get("content", ""),
-            user_id=int(it.get("user_id", 0)),
+            user_id=str(it.get("user_id", "")),
             stl_filename=it.get("stl_filename", ""),
             stl_file_path=it.get("stl_file_path", ""),
-            created_at=it.get("created_at", ""),
+            created_at=created_at,
+            author=author,
+            likes=likes_wrapper,  # ★ 追加
+            comments=comments_wrapper,  # ★ 追加
             s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{it.get('stl_file_path', '')}" if it.get("stl_file_path") else None
         )
         posts_items.append(post_obj)
@@ -210,17 +270,67 @@ def index():
     if selected_post_id:
         post_item = get_stl_post_by_id(selected_post_id)
         if post_item:
+            user_id = str(post_item.get("user_id", ""))
+
+            # ★ intにしない（user_idは文字列で統一）
+            author = SimpleNamespace(
+                id=user_id,
+                display_name="Unknown User",
+                email=user_id if "@" in user_id else ""
+            )
+
+            if users_table:
+                try:
+                    user_response = users_table.get_item(Key={"user_id": user_id})
+                    user_data = user_response.get("Item", {})
+                    if user_data:
+                        author = SimpleNamespace(
+                            id=user_id,
+                            display_name=user_data.get("display_name", "Unknown User"),
+                            email=user_data.get("email", "")
+                        )
+                except Exception as e:
+                    print(f"ユーザー情報取得エラー (user_id: {user_id}): {e}")
+
+            # created_atをdatetimeオブジェクトに変換
+            created_at_str = post_item.get("created_at", "")
+            if created_at_str:
+                try:
+                    created_at = datetime.datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                except Exception:
+                    created_at = datetime.datetime.utcnow()
+            else:
+                created_at = datetime.datetime.utcnow()
+            
+            # ★ selected_postのコメントといいね
+            post_comments = [c for c in all_comments if c.get("post_id") == selected_post_id]
+            post_likes = [l for l in all_likes if l.get("post_id") == selected_post_id]
+
+            likes_wrapper = type('LikesWrapper', (), {
+                'count': lambda self: len(post_likes),  # ← selfを追加
+                'all': lambda self: post_likes  # ← selfを追加
+            })()
+
+            comments_wrapper = type('CommentsWrapper', (), {
+                'count': lambda self: len(post_comments),  # ← selfを追加
+                'all': lambda self: post_comments  # ← selfを追加
+            })()
+            
             selected_post = SimpleNamespace(
                 post_id=post_item.get("post_id"),
                 title=post_item.get("title", ""),
                 content=post_item.get("content", ""),
-                user_id=int(post_item.get("user_id", 0)),
+                user_id=str(post_item.get("user_id", "")),
                 stl_file_path=post_item.get("stl_file_path", ""),
+                created_at=created_at,
+                author=author,
+                likes=likes_wrapper,  # ★ 追加
+                comments=comments_wrapper,  # ★ 追加
                 s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{post_item.get('stl_file_path', '')}" if post_item.get("stl_file_path") else None
             )
 
-    comments = get_all_comments()
-    likes = get_all_likes()
+    comments = all_comments
+    likes = all_likes
 
     return render_template('pages/stl_board.html',
                            form=form,
@@ -277,8 +387,7 @@ def delete_post(post_id):
         abort(404)
 
     # 投稿者 or 管理者でなければ403
-    if current_user.id != int(post.get("user_id", 0)) and not current_user.administrator:
-        abort(403)
+    if str(current_user.id) != str(post.get("user_id", "")) and not current_user.administrator: abort(403)
 
     try:
         # S3から削除
@@ -314,7 +423,7 @@ def view_post(post_id):
         post_id=post_item.get("post_id"),
         title=post_item.get("title", ""),
         content=post_item.get("content", ""),
-        user_id=int(post_item.get("user_id", 0)),
+        user_id=str(post_item.get("user_id", "")),
         stl_file_path=post_item.get("stl_file_path", ""),
         s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{post_item.get('stl_file_path', '')}" if post_item.get("stl_file_path") else None
     )
