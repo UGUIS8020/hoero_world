@@ -1186,12 +1186,23 @@ def blog_post(blog_post_id):
     if not item:
         abort(404)
 
-    # ★ 追加：DynamoからYouTube URLを取り出して embed URLに変換
+    # --- ★ここで最新の表示名を解決する ---
+    users_table = current_app.config.get("HOERO_USERS_TABLE")
+    latest_author_name = item.get("author_name", "")  # fallback（記事に保存されてる名前）
+
+    uid = str(item.get("user_id", ""))  # email or uuid
+    if users_table and uid and "@" in uid:  # emailっぽい場合だけ users を引く（uuid混在対策）
+        try:
+            resp = users_table.get_item(Key={"user_id": uid})
+            u = resp.get("Item")
+            if u and u.get("display_name"):
+                latest_author_name = u["display_name"]
+        except Exception as e:
+            print(f"[WARN] users_table lookup failed: {uid} / {e}")
+
+    # YouTube
     youtube_url = item.get("youtube_url", "")
     youtube_embed_url = to_youtube_embed(youtube_url)
-
-    print("youtube_url:", youtube_url)
-    print("youtube_embed_url:", youtube_embed_url)
 
     post = SimpleNamespace(
         id=int(item.get("post_id")),
@@ -1200,16 +1211,14 @@ def blog_post(blog_post_id):
         summary=item.get("summary", ""),
         featured_image=item.get("featured_image", ""),
         featured_video=item.get("featured_video", ""),
-
-        # ★ 追加：テンプレで使う
         youtube_url=youtube_url,
         youtube_embed_url=youtube_embed_url,
-
         date=item.get("date", ""),
-        author_name=item.get("author_name", ""),
+        author_name=latest_author_name,   # ★ここがポイント
         category_name=item.get("category_name", ""),
-    )   
+    )
 
+    # recent_posts（ここは表示名を出してないのでそのままでOK）
     recent_items = list_recent_posts(limit=5)
     recent_blog_posts = []
     for it in recent_items:
@@ -1218,7 +1227,6 @@ def blog_post(blog_post_id):
         except Exception:
             continue
 
-        # ★ 追加：YouTube ID 抽出（urlでもembedでもOK）
         yurl = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
         yid = extract_youtube_id(yurl)
 
@@ -1227,17 +1235,15 @@ def blog_post(blog_post_id):
                 id=pid,
                 title=it.get("title", ""),
                 featured_image=it.get("featured_image", ""),
-                youtube_id=yid,  # ★ 追加
+                youtube_id=yid,
             )
         )
-
-    blog_categories = []
 
     return render_template(
         'main/blog_post.html',
         post=post,
         recent_blog_posts=recent_blog_posts,
-        blog_categories=blog_categories,
+        blog_categories=[],
         form=form
     )
 

@@ -170,7 +170,7 @@ def index():
         post_id = create_stl_post(
             title=form.title.data,
             content=form.content.data,
-            user_id=current_user.id,
+            user_id=current_user.email,
             stl_filename=glb_filename,
             stl_file_path=glb_file_path
         )
@@ -355,8 +355,8 @@ def add_comment(post_id):
         return redirect(url_for('stl_board.index', post_id=post_id))
 
     create_stl_comment(
-        post_id=post_id,
-        user_id=current_user.id,
+        post_id=post_id,        
+        user_id=current_user.email,
         content=content,
         parent_comment_id=parent_id if parent_id else None
     )
