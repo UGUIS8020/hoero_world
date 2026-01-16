@@ -12,7 +12,6 @@ import trimesh
 from trimesh.visual.material import PBRMaterial
 from dotenv import load_dotenv
 import boto3
-import pymeshlab
 from types import SimpleNamespace
 
 from utils.stl_dynamo import (
@@ -59,46 +58,65 @@ class STLPostForm(FlaskForm):
     submit = SubmitField('投稿する')
 
 
-def reduce_stl_size(input_file_path, output_file_path, target_faces=50000):
-    """STLファイルを読み込んで、三角形面数を削減して保存する関数"""
-    ms = pymeshlab.MeshSet()
-    ms.load_new_mesh(input_file_path)
-    current_faces = ms.current_mesh().face_number()
-
+def reduce_stl_size(input_file_path, output_file_path, target_faces=70000):
+    """Trimeshを使った軽量化"""
+        
+    mesh = trimesh.load_mesh(input_file_path)
+    current_faces = len(mesh.faces)
+    
     if current_faces > target_faces:
         print(f"[軽量化開始] 入力三角形面数: {current_faces} → 目標: {target_faces}")
-        ms.meshing_decimation_quadric_edge_collapse(targetfacenum=target_faces)
-        new_faces = ms.current_mesh().face_number()
+        
+        # Trimeshの簡略化機能を使用
+        ratio = target_faces / current_faces
+        mesh = mesh.simplify_quadric_decimation(target_faces)
+        
+        new_faces = len(mesh.faces)
         print(f"[軽量化完了] 変換後の三角形面数: {new_faces}")
     else:
         print(f"[軽量化不要] 三角形面数: {current_faces} ({target_faces} 以下)")
-
-    ms.save_current_mesh(output_file_path, binary=True)
+    
+    mesh.export(output_file_path)
+    
     return {
         'original_faces': current_faces,
-        'new_faces': ms.current_mesh().face_number()
+        'new_faces': len(mesh.faces)
     }
 
 
 def convert_stl_to_gltf(input_stl_path, output_gltf_path):
     try:
-        mesh = trimesh.load_mesh(input_stl_path)
-        material = PBRMaterial(
-            name="RedMetal",
-            baseColorFactor=[0.8, 0.0, 0.0, 1.0],
-            metallicFactor=1.0,
-            roughnessFactor=0.2
+        loaded = trimesh.load(input_stl_path, force='mesh')
+        if isinstance(loaded, trimesh.Scene):
+            geoms = [g for g in loaded.geometry.values() if isinstance(g, trimesh.Trimesh)]
+            if not geoms:
+                raise ValueError("Scene内にTrimeshジオメトリがありません")
+            mesh = trimesh.util.concatenate(geoms)
+        else:
+            mesh = loaded
+
+        if not isinstance(mesh, trimesh.Trimesh) or mesh.faces is None or len(mesh.faces) == 0:
+            raise ValueError("faces を持たないメッシュのため material を設定できません")
+
+        # ★ここが光沢調整（PBR）
+        mat = PBRMaterial(
+            baseColorFactor=[50/255, 50/255, 50/255, 1.0],  # グレー（0〜1）
+            metallicFactor=0.0,    # 金属っぽさ（0=非金属）
+            roughnessFactor=0.25   # ★ツヤ：低いほどテカる（0.05〜0.3がツヤ強め）
         )
-        mesh.visual.material = material
-        scene = trimesh.Scene()
-        scene.add_geometry(mesh)
+
+        # face_colors を使わず material で色+光沢を指定        
+        mesh.visual.material = mat
+
+        scene = trimesh.Scene(mesh)
         glb_data = scene.export(file_type='glb')
 
         with open(output_gltf_path, 'wb') as f:
             f.write(glb_data)
         return True
+
     except Exception as e:
-        print(f"変換エラー: {e}")
+        print(f"変換エラー: {e} ({type(e).__name__})")
         return False
 
 
