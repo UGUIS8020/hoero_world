@@ -312,19 +312,17 @@ def account(user_id):
     return render_template('users/account.html', form=form, user=user)
 
 
-@bp.route('/<user_id>/user_posts')  # ★ int をやめて文字列
+@bp.route('/<user_id>/user_posts')
 @login_required
 def user_posts(user_id):
     form = BlogSearchForm()
 
-    # DynamoDB からユーザー情報取得
     users_table = current_app.config["HOERO_USERS_TABLE"]
     resp = users_table.get_item(Key={"user_id": user_id})
     item = resp.get("Item")
     if not item:
         abort(404)
 
-    # テンプレート用に SimpleNamespace に変換
     user = SimpleNamespace(
         user_id=item["user_id"],
         display_name=item.get("display_name", ""),
@@ -332,16 +330,30 @@ def user_posts(user_id):
         sender_name=item.get("sender_name", ""),
     )
 
-    # ブログ記事取得（ここは既存の Dynamo ロジックでOK）
     page = request.args.get('page', 1, type=int)
-    user_posts_items = list_posts_by_user(user_id)  # 引数は email を渡す
-    blog_posts = paginate_posts(user_posts_items, page=page, per_page=10)
+
+    # ★ ユーザーの記事（user_id=email 前提）
+    user_posts_items = list_posts_by_user(user_id)
+
+    # ★ ここで各記事に「表示用の author_display_name」を付ける
+    #    （テンプレが post.author_name を見ているなら、ここで上書きするのもあり）
+    enriched = []
+    for it in user_posts_items:
+        it = dict(it)  # 念のためコピー
+
+        # 最新のユーザー名を優先（users_tableのdisplay_name）
+        it["author_name"] = item.get("display_name", it.get("author_name", "Unknown User"))
+
+        enriched.append(it)
+
+    blog_posts = paginate_posts(enriched, page=page, per_page=10)
 
     blog_categories = list_blog_categories_all()
+
     recent_items = list_recent_posts(limit=5)
     recent_blog_posts = [
         SimpleNamespace(
-            post_id=int(it.get("post_id")),
+            post_id=str(it.get("post_id", "")),   # ★ intをやめる
             title=it.get("title", ""),
             featured_image=it.get("featured_image", ""),
         )
