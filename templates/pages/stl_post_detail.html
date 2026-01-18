@@ -1,28 +1,282 @@
 {% extends "common/base.html" %}
+
+{% block title %}{{ post.title or "STL投稿詳細" }} - STL掲示板{% endblock %}
+
 {% block content %}
 
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+<style>
+.recent-thumb{
+  width: 90px;
+  height: 50px;
+  object-fit: cover;   /* img用でもOK */
+  border-radius: 6px;
+  flex: 0 0 auto;      /* d-flex内で潰れない */
+  display: block;
+}
+
+.post-body{
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.model-viewer-container {
+  margin: 20px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e1e8ed;
+  background: #f5f8fa;
+}
+</style>
+
 <!-- パンくずナビ -->
-    <nav class="breadcrumb-nav" aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">ホーム</a></li>
-            <li class="breadcrumb-item"><a href="/stl_board">STL掲示板</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ post.title or "STL投稿詳細" }}</li>
-        </ol>
-    </nav> 
+<nav class="breadcrumb-nav" aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+        <li class="breadcrumb-item"><a href="/stl_board">STL掲示板</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ post.title or "STL投稿詳細" }}</li>
+    </ol>
+</nav>
 
-  <div class="container mt-4">
-    <h2>{{ post.title or "STL Post" }}</h2>
-    <p>{{ post.content }}</p>
+<header id="page-header">        
+    <div class="container my-3 bg-light">
+        <div class="row">
+            <div class="col-md-6 m-auto text-center">
+                <h1 class="fst-italic">{{ post.title or "STL投稿" }}</h1>
+                <hr>
+                <p>
+                    {% if post.created_at %}
+                    {{ post.created_at.strftime('%Y-%m-%d') }} : 
+                    {% endif %}
+                    {% if post.author_name %}
+                    {{ post.author_name }}
+                    {% else %}
+                    {{ post.user_id }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</header>
 
-    {% if post.s3_presigned_url %}
-      <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-      <model-viewer src="{{ post.s3_presigned_url }}" auto-rotate camera-controls style="width:100%; height:400px;"></model-viewer>
-    {% endif %}
+<!--ページ明細-->
+<div class="container my-3">
+    <div class="row mb-2">
+        <!--コンテンツ-->
+        <div class="col-md-8">
 
-    <hr>
-    <h5>Comments</h5>
-    {% for c in comments %}
-      <div class="mb-2">{{ c.content }}</div>
-    {% endfor %}
+            <!--STL投稿-->
+            <section id="stl_post">
+                <div class="container py-2 bg-light">
+                    {% if post.youtube_embed_url %}
+                        <!-- YouTubeがある場合（自動再生＋常時ミュート） -->
+                        <div class="mb-3 ratio ratio-16x9">
+                            <div id="yt-player" data-embed-url="{{ post.youtube_embed_url }}"></div>
+                        </div>
+
+                        <script>
+                        (function () {
+                            const el = document.getElementById("yt-player");
+                            if (!el) return;
+
+                            const embedUrl = el.dataset.embedUrl || "";
+                            const m = embedUrl.match(/\/embed\/([A-Za-z0-9_-]{6,})/);
+                            if (!m) return;
+                            const videoId = m[1];
+
+                            function createPlayer() {
+                                const player = new YT.Player("yt-player", {
+                                    videoId: videoId,
+                                    playerVars: {
+                                        autoplay: 1,
+                                        mute: 1,
+                                        playsinline: 1,
+                                        rel: 0,
+                                        modestbranding: 1
+                                    },
+                                    events: {
+                                        onReady: function (e) {
+                                            e.target.mute();
+                                            e.target.playVideo();
+                                        },
+                                        onStateChange: function (e) {
+                                            if (e.data === YT.PlayerState.PLAYING) {
+                                                e.target.mute();
+                                            }
+                                        }
+                                    }
+                                });
+                                window._ytPlayer = player;
+                            }
+
+                            if (window.YT && YT.Player) {
+                                createPlayer();
+                                return;
+                            }
+
+                            window.onYouTubeIframeAPIReady = function () {
+                                createPlayer();
+                            };
+
+                            const tag = document.createElement("script");
+                            tag.src = "https://www.youtube.com/iframe_api";
+                            document.head.appendChild(tag);
+                        })();
+                        </script>
+                    {% endif %}
+
+                    {# ★画像を表示 #}
+                    {% if post.image_url %}
+                      <div class="mb-3">
+                        <img src="{{ post.image_url }}"
+                            alt="{{ post.title or 'post image' }}"
+                            class="img-fluid rounded border">
+                      </div>
+                    {% endif %}
+
+                    {% if post.s3_presigned_url %}
+                        <!-- STLモデルビューアー -->
+                        <div class="model-viewer-container">
+                            <model-viewer src="{{ post.s3_presigned_url }}"
+                                          auto-rotate
+                                          camera-controls
+                                          style="width: 100%; height: 500px; background-color: #fff;">
+                            </model-viewer>
+                        </div>
+                    {% endif %}
+
+                    <div class="post-body mb-3">{{ post.content or "（本文なし）" }}</div>
+                </div>
+            </section>
+
+            <!--メニュー-->
+            <section id="menu">
+                <div class="container my-3 py-4 bg-light">
+                    <div class="row">
+                        {% if current_user.is_authenticated and (current_user.email == post.user_id or current_user.administrator) %}
+                            <div class="col-md-3 mb-3">
+                                <a href="{{ url_for('stl_board.edit_post', post_id=post.post_id) }}"
+                                   class="btn btn-success w-100">
+                                    編集
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button type="button"
+                                        class="btn btn-danger w-100"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#del_modal">
+                                    削除
+                                </button>
+                            </div>
+                        {% endif %}
+                        <div class="col-md-3">
+                            <a href="{{ url_for('stl_board.index') }}" class="btn btn-secondary w-100">
+                                戻る
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!--コメントセクション-->
+            <section id="comments">
+                <div class="container py-2 bg-light">
+                    <h4>コメント ({{ comments|length }})</h4>
+                    <hr>
+                    {% if comments %}
+                        {% for c in comments %}
+                        <div class="mb-3 pb-3 border-bottom">
+                            <div class="mb-1">{{ c.content }}</div>
+                            <small class="text-muted">{{ c.user_id }}</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">まだコメントがありません</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+            <!--サイドバー-->
+        <div class="col-md-4">
+            <div class="position-sticky" style="top: 2rem;">
+                <!--会社情報-->
+                <div class="p-4 mb-2 bg-light">
+                    <h4 class="fst-italic">Shibustagram</h4>
+                    <p>歯科技工用のSTLファイルやYouTube動画を共有できます。<br>
+                      技術情報の交換にご活用ください。</p>
+                </div>
+
+                <!--最新記事-->
+                <div class="p-4">
+                    <h4 class="fst-italic">RECENT POST <span class="ms-2 fs-6">最新記事</span></h4>
+                    <hr>
+                    <ol class="list-unstyled">
+                        {% for recent_post in recent_posts %}
+                        <li>
+                            <a href="{{ url_for('stl_board.view_post', post_id=recent_post.post_id) }}"
+                              class="text-decoration-none d-flex align-items-center gap-2">
+
+                                {% if recent_post.youtube_id %}
+                                    <!-- YouTubeサムネイル -->
+                                    <img src="https://img.youtube.com/vi/{{ recent_post.youtube_id }}/hqdefault.jpg"
+                                        class="recent-thumb" alt="{{ recent_post.title }}">
+                                {% elif recent_post.stl_file_path %}
+                                    <!-- STLファイル用の背景 -->
+                                    <div class="recent-thumb bg-secondary"></div>
+                                {% else %}
+                                    <!-- デフォルト背景 -->
+                                    <div class="recent-thumb bg-light border"></div>
+                                {% endif %}
+
+                                <div class="ms-2">
+                                  <div>{{ recent_post.title | truncate(10, True, '') }}</div>
+                                  {% if recent_post.created_at %}
+                                    <small class="text-muted">{{ recent_post.created_at.strftime('%Y-%m-%d') }}</small>
+                                  {% endif %}
+                                </div>
+                            </a>
+                        </li>
+                        <hr>
+                        {% endfor %}
+                    </ol>
+                </div>
+
+                <!--共有リンク-->
+                <div class="p-4 bg-light">
+                    <h4 class="fst-italic">共有</h4>
+                    <hr>
+                    <p class="small">このページのURL:</p>
+                    <input type="text" class="form-control" 
+                           value="{{ request.url }}" 
+                           readonly 
+                           onclick="this.select()">
+                    <small class="text-muted">クリックしてコピー</small>
+                </div>
+            </div>
+        </div>
+
+<!-- 削除モーダル -->
+<div class="modal fade" id="del_modal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">削除確認</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>このSTL投稿を削除しますか？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+        <form action="{{ url_for('stl_board.delete_post', post_id=post.post_id) }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="submit" class="btn btn-danger" value="削除">
+        </form>
+      </div>
+    </div>
   </div>
+</div>
+
 {% endblock %}

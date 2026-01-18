@@ -179,7 +179,11 @@
               
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.info' %}active{% endif %}" href="{{ url_for('main.info') }}">会社情報</a>
-              </li>           
+              </li>
+              
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'stl_board.index' %}active{% endif %}" href="{{ url_for('stl_board.index') }}">  掲示板</a>
+              </li>
               
             
 
@@ -204,11 +208,7 @@
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.missing_teeth_nation') }}">MTN-V2</a>
-              </li>
-
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'stl_board.index' %}active{% endif %}" href="{{ url_for('stl_board.index') }}">STL</a>
-              </li>    
+              </li>               
               
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.news') }}">お知らせ</a>
@@ -216,9 +216,9 @@
               
 
               {% if current_user.is_authenticated %}
-              <li class="nav-item">
+              <!-- <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.blog_maintenance' %}active{% endif %}" href="{{ url_for('main.blog_maintenance') }}">ブログ</a>
-              </li>
+              </li> -->
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.category_maintenance' %}active{% endif %}" href="{{ url_for('main.category_maintenance') }}">カテゴリ</a>
               </li>              

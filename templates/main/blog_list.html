@@ -1,0 +1,50 @@
+{% extends "common/base.html" %}
+{% block content %}
+
+
+{% for post in blog_posts %}
+<div class="col-md-6 col-lg-4 mb-4">
+    <div class="card h-100 shadow-sm">
+        {# YouTube サムネイルを優先表示 #}
+        {% if post.youtube_id %}
+        <img src="https://img.youtube.com/vi/{{ post.youtube_id }}/hqdefault.jpg" 
+             class="card-img-top" alt="{{ post.title }}" style="height: 200px; object-fit: cover;">
+        {% elif post.featured_image %}
+        <img src="{{ url_for('static', filename='featured_image/' + post.featured_image) }}" 
+             class="card-img-top" alt="{{ post.title }}" style="height: 200px; object-fit: cover;">
+        {% else %}
+        <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
+            <i class="fas fa-file-alt fa-3x text-white"></i>
+        </div>
+        {% endif %}
+        
+        <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ post.title }}</h5>
+            
+            <p class="card-text text-muted small mb-2">
+                <i class="far fa-calendar"></i> {{ post.date[:10] if post.date else '' }}
+                {% if post.author_name %}
+                <span class="ms-2"><i class="far fa-user"></i> {{ post.author_name }}</span>
+                {% endif %}
+            </p>
+            
+            {% if post.category_name %}
+            <span class="badge bg-info mb-2">{{ post.category_name }}</span>
+            {% endif %}
+            
+            {% if post.summary %}
+            <p class="card-text flex-grow-1">{{ post.summary | truncate(100) }}</p>
+            {% elif post.text %}
+            <p class="card-text flex-grow-1">{{ post.text | striptags | truncate(100) }}</p>
+            {% endif %}
+            
+            <a href="{{ url_for('main.blog_post', blog_post_id=post.post_id) }}" 
+               class="btn btn-primary mt-auto">
+                続きを読む <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

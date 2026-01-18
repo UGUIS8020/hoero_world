@@ -13,6 +13,9 @@ from trimesh.visual.material import PBRMaterial
 from dotenv import load_dotenv
 import boto3
 from types import SimpleNamespace
+import re
+from PIL import Image, ImageOps
+import io
 
 from utils.stl_dynamo import (
     create_stl_post,
@@ -30,6 +33,7 @@ from utils.stl_dynamo import (
     get_likes_by_post,
     get_all_likes,
     delete_likes_by_post,
+    update_stl_post,
 )
 
 load_dotenv()
@@ -48,14 +52,99 @@ BUCKET_NAME = os.getenv("BUCKET_NAME")
 bp = Blueprint('stl_board', __name__, url_prefix='/stl_board')
 
 
+def upload_resized_image_to_s3(file_storage, *, max_width=1000, quality=85, prefix="STL-board/images/"):
+    """
+    スマホ写真などを横幅max_widthに縮小してS3へアップロードし、S3キーを返す
+    - 形式: jpeg/png/webp対応
+    - exif回転補正あり
+    """
+    original = secure_filename(file_storage.filename or "")
+    ext = os.path.splitext(original)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise ValueError("画像は jpg/jpeg/png/webp のみアップロードできます")
+
+    # Pillowで読み込み（EXIF回転も補正）
+    img = Image.open(file_storage.stream)
+    img = ImageOps.exif_transpose(img)
+
+    # リサイズ（横幅だけ基準、縦横比維持）
+    w, h = img.size
+    if w > max_width:
+        new_h = int(h * (max_width / float(w)))
+        img = img.resize((max_width, new_h), Image.LANCZOS)
+
+    # 透過PNG→JPEGの事故防止（PNG/WebPの透過は保持、JPEGはRGB化）
+    out = io.BytesIO()
+
+    timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    base = os.path.splitext(original)[0]
+    base_filename = f"{timestamp}_{base}"
+
+    if ext in [".jpg", ".jpeg"]:
+        img = img.convert("RGB")
+        img.save(out, format="JPEG", quality=quality, optimize=True)
+        content_type = "image/jpeg"
+        key = f"{prefix}{base_filename}.jpg"
+
+    elif ext == ".png":
+        # PNGはそのまま（圧縮）
+        img.save(out, format="PNG", optimize=True)
+        content_type = "image/png"
+        key = f"{prefix}{base_filename}.png"
+
+    else:  # .webp
+        # WebPで保存（軽い）
+        img.save(out, format="WEBP", quality=quality, method=6)
+        content_type = "image/webp"
+        key = f"{prefix}{base_filename}.webp"
+
+    out.seek(0)
+
+    s3.upload_fileobj(
+        out,
+        BUCKET_NAME,
+        key,
+        ExtraArgs={"ContentType": content_type}
+    )
+    return key
+
+
 # STL投稿用フォーム
 class STLPostForm(FlaskForm):
     title = StringField('タイトル', validators=[])
     content = TextAreaField('内容', render_kw={'placeholder': 'POST入力'})
-    stl_file = FileField('STLファイル', validators=[
-        FileAllowed(['stl'], 'STLファイルのみ許可されています')
+    stl_file = FileField('STLファイル', validators=[FileAllowed(['stl'], 'STLファイルのみ許可されています')])
+    image_file = FileField('画像', validators=[  # ★追加
+        FileAllowed(['jpg', 'jpeg', 'png', 'webp'], '画像ファイルのみ許可されています')
     ])
-    submit = SubmitField('投稿する')
+    youtube_url = StringField('YouTube URL', render_kw={'placeholder': 'https://www.youtube.com/watch?v=...'})
+    submit = SubmitField('更新する')
+
+
+def extract_youtube_id(url: str) -> str:
+    """YouTube URLから動画IDを抽出"""
+    if not url:
+        return ""
+    
+    patterns = [
+        r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',
+        r'(?:embed\/)([0-9A-Za-z_-]{11})',
+        r'(?:watch\?v=)([0-9A-Za-z_-]{11})',
+        r'youtu\.be\/([0-9A-Za-z_-]{11})',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return ""
+
+def to_youtube_embed(url: str) -> str:
+    """YouTube URLを埋め込み形式に変換"""
+    video_id = extract_youtube_id(url)
+    if video_id:
+        return f"https://www.youtube.com/embed/{video_id}"
+    return ""
 
 
 def reduce_stl_size(input_file_path, output_file_path, target_faces=70000):
@@ -131,6 +220,9 @@ def index():
             flash("投稿するにはログインが必要です", "warning")
             return redirect(url_for("users.login"))
 
+        # =========================================
+        # 1) STLファイルの処理
+        # =========================================
         stl_file = form.stl_file.data
         glb_filename = None
         glb_file_path = None
@@ -169,7 +261,9 @@ def index():
                             ExtraArgs={'ContentType': 'model/gltf-binary'}
                         )
 
-                    os.remove(temp_path)
+                    # 後片付け
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
                     if upload_stl_path != temp_path and os.path.exists(upload_stl_path):
                         os.remove(upload_stl_path)
                     if os.path.exists(glb_temp_path):
@@ -185,22 +279,54 @@ def index():
                 flash('STLファイルのみアップロードできます', 'danger')
                 return redirect(url_for('stl_board.index'))
 
+        # =========================================
+        # 2) 画像ファイルの処理（横幅1000pxに縮小してS3へ）
+        # =========================================
+        image_file_path = None
+        if form.image_file.data and form.image_file.data.filename:
+            try:
+                image_file_path = upload_resized_image_to_s3(
+                    form.image_file.data,
+                    max_width=1000,
+                    quality=85,
+                    prefix="STL-board/images/"
+                )
+            except Exception as e:
+                flash(f"画像アップロード中にエラーが発生しました: {str(e)}", "danger")
+                return redirect(url_for("stl_board.index"))
+
+        # =========================================
+        # 3) YouTube URL の処理
+        # =========================================
+        youtube_url = (form.youtube_url.data or "").strip()
+        youtube_id = extract_youtube_id(youtube_url) if youtube_url else ""
+        youtube_embed_url = to_youtube_embed(youtube_url) if youtube_url else ""
+
+        # =========================================
+        # 4) 投稿を作成
+        # =========================================
         post_id = create_stl_post(
             title=form.title.data,
             content=form.content.data,
             user_id=current_user.email,
             stl_filename=glb_filename,
-            stl_file_path=glb_file_path
+            stl_file_path=glb_file_path,
+            youtube_url=youtube_url,
+            youtube_id=youtube_id,
+            youtube_embed_url=youtube_embed_url,
+            image_file_path=image_file_path,  # ★追加
         )
         flash('投稿が作成されました', 'success')
         return redirect(url_for('stl_board.index'))
 
-    # ★ ユーザーテーブル
+    # ==========================================================
+    # 以下：表示処理（GET）
+    # ==========================================================
+
+    # ユーザーテーブル
     users_table = current_app.config.get("HOERO_USERS_TABLE")
 
-    # -----------------------------
-    # ★ 追加：共通ヘルパー（author解決 / datetime化）
-    # -----------------------------
+    # 共通ヘルパー関数
     def resolve_author(user_id: str):
         user_id = str(user_id or "")
         author = SimpleNamespace(
@@ -223,34 +349,27 @@ def index():
         return author
 
     def to_datetime(dt_value):
-        """DynamoDBの文字列/Noneなどを datetime に寄せる（テンプレで strftime できるように）"""
+        """DynamoDBの文字列/Noneなどを datetime に寄せる"""
         if not dt_value:
             return datetime.datetime.utcnow()
-        # 既にdatetimeならそのまま
         if hasattr(dt_value, "strftime"):
             return dt_value
-        # 文字列想定
         s = str(dt_value)
         try:
             return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
         except Exception:
             return datetime.datetime.utcnow()
 
-    # ★ コメント・いいねを全件取得
+    # コメント・いいねを全件取得
     all_comments = get_all_comments()
     all_likes = get_all_likes()
 
-    # -----------------------------
-    # ★ 追加：コメントをテンプレ互換に整形（author / created_at を必ず持たせる）
-    # -----------------------------
+    # コメントをテンプレ互換に整形
     all_comments_obj = []
     for c in (all_comments or []):
-        c_dict = dict(c)  # 念のためコピー
-
-        # 既に user_id / created_at が入っている可能性があるので pop して重複を避ける
+        c_dict = dict(c)
         raw_user_id = c_dict.pop("user_id", "")
         raw_created_at = c_dict.pop("created_at", None)
-
         c_user_id = str(raw_user_id or "")
 
         comment_obj = SimpleNamespace(
@@ -267,13 +386,19 @@ def index():
     posts_items = []
     for it in posts_data["items"]:
         post_id = it.get("post_id")
-
         user_id = str(it.get("user_id", ""))
         author = resolve_author(user_id)
-
         created_at = to_datetime(it.get("created_at"))
 
-        # ★ この投稿のコメントといいねをフィルタ（コメントは obj 側を使う）
+        # YouTube 情報
+        youtube_url = it.get("youtube_url", "")
+        youtube_id = it.get("youtube_id", "") or extract_youtube_id(youtube_url)
+        youtube_embed_url = it.get("youtube_embed_url", "") or to_youtube_embed(youtube_url)
+
+        # ★画像
+        image_path = it.get("image_file_path", "") or ""
+        image_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_path}" if image_path else None
+
         post_comments = [c for c in all_comments_obj if getattr(c, "post_id", None) == post_id]
         post_likes = [l for l in all_likes if l.get("post_id") == post_id]
 
@@ -294,10 +419,15 @@ def index():
             user_id=user_id,
             stl_filename=it.get("stl_filename", ""),
             stl_file_path=it.get("stl_file_path", ""),
+            image_file_path=image_path,     # ★追加（必要なら）
+            image_url=image_url,            # ★追加（テンプレ表示用）
             created_at=created_at,
             author=author,
             likes=likes_wrapper,
             comments=comments_wrapper,
+            youtube_url=youtube_url,
+            youtube_id=youtube_id,
+            youtube_embed_url=youtube_embed_url,
             s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{it.get('stl_file_path', '')}" if it.get("stl_file_path") else None
         )
         posts_items.append(post_obj)
@@ -312,6 +442,7 @@ def index():
         next_num=posts_data["next_num"],
     )
 
+    # selected_post
     selected_post = None
     if selected_post_id:
         post_item = get_stl_post_by_id(selected_post_id)
@@ -320,7 +451,14 @@ def index():
             author = resolve_author(user_id)
             created_at = to_datetime(post_item.get("created_at"))
 
-            # ★ selected_postのコメントといいね
+            youtube_url = post_item.get("youtube_url", "")
+            youtube_id = post_item.get("youtube_id", "") or extract_youtube_id(youtube_url)
+            youtube_embed_url = post_item.get("youtube_embed_url", "") or to_youtube_embed(youtube_url)
+
+            # ★画像
+            image_path = post_item.get("image_file_path", "") or ""
+            image_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_path}" if image_path else None
+
             post_comments = [c for c in all_comments_obj if getattr(c, "post_id", None) == selected_post_id]
             post_likes = [l for l in all_likes if l.get("post_id") == selected_post_id]
 
@@ -340,14 +478,18 @@ def index():
                 content=post_item.get("content", ""),
                 user_id=user_id,
                 stl_file_path=post_item.get("stl_file_path", ""),
+                image_file_path=image_path,   # ★追加
+                image_url=image_url,          # ★追加
                 created_at=created_at,
                 author=author,
                 likes=likes_wrapper,
                 comments=comments_wrapper,
+                youtube_url=youtube_url,
+                youtube_id=youtube_id,
+                youtube_embed_url=youtube_embed_url,
                 s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{post_item.get('stl_file_path', '')}" if post_item.get("stl_file_path") else None
             )
 
-    # ★ ここが重要：テンプレに渡す comments を obj版にする
     comments = all_comments_obj
     likes = all_likes
 
@@ -440,15 +582,273 @@ def view_post(post_id):
     if not post_item:
         abort(404)
 
+    # YouTube 情報を取得
+    youtube_url = post_item.get("youtube_url", "")
+    youtube_id = post_item.get("youtube_id", "") or extract_youtube_id(youtube_url)
+    youtube_embed_url = post_item.get("youtube_embed_url", "") or to_youtube_embed(youtube_url)
+
+    # ユーザー情報を取得
+    users_table = current_app.config.get("HOERO_USERS_TABLE")
+    user_id = str(post_item.get("user_id", ""))
+    author_name = "Unknown User"
+    
+    if users_table and user_id:
+        try:
+            user_response = users_table.get_item(Key={"user_id": user_id})
+            user_data = user_response.get("Item", {})
+            if user_data:
+                author_name = user_data.get("display_name", "Unknown User")
+        except Exception as e:
+            print(f"ユーザー情報取得エラー: {e}")
+
+    # 作成日時を datetime に変換
+    created_at = post_item.get("created_at", "")
+    try:
+        created_at_dt = datetime.datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except Exception:
+        created_at_dt = datetime.datetime.utcnow()
+
+    image_path = post_item.get("image_file_path", "") or ""
+    image_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_path}" if image_path else None
+
     post = SimpleNamespace(
         post_id=post_item.get("post_id"),
         title=post_item.get("title", ""),
         content=post_item.get("content", ""),
-        user_id=str(post_item.get("user_id", "")),
+        user_id=user_id,
+        author_name=author_name,
+        created_at=created_at_dt,
         stl_file_path=post_item.get("stl_file_path", ""),
+        youtube_url=youtube_url,
+        youtube_id=youtube_id,
+        youtube_embed_url=youtube_embed_url,
+        image_file_path=image_path,
+        image_url=image_url,
         s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{post_item.get('stl_file_path', '')}" if post_item.get("stl_file_path") else None
     )
 
     comments = get_comments_by_post(post_id)
 
-    return render_template('pages/stl_post_detail.html', post=post, comments=comments)
+    # ★ 最新のSTL投稿を取得（サイドバー用）
+    try:
+        recent_items = list_stl_posts(limit=5)
+        print(f"\n=== 最新投稿取得 ===")
+        print(f"取得した投稿数: {len(recent_items)}")
+    except Exception as e:
+        print(f"最新投稿取得エラー: {e}")
+        recent_items = []
+    
+    recent_posts = []
+    for idx, it in enumerate(recent_items, 1):
+        pid = it.get("post_id")
+        if not pid:
+            continue
+        
+        # YouTube 情報を複数のソースから取得
+        yurl = it.get("youtube_url", "")
+        yembed = it.get("youtube_embed_url", "")
+        yid_stored = it.get("youtube_id", "")
+        
+        # 優先順位: 保存済みID > URLから抽出 > embed URLから抽出
+        yid = yid_stored or extract_youtube_id(yurl) or extract_youtube_id(yembed)
+        
+        stl_path = it.get("stl_file_path", "")
+        
+        # ★ 詳細なデバッグ出力
+        print(f"\n[{idx}] 投稿ID: {pid}")
+        print(f"    タイトル: {it.get('title', '無題')}")
+        print(f"    youtube_url: '{yurl}'")
+        print(f"    youtube_embed_url: '{yembed}'")
+        print(f"    youtube_id (保存済み): '{yid_stored}'")
+        print(f"    youtube_id (抽出結果): '{yid}'")
+        print(f"    stl_file_path: '{stl_path}'")
+        
+        # 空文字列を None に変換
+        yid = yid if yid and yid.strip() else None
+        stl_path = stl_path if stl_path and stl_path.strip() else None
+        
+        print(f"    最終判定 - YouTube: {yid is not None}, STL: {stl_path is not None}")
+
+        raw_created_at = it.get("created_at", "")
+        try:
+            recent_created_at_dt = datetime.datetime.fromisoformat(str(raw_created_at).replace("Z", "+00:00"))
+        except Exception:
+            recent_created_at_dt = None
+        
+        recent_posts.append(
+            SimpleNamespace(
+                post_id=pid,
+                title=it.get("title", "無題"),
+                youtube_id=yid,
+                stl_file_path=stl_path,
+                created_at=recent_created_at_dt
+            )
+        )
+    
+    print(f"\n=== recent_posts数: {len(recent_posts)} ===\n")
+
+    return render_template('pages/stl_post_detail.html', 
+                         post=post, 
+                         comments=comments,
+                         recent_posts=recent_posts)
+
+
+@bp.route('/edit/<post_id>', methods=['GET', 'POST'])
+@login_required
+def edit_post(post_id):
+    post_item = get_stl_post_by_id(post_id)
+    if not post_item:
+        abort(404)
+
+    if str(current_user.email) != str(post_item.get("user_id", "")) and not current_user.administrator:
+        abort(403)
+
+    form = STLPostForm()
+
+    if form.validate_on_submit():
+        try:
+            # ----------------------------
+            # STL更新（必要なら）
+            # ----------------------------
+            stl_file = form.stl_file.data
+            glb_filename = post_item.get("stl_filename")
+            glb_file_path = post_item.get("stl_file_path")
+
+            if stl_file and stl_file.filename:
+                if not stl_file.filename.lower().endswith(".stl"):
+                    flash("STLファイルのみアップロードできます", "danger")
+                    return redirect(url_for("stl_board.edit_post", post_id=post_id))
+
+                # 古いGLBを削除
+                if post_item.get("stl_file_path"):
+                    try:
+                        s3.delete_object(Bucket=BUCKET_NAME, Key=post_item["stl_file_path"])
+                    except Exception as e:
+                        print(f"古いファイル削除エラー: {e}")
+
+                original_filename = secure_filename(stl_file.filename)
+                timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+                base_filename = f"{timestamp}_{os.path.splitext(original_filename)[0]}"
+                glb_s3_key = f"STL-board/{base_filename}.glb"
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".stl") as temp:
+                    stl_file.save(temp.name)
+                    temp_path = temp.name
+
+                file_size_mb = os.path.getsize(temp_path) / (1024 * 1024)
+                if file_size_mb > 5.0:
+                    reduced_temp_path = temp_path.replace(".stl", "_reduced.stl")
+                    reduce_stl_size(temp_path, reduced_temp_path)
+                    upload_stl_path = reduced_temp_path
+                    flash("ファイルが大きいため自動的に軽量化しました", "warning")
+                else:
+                    upload_stl_path = temp_path
+
+                glb_temp_path = upload_stl_path.replace(".stl", ".glb")
+                if not convert_stl_to_gltf(upload_stl_path, glb_temp_path):
+                    flash("glTF変換に失敗しました", "danger")
+                    return redirect(url_for("stl_board.edit_post", post_id=post_id))
+
+                with open(glb_temp_path, "rb") as glb_data:
+                    s3.upload_fileobj(
+                        glb_data, BUCKET_NAME, glb_s3_key,
+                        ExtraArgs={"ContentType": "model/gltf-binary"}
+                    )
+
+                # 一時ファイル掃除
+                try:
+                    os.remove(temp_path)
+                except:
+                    pass
+                if upload_stl_path != temp_path and os.path.exists(upload_stl_path):
+                    os.remove(upload_stl_path)
+                if os.path.exists(glb_temp_path):
+                    os.remove(glb_temp_path)
+
+                glb_filename = f"{base_filename}.glb"
+                glb_file_path = glb_s3_key
+
+            # ----------------------------
+            # 画像更新（必要なら：横幅1000pxに縮小してS3へ）
+            # ----------------------------
+            image_file_path = post_item.get("image_file_path")  # 既存を維持
+
+            if form.image_file.data and form.image_file.data.filename:
+                try:
+                    image_file_path = upload_resized_image_to_s3(
+                        form.image_file.data,
+                        max_width=1000,
+                        quality=85,
+                        prefix="STL-board/images/"
+                    )
+                except Exception as e:
+                    flash(f"画像アップロード中にエラーが発生しました: {str(e)}", "danger")
+                    return redirect(url_for("stl_board.edit_post", post_id=post_id))
+
+            # ----------------------------
+            # YouTube更新
+            # ----------------------------
+            youtube_url = (form.youtube_url.data or "").strip()
+            youtube_id = extract_youtube_id(youtube_url) if youtube_url else ""
+            youtube_embed_url = to_youtube_embed(youtube_url) if youtube_url else ""
+
+            # ----------------------------
+            # DB更新
+            # ----------------------------
+            update_stl_post(
+                post_id=post_id,
+                title=form.title.data,
+                content=form.content.data,
+                stl_filename=glb_filename,
+                stl_file_path=glb_file_path,
+                youtube_url=youtube_url,
+                youtube_id=youtube_id,
+                youtube_embed_url=youtube_embed_url,
+                image_file_path=image_file_path,
+            )
+
+            flash("投稿を更新しました", "success")
+            return redirect(url_for("stl_board.view_post", post_id=post_id))
+
+        except Exception as e:
+            flash(f"更新中にエラーが発生しました: {str(e)}", "danger")
+
+    elif request.method == "GET":
+        form.title.data = post_item.get("title", "")
+        form.content.data = post_item.get("content", "")
+        form.youtube_url.data = post_item.get("youtube_url", "")
+
+    # ============================
+    # テンプレ用（表示用データ）
+    # ============================
+
+    # YouTube
+    youtube_url = post_item.get("youtube_url", "")
+    youtube_id = post_item.get("youtube_id", "") or extract_youtube_id(youtube_url)
+    youtube_embed_url = post_item.get("youtube_embed_url", "") or to_youtube_embed(youtube_url)
+
+    # ★画像URLを追加
+    image_path = post_item.get("image_file_path", "") or ""
+    image_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_path}" if image_path else None
+
+    current_post = SimpleNamespace(
+        post_id=post_item.get("post_id"),
+        title=post_item.get("title", ""),
+        content=post_item.get("content", ""),
+
+        # STL
+        stl_file_path=post_item.get("stl_file_path", ""),
+        s3_presigned_url=f"https://{BUCKET_NAME}.s3.amazonaws.com/{post_item.get('stl_file_path', '')}"
+            if post_item.get("stl_file_path") else None,
+
+        # YouTube
+        youtube_url=youtube_url,
+        youtube_id=youtube_id,
+        youtube_embed_url=youtube_embed_url,
+
+        # ★画像
+        image_file_path=image_path,
+        image_url=image_url,
+    )
+
+    return render_template("pages/edit_stl_post.html", form=form, post_id=post_id, current_post=current_post)

@@ -156,16 +156,15 @@
 </style>
 
 <!-- パンくずナビ -->
-    <nav class="breadcrumb-nav" aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">ホーム</a></li>
-            <li class="breadcrumb-item active" aria-current="page">STL掲示板</li>            
-        </ol>
-    </nav> 
+<nav class="breadcrumb-nav" aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+        <li class="breadcrumb-item active" aria-current="page">STL掲示板</li>            
+    </ol>
+</nav> 
 
 
 <div class="container mt-4">  
-
 
   {% if current_user.is_authenticated %}
   <div class="card mb-4">
@@ -183,11 +182,24 @@
           {{ form.content.label(class="form-label") }}
           {{ form.content(class="form-control", rows=3) }}
         </div>
+
+        <div class="mb-3">
+          {{ form.image_file.label(class="form-label") }}
+          {{ form.image_file(class="form-control") }}
+          <div class="form-text">jpg / png / webp（オプション）</div>
+        </div>
   
         <div class="mb-3">
           {{ form.stl_file.label(class="form-label") }}
           {{ form.stl_file(class="form-control") }}
           <div class="form-text">5MB以内のSTLファイルをアップロードしてください。</div>
+        </div>
+
+        {# ★ YouTube URL フィールドを追加 #}
+        <div class="mb-3">
+          {{ form.youtube_url.label(class="form-label") }}
+          {{ form.youtube_url(class="form-control", placeholder="https://www.youtube.com/watch?v=...") }}
+          <div class="form-text">YouTube動画のURLを入力してください（オプション）</div>
         </div>
   
         <div class="d-grid">
@@ -210,7 +222,12 @@
   
       <!-- 投稿ヘッダー -->
       {% if post.title %}
-        <div class="fw-bold mb-1">{{ post.title }}</div>
+        <div class="fw-bold fs-4 mb-1">
+          <a href="{{ url_for('stl_board.view_post', post_id=post.post_id) }}" 
+            class="text-decoration-none text-dark">
+            {{ post.title }}
+          </a>
+        </div>
       {% endif %}
 
       <div class="post-header">
@@ -222,16 +239,38 @@
       <div class="post-body">
         {{ post.content or "（本文なし）" }}
       </div>
-  
-      <!-- モデルビューアー -->
+
+      {% if post.image_url %}
+        <div class="model-viewer-container">
+          <img src="{{ post.image_url }}"
+               alt="post image"
+               style="width:100%; height:auto; display:block;">
+        </div>
+      {% endif %}
+
+      {# ★ YouTube動画とSTLモデルビューアー（両方表示可能） #}
+      {% if post.youtube_embed_url %}
+        <!-- YouTube動画を表示 -->
+        <div class="model-viewer-container">
+          <div class="ratio ratio-16x9">
+            <iframe src="{{ post.youtube_embed_url }}" 
+                    allowfullscreen 
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+            </iframe>
+          </div>
+        </div>
+      {% endif %}      
+
       {% if post.s3_presigned_url %}
-      <div class="model-viewer-container">
-        <model-viewer src="{{ post.s3_presigned_url }}"
-                      auto-rotate
-                      camera-controls
-                      style="width: 100%; height: 400px; background-color: #fff;">
-        </model-viewer>
-      </div>
+        <!-- STLモデルビューアー -->
+        <div class="model-viewer-container">
+          <model-viewer src="{{ post.s3_presigned_url }}"
+                        auto-rotate
+                        camera-controls
+                        style="width: 100%; height: 400px; background-color: #fff;">
+          </model-viewer>
+        </div>
       {% endif %}
   
       <!-- アクション -->
@@ -242,12 +281,12 @@
         </form>
         <a href="#comment-content-{{ post.post_id }}">💬 コメント</a>
 
-         <div id="comment-content-{{ post.post_id }}"></div>
+        <div id="comment-content-{{ post.post_id }}"></div>
         <!-- 共有リンクを追加 -->
         <a href="{{ url_for('stl_board.view_post', post_id=post.post_id) }}" target="_blank">🔗 共有</a>
       </div>
 
-      <!-- 👇 削除ボタンをここに追加 -->
+      <!-- 削除ボタン -->
       {% if current_user.is_authenticated and (current_user.id == post.user_id or current_user.administrator) %}
       <form method="POST" action="{{ url_for('stl_board.delete_post', post_id=post.post_id) }}"
             onsubmit="return confirm('本当にこの投稿を削除しますか？');" class="mt-2">
@@ -284,37 +323,35 @@
   </div>
 
   <!-- ページネーション -->
-{% if posts.pages > 1 %}
-<nav class="mt-3">
-  <ul class="pagination justify-content-center">
-    {% if posts.has_prev %}
-    <li class="page-item">
-      <a class="page-link" href="{{ url_for('stl_board.index', page=posts.prev_num) }}">前へ</a>
-    </li>
-    {% else %}
-    <li class="page-item disabled"><span class="page-link">前へ</span></li>
-    {% endif %}
-    
-    {% for page_num in range(1, posts.pages + 1) %}
-      {% if page_num == posts.page %}
-      <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+  {% if posts.pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center">
+      {% if posts.has_prev %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('stl_board.index', page=posts.prev_num) }}">前へ</a>
+      </li>
       {% else %}
-      <li class="page-item"><a class="page-link" href="{{ url_for('stl_board.index', page=page_num) }}">{{ page_num }}</a></li>
+      <li class="page-item disabled"><span class="page-link">前へ</span></li>
       {% endif %}
-    {% endfor %}
-    
-    {% if posts.has_next %}
-    <li class="page-item">
-      <a class="page-link" href="{{ url_for('stl_board.index', page=posts.next_num) }}">次へ</a>
-    </li>
-    {% else %}
-    <li class="page-item disabled"><span class="page-link">次へ</span></li>
-    {% endif %}
-  </ul>
-</nav>
-{% endif %}
-
-  
+      
+      {% for page_num in range(1, posts.pages + 1) %}
+        {% if page_num == posts.page %}
+        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+        {% else %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('stl_board.index', page=page_num) }}">{{ page_num }}</a></li>
+        {% endif %}
+      {% endfor %}
+      
+      {% if posts.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('stl_board.index', page=posts.next_num) }}">次へ</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">次へ</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
 
 </div>
 {% endblock %}
