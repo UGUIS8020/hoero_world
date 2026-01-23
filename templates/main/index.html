@@ -164,6 +164,12 @@ a:active { color: #b22222; text-decoration: none; }
     <li class="nav-item">
     <a class="nav-link {% if request.endpoint == 'main.s3_browser' %}active{% endif %}" href="{{ url_for('main.s3_browser') }}">s3_browser</a>
     </li>  
+    <li class="nav-item">
+  <a class="nav-link {% if request.endpoint and request.endpoint.startswith('close_stl_board.') %}active{% endif %}"
+     href="{{ url_for('close_stl_board.index') }}">
+    CLOSE_STL_BOARD
+  </a>
+</li>
 </ul>                                    
 {% endif %}
 

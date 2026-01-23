@@ -192,6 +192,65 @@ def user_maintenance():
 
     return render_template("users/user_maintenance.html", users=users_page)
 
+
+@bp.route('/<user_id>/user_posts')
+@login_required
+def user_posts(user_id):
+    form = BlogSearchForm()
+
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    resp = users_table.get_item(Key={"user_id": user_id})
+    item = resp.get("Item")
+    if not item:
+        abort(404)
+
+    user = SimpleNamespace(
+        user_id=item["user_id"],
+        display_name=item.get("display_name", ""),
+        email=item.get("user_id", ""),
+        sender_name=item.get("sender_name", ""),
+    )
+
+    page = request.args.get('page', 1, type=int)
+
+    # ★ ユーザーの記事（user_id=email 前提）
+    user_posts_items = list_posts_by_user(user_id)
+
+    # ★ ここで各記事に「表示用の author_display_name」を付ける
+    #    （テンプレが post.author_name を見ているなら、ここで上書きするのもあり）
+    enriched = []
+    for it in user_posts_items:
+        it = dict(it)  # 念のためコピー
+
+        # 最新のユーザー名を優先（users_tableのdisplay_name）
+        it["author_name"] = item.get("display_name", it.get("author_name", "Unknown User"))
+
+        enriched.append(it)
+
+    blog_posts = paginate_posts(enriched, page=page, per_page=10)
+
+    blog_categories = list_blog_categories_all()
+
+    recent_items = list_recent_posts(limit=5)
+    recent_blog_posts = [
+        SimpleNamespace(
+            post_id=str(it.get("post_id", "")),   # ★ intをやめる
+            title=it.get("title", ""),
+            featured_image=it.get("featured_image", ""),
+        )
+        for it in recent_items
+    ]
+
+    return render_template(
+        'users/index_users.html',
+        blog_posts=blog_posts,
+        recent_blog_posts=recent_blog_posts,
+        blog_categories=blog_categories,
+        user=user,
+        form=form,
+    )    
+
+
 @bp.route('/account', methods=['GET', 'POST'])
 @login_required
 def account_me():
@@ -283,17 +342,17 @@ def account(user_id):
         user.full_name = form.full_name.data
         user.sender_name = form.sender_name.data
         user.phone = form.phone.data
-        
+
         # 住所情報の更新
         user.postal_code = form.postal_code.data
         user.prefecture = form.prefecture.data
         user.address = form.address.data
         user.building = form.building.data
-        
+
         # パスワードの更新（入力があれば）
         if form.password.data:
             user.password = form.password.data
-            
+
         db.session.commit()
         flash('ユーザーアカウントが更新されました')
         return redirect(url_for('users.user_maintenance'))
@@ -308,63 +367,5 @@ def account(user_id):
         form.prefecture.data = user.prefecture
         form.address.data = user.address
         form.building.data = user.building
-        
+
     return render_template('users/account.html', form=form, user=user)
-
-
-@bp.route('/<user_id>/user_posts')
-@login_required
-def user_posts(user_id):
-    form = BlogSearchForm()
-
-    users_table = current_app.config["HOERO_USERS_TABLE"]
-    resp = users_table.get_item(Key={"user_id": user_id})
-    item = resp.get("Item")
-    if not item:
-        abort(404)
-
-    user = SimpleNamespace(
-        user_id=item["user_id"],
-        display_name=item.get("display_name", ""),
-        email=item.get("user_id", ""),
-        sender_name=item.get("sender_name", ""),
-    )
-
-    page = request.args.get('page', 1, type=int)
-
-    # ★ ユーザーの記事（user_id=email 前提）
-    user_posts_items = list_posts_by_user(user_id)
-
-    # ★ ここで各記事に「表示用の author_display_name」を付ける
-    #    （テンプレが post.author_name を見ているなら、ここで上書きするのもあり）
-    enriched = []
-    for it in user_posts_items:
-        it = dict(it)  # 念のためコピー
-
-        # 最新のユーザー名を優先（users_tableのdisplay_name）
-        it["author_name"] = item.get("display_name", it.get("author_name", "Unknown User"))
-
-        enriched.append(it)
-
-    blog_posts = paginate_posts(enriched, page=page, per_page=10)
-
-    blog_categories = list_blog_categories_all()
-
-    recent_items = list_recent_posts(limit=5)
-    recent_blog_posts = [
-        SimpleNamespace(
-            post_id=str(it.get("post_id", "")),   # ★ intをやめる
-            title=it.get("title", ""),
-            featured_image=it.get("featured_image", ""),
-        )
-        for it in recent_items
-    ]
-
-    return render_template(
-        'users/index_users.html',
-        blog_posts=blog_posts,
-        recent_blog_posts=recent_blog_posts,
-        blog_categories=blog_categories,
-        user=user,
-        form=form,
-    )    

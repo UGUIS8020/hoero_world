@@ -82,6 +82,7 @@ from views.stl_board import bp as stl_board_bp
 from views.sub_account import bp as sub_account_bp
 from views.oralscan import bp as oralscan_bp
 from views.news import bp as news_bp
+from views.close_stl_board import bp_close as close_stl_board_bp
 
 flask_app.register_blueprint(main_bp)
 flask_app.register_blueprint(users_bp)
@@ -91,6 +92,7 @@ flask_app.register_blueprint(stl_board_bp)
 flask_app.register_blueprint(sub_account_bp)
 flask_app.register_blueprint(oralscan_bp)
 flask_app.register_blueprint(news_bp)
+flask_app.register_blueprint(close_stl_board_bp)
 
 if __name__ == "__main__":
     flask_app.run(debug=True)

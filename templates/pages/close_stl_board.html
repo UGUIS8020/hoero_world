@@ -1,0 +1,398 @@
+{% extends "common/base.html" %}
+
+{# SEO最適化 #}
+{% block title %}STLファイル共有ボード｜3Dモデル投稿掲示板｜渋谷歯科技工所{% endblock %}
+{% block description %}歯科技工用STLファイルの共有・交換ができる専用掲示板。3Dモデルのアップロード、ダウンロード、技術情報の交換が可能です。{% endblock %}
+{% block keywords %}STLファイル,3Dモデル,歯科技工,ファイル共有,3Dプリント,CAD,掲示板,技工所,デジタルデンティストリー{% endblock %}
+
+{% block og_type %}website{% endblock %}
+{% block og_description %}歯科技工用STLファイルの共有・交換ができる専用掲示板。3Dモデルのアップロードやダウンロードが可能です。{% endblock %}
+
+{% block extra_meta %}
+  {# Twitter Card専用設定 #}
+  <meta name="twitter:title" content="STLファイル共有ボード｜3Dモデル掲示板">
+  <meta name="twitter:description" content="歯科技工用STLファイルの共有・交換ができる専用掲示板。技術情報の交換も可能です。">
+
+  {# パンくず構造化データ #}
+  <script type="application/ld+json">
+  {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+          {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "ホーム",
+              "item": "https://shibuya8020.com/"
+          },
+          {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "STLファイル共有ボード",
+              "item": "https://shibuya8020.com/close_stl_board/"
+          }
+      ]
+  }
+  </script>
+
+  {# WebApplicationの構造化データ #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "STLファイル共有ボード",
+    "description": "歯科技工用STLファイルの共有・交換ができる専用掲示板システム",
+    "url": "https://shibuya8020.com/close_stl_board/",
+    "applicationCategory": "3D Modeling Tool",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "JPY"
+    },
+    "provider": {
+      "@type": "Organization",
+      "name": "渋谷歯科技工所"
+    },
+    "featureList": [
+      "STLファイルのアップロード",
+      "3Dモデルの共有",
+      "技術情報の交換",
+      "ファイルのダウンロード"
+    ]
+  }
+  </script>
+{% endblock %}
+
+{% block content %}
+
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+<style>
+.timeline-container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #fff;
+}
+
+.post-item {
+  border-bottom: 1px solid #e6ecf0;
+  padding: 16px 0;
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #657786;
+  margin-bottom: 6px;
+}
+
+.post-body {
+  font-size: 1rem;
+  color: #14171a;
+  white-space: pre-line;
+}
+
+.post-actions {
+  display: flex;
+  gap: 20px;
+  font-size: 0.9rem;
+  color: #657786;
+  margin-top: 8px;
+}
+
+.post-actions button,
+.post-actions a {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #657786;
+  text-decoration: none;
+}
+
+.post-actions button:hover,
+.post-actions a:hover {
+  color: #1da1f2;
+}
+
+.model-viewer-container {
+  margin-top: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e1e8ed;
+  background: #f5f8fa;
+}
+
+/* コメント用 */
+.comment-item {
+  padding: 12px 0 12px 20px;
+  border-left: 2px solid #e1e8ed;
+  margin-top: 8px;
+}
+
+.comment-header {
+  font-size: 0.8rem;
+  color: #657786;
+  margin-bottom: 4px;
+}
+
+/* コメントフォーム */
+.comment-form textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ccd6dd;
+  padding: 8px;
+  resize: none;
+}
+
+.comment-form button {
+  margin-top: 6px;
+  font-size: 0.85rem;
+}
+</style>
+
+<!-- パンくずナビ -->
+<nav class="breadcrumb-nav" aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+        <li class="breadcrumb-item active" aria-current="page">CLOSE BOARD</li>            
+    </ol>
+</nav> 
+
+
+<div class="container mt-4">  
+
+  {% if current_user.is_authenticated %}
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="mb-3">新規POST</h5>
+      <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+  
+        <div class="mb-3">
+          {{ form.title.label(class="form-label") }}
+          {{ form.title(class="form-control", placeholder="タイトルを入力") }}
+        </div>
+  
+        <div class="mb-3">
+          {{ form.content.label(class="form-label") }}
+          {{ form.content(class="form-control", rows=3) }}
+        </div>
+
+        <div class="mb-3">
+          {{ form.image_file.label(class="form-label") }}
+          {{ form.image_file(class="form-control") }}
+          <div class="form-text">jpg / png / webp（オプション）</div>
+        </div>
+  
+        <div class="mb-3">
+          {{ form.stl_file.label(class="form-label") }}
+          {{ form.stl_file(class="form-control") }}
+          <div class="form-text">5MB以内のSTLファイルをアップロードしてください。</div>
+        </div>
+
+        {# ★ YouTube URL フィールドを追加 #}
+        <div class="mb-3">
+          {{ form.youtube_url.label(class="form-label") }}
+          {{ form.youtube_url(class="form-control", placeholder="https://www.youtube.com/watch?v=...") }}
+          <div class="form-text">YouTube動画のURLを入力してください（オプション）</div>
+        </div>
+  
+        <div class="d-grid">
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info text-center mb-4">
+    投稿するには<a href="{{ url_for('users.login') }}">ログイン</a>してください
+  </div>
+  {% endif %}
+
+
+  <div class="timeline-container">
+
+    {% for post in posts.items %}
+    <div class="post-item">
+  
+      <!-- 投稿ヘッダー -->
+      {% if post.title %}
+        <div class="fw-bold fs-4 mb-1">
+          <a href="{{ url_for('close_stl_board.view_post', post_id=post.post_id) }}"
+            class="text-decoration-none text-dark">
+            {{ post.title }}
+          </a>
+        </div>
+      {% endif %}
+
+      <div class="post-header">
+        <strong>{{ post.author.display_name }}</strong>
+        <span>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      </div>
+  
+      <!-- 投稿本文 -->
+      <div class="post-body">
+        {{ post.content or "（本文なし）" }}
+      </div>
+
+      {% if post.image_url %}
+        <div class="model-viewer-container">
+          <img src="{{ post.image_url }}"
+               alt="post image"
+               style="width:100%; height:auto; display:block;">
+        </div>
+      {% endif %}
+
+      {# ★ YouTube動画とSTLモデルビューアー（両方表示可能） #}
+      {% if post.youtube_embed_url %}
+        <!-- YouTube動画を表示 -->
+        <div class="model-viewer-container">
+          <div class="ratio ratio-16x9">
+            <iframe src="{{ post.youtube_embed_url }}" 
+                    allowfullscreen 
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+            </iframe>
+          </div>
+        </div>
+      {% endif %}      
+
+      {% if post.s3_presigned_url %}
+        <!-- STLモデルビューアー -->
+        <div class="model-viewer-container">
+          <model-viewer src="{{ post.s3_presigned_url }}"
+                        auto-rotate
+                        camera-controls
+                        style="width: 100%; height: 400px; background-color: #fff;">
+          </model-viewer>
+        </div>
+      {% endif %}
+  
+      <!-- アクション -->
+      <div class="post-actions">
+        <form method="POST" action="{{ url_for('close_stl_board.like_post', post_id=post.post_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">❤️ {{ post.likes.count() }}</button>
+        </form>
+        <a href="#comment-content-{{ post.post_id }}">💬 コメント</a>
+
+        <div id="comment-content-{{ post.post_id }}"></div>
+        <!-- 共有リンクを追加 -->
+        <a href="{{ url_for('close_stl_board.view_post', post_id=post.post_id) }}" target="_blank">🔗 共有</a>
+      </div>
+
+      <!-- 削除ボタン -->
+      {% if current_user.is_authenticated and (current_user.id == post.user_id or current_user.administrator) %}
+      <form method="POST" action="{{ url_for('close_stl_board.delete_post', post_id=post.post_id) }}"
+            onsubmit="return confirm('本当にこの投稿を削除しますか？');" class="mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-danger">🗑️ 投稿を削除</button>
+      </form>
+      {% endif %}
+  
+      <!-- コメント -->
+      {% for comment in comments %}
+        {% if comment.post_id == post.post_id and not comment.parent_comment_id %}
+        <div class="comment-item">
+          <div class="comment-header">
+            {{ comment.author.display_name }} ・ {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}
+          </div>
+          <div>{{ comment.content }}</div>
+        </div>
+        {% endif %}
+      {% endfor %}      
+  
+      <!-- コメント投稿フォーム -->
+      {% if current_user.is_authenticated %}
+      <form method="POST" action="{{ url_for('close_stl_board.add_comment', post_id=post.post_id) }}"
+            class="comment-form mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <textarea name="content" rows="2" required placeholder="返信を入力…"></textarea>
+        <button class="btn btn-sm btn-outline-primary" type="submit">返信する</button>
+      </form>
+      {% endif %}
+  
+    </div>
+    {% endfor %}
+  
+  </div>
+
+  <!-- ページネーション -->
+  {% if posts.pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination justify-content-center">
+      {% if posts.has_prev %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('close_stl_board.index', page=posts.prev_num) }}">前へ</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">前へ</span></li>
+      {% endif %}
+      
+      {% for page_num in range(1, posts.pages + 1) %}
+        {% if page_num == posts.page %}
+        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+        {% else %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('close_stl_board.index', page=page_num) }}">{{ page_num }}</a></li>
+        {% endif %}
+      {% endfor %}
+      
+      {% if posts.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="{{ url_for('close_stl_board.index', page=posts.next_num) }}">次へ</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">次へ</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
+
+{% endblock %}
