@@ -11,6 +11,52 @@
 {% block extra_meta %}
   <!-- Tailwind CSS -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
+  <!-- ★ Tailwindの影響を打ち消す（Tailwindの直後に配置が重要）-->
+  <style>
+    /* ナビゲーションバーを保護 */
+    .navbar {
+      background-color: #212529 !important;
+      position: fixed !important;
+      top: 0 !important;
+      width: 100% !important;
+      z-index: 1030 !important;
+      padding: 0.5rem 0 !important;
+    }
+    .navbar-brand img {
+      height: 40px !important;
+      width: auto !important;
+    }
+    .navbar-toggler-icon {
+      width: 1.5em !important;
+      height: 1.5em !important;
+    }
+    .navbar .nav-link {
+      white-space: nowrap !important;
+      color: rgba(255,255,255,.75) !important;
+      padding: 0.5rem 1rem !important;
+    }
+    
+    /* フッターを保護 */
+    .footer {
+      background-color: #212529 !important;
+      position: fixed !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      padding: 0.5rem 0 !important;
+      color: #fff !important;
+    }
+    
+    /* Bootstrapのコンテナを保護 */
+    body {
+      padding-top: 1rem !important;
+      padding-bottom: 3.5rem !important;
+    }
+  </style>
+
+  
+  <!-- Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <!-- React と ReactDOM -->
   <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>

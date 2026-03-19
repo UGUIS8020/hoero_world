@@ -29,7 +29,7 @@
               "@type": "ListItem",
               "position": 2,
               "name": "STLファイル共有ボード",
-              "item": "https://shibuya8020.com/stl_board/"
+              "item": "https://shibuya8020.com/close_stl_board/"
           }
       ]
   }
@@ -42,7 +42,7 @@
     "@type": "WebApplication",
     "name": "STLファイル共有ボード",
     "description": "歯科技工用STLファイルの共有・交換ができる専用掲示板システム",
-    "url": "https://shibuya8020.com/stl_board/",
+    "url": "https://shibuya8020.com/close_stl_board/",
     "applicationCategory": "3D Modeling Tool",
     "operatingSystem": "Web Browser",
     "offers": {
@@ -159,7 +159,7 @@
 <nav class="breadcrumb-nav" aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="/">ホーム</a></li>
-        <li class="breadcrumb-item active" aria-current="page">STL掲示板</li>            
+        <li class="breadcrumb-item active" aria-current="page">CLOSE BOARD</li>            
     </ol>
 </nav> 
 
@@ -223,7 +223,7 @@
       <!-- 投稿ヘッダー -->
       {% if post.title %}
         <div class="fw-bold fs-4 mb-1">
-          <a href="{{ url_for('stl_board.view_post', post_id=post.post_id) }}" 
+          <a href="{{ url_for('close_stl_board.view_post', post_id=post.post_id) }}"
             class="text-decoration-none text-dark">
             {{ post.title }}
           </a>
@@ -275,7 +275,7 @@
   
       <!-- アクション -->
       <div class="post-actions">
-        <form method="POST" action="{{ url_for('stl_board.like_post', post_id=post.post_id) }}">
+        <form method="POST" action="{{ url_for('close_stl_board.like_post', post_id=post.post_id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit">❤️ {{ post.likes.count() }}</button>
         </form>
@@ -283,12 +283,12 @@
 
         <div id="comment-content-{{ post.post_id }}"></div>
         <!-- 共有リンクを追加 -->
-        <a href="{{ url_for('stl_board.view_post', post_id=post.post_id) }}" target="_blank">🔗 共有</a>
+        <a href="{{ url_for('close_stl_board.view_post', post_id=post.post_id) }}" target="_blank">🔗 共有</a>
       </div>
 
       <!-- 削除ボタン -->
       {% if current_user.is_authenticated and (current_user.id == post.user_id or current_user.administrator) %}
-      <form method="POST" action="{{ url_for('stl_board.delete_post', post_id=post.post_id) }}"
+      <form method="POST" action="{{ url_for('close_stl_board.delete_post', post_id=post.post_id) }}"
             onsubmit="return confirm('本当にこの投稿を削除しますか？');" class="mt-2">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-sm btn-outline-danger">🗑️ 投稿を削除</button>
@@ -309,7 +309,7 @@
   
       <!-- コメント投稿フォーム -->
       {% if current_user.is_authenticated %}
-      <form method="POST" action="{{ url_for('stl_board.add_comment', post_id=post.post_id) }}"
+      <form method="POST" action="{{ url_for('close_stl_board.add_comment', post_id=post.post_id) }}"
             class="comment-form mt-2">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <textarea name="content" rows="2" required placeholder="返信を入力…"></textarea>
@@ -328,7 +328,7 @@
     <ul class="pagination justify-content-center">
       {% if posts.has_prev %}
       <li class="page-item">
-        <a class="page-link" href="{{ url_for('stl_board.index', page=posts.prev_num) }}">前へ</a>
+        <a class="page-link" href="{{ url_for('close_stl_board.index', page=posts.prev_num) }}">前へ</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">前へ</span></li>
@@ -338,13 +338,13 @@
         {% if page_num == posts.page %}
         <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
         {% else %}
-        <li class="page-item"><a class="page-link" href="{{ url_for('stl_board.index', page=page_num) }}">{{ page_num }}</a></li>
+        <li class="page-item"><a class="page-link" href="{{ url_for('close_stl_board.index', page=page_num) }}">{{ page_num }}</a></li>
         {% endif %}
       {% endfor %}
       
       {% if posts.has_next %}
       <li class="page-item">
-        <a class="page-link" href="{{ url_for('stl_board.index', page=posts.next_num) }}">次へ</a>
+        <a class="page-link" href="{{ url_for('close_stl_board.index', page=posts.next_num) }}">次へ</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">次へ</span></li>

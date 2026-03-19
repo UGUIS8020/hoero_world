@@ -1,0 +1,183 @@
+{% extends "common/base.html" %}
+
+{% block title %}投稿を編集 - STL掲示板{% endblock %}
+
+{% block content %}
+
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+<style>
+.current-content-preview {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.preview-label {
+  font-weight: bold;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.model-viewer-container {
+  margin: 15px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e1e8ed;
+  background: #f5f8fa;
+}
+
+.preview-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+  display: block;
+}
+</style>
+
+<!-- パンくずナビ -->
+<nav class="breadcrumb-nav" aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+        <li class="breadcrumb-item"><a href="/stl_board">STL掲示板</a></li>
+        <li class="breadcrumb-item active" aria-current="page">投稿編集</li>
+    </ol>
+</nav>
+
+<div class="container mt-4" style="max-width: 1000px;">
+  <div class="mb-3">
+    <a href="{{ url_for('stl_board.view_post', post_id=post_id) }}" class="btn btn-outline-secondary">
+      ← 投稿に戻る
+    </a>
+  </div>
+
+  {# ★ 現在の投稿内容のプレビュー #}
+  <div class="current-content-preview">
+    <h4 class="mb-3">📋 現在の投稿内容</h4>
+
+    <div class="mb-3">
+      <div class="preview-label">タイトル:</div>
+      <div>{{ current_post.title or "（タイトルなし）" }}</div>
+    </div>
+
+    <div class="mb-3">
+      <div class="preview-label">内容:</div>
+      <div style="white-space: pre-line;">{{ current_post.content or "（内容なし）" }}</div>
+    </div>
+
+    {# ★ 画像プレビュー（追加） #}
+    {% if current_post.image_url %}
+    <div class="mb-3">
+      <div class="preview-label">画像:</div>
+      <img src="{{ current_post.image_url }}" alt="post image" class="preview-image">
+    </div>
+    {% endif %}
+
+    {% if current_post.youtube_url %}
+    <div class="mb-3">
+      <div class="preview-label">YouTube URL:</div>
+      <div>
+        <a href="{{ current_post.youtube_url }}" target="_blank">{{ current_post.youtube_url }}</a>
+      </div>
+
+      {# YouTube動画プレビュー #}
+      {% if current_post.youtube_embed_url %}
+      <div class="model-viewer-container mt-2">
+        <div class="ratio ratio-16x9">
+          <iframe src="{{ current_post.youtube_embed_url }}"
+                  allowfullscreen
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+          </iframe>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if current_post.s3_presigned_url %}
+    <div class="mb-3">
+      <div class="preview-label">STLファイル:</div>
+      <div class="model-viewer-container">
+        <model-viewer src="{{ current_post.s3_presigned_url }}"
+                      auto-rotate
+                      camera-controls
+                      style="width: 100%; height: 400px; background-color: #fff;">
+        </model-viewer>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# 編集フォーム #}
+  <div class="card">
+    <div class="card-body">
+      <h3 class="mb-4">✏️ 編集フォーム</h3>
+
+      <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+          {{ form.title.label(class="form-label") }}
+          {{ form.title(class="form-control", placeholder="タイトルを入力") }}
+          {% if form.title.errors %}
+            <div class="text-danger">{{ form.title.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          {{ form.content.label(class="form-label") }}
+          {{ form.content(class="form-control", rows=5, placeholder="内容を入力") }}
+          {% if form.content.errors %}
+            <div class="text-danger">{{ form.content.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          {{ form.stl_file.label(class="form-label") }}
+          {{ form.stl_file(class="form-control") }}
+          <div class="form-text">
+            新しいSTLファイルをアップロードする場合のみ選択してください（5MB以内）<br>
+            選択しない場合は現在のファイルが保持されます
+          </div>
+          {% if form.stl_file.errors %}
+            <div class="text-danger">{{ form.stl_file.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        {# ★ 画像アップロード（追加） #}
+        <div class="mb-3">
+          {{ form.image_file.label(class="form-label") }}
+          {{ form.image_file(class="form-control") }}
+          <div class="form-text">
+            新しい画像をアップロードする場合のみ選択してください（選択しない場合は現在の画像が保持されます）
+          </div>
+          {% if form.image_file.errors %}
+            <div class="text-danger">{{ form.image_file.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          {{ form.youtube_url.label(class="form-label") }}
+          {{ form.youtube_url(class="form-control", placeholder="https://www.youtube.com/watch?v=...") }}
+          <div class="form-text">YouTube動画のURLを入力してください（空欄にすると削除されます）</div>
+          {% if form.youtube_url.errors %}
+            <div class="text-danger">{{ form.youtube_url.errors[0] }}</div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">✅ 更新する</button>
+          <a href="{{ url_for('stl_board.view_post', post_id=post_id) }}" class="btn btn-secondary">
+            キャンセル
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

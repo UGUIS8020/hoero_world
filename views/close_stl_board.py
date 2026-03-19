@@ -49,7 +49,7 @@ s3 = boto3.client(
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 
 # STL掲示板用のブループリント
-bp = Blueprint('stl_board', __name__, url_prefix='/stl_board')
+bp_close = Blueprint("close_stl_board", __name__, url_prefix="/close_stl_board")
 
 
 def upload_resized_image_to_s3(file_storage, *, max_width=1000, quality=85, prefix="STL-board/images/"):
@@ -209,7 +209,8 @@ def convert_stl_to_gltf(input_stl_path, output_gltf_path):
         return False
 
 
-@bp.route('/', methods=['GET', 'POST'])
+@bp_close.route('/', methods=['GET', 'POST'])
+@login_required
 def index():
     form = STLPostForm()
     selected_post_id = request.args.get('post_id')
@@ -251,7 +252,7 @@ def index():
                     glb_temp_path = upload_stl_path.replace(".stl", ".glb")
                     if not convert_stl_to_gltf(upload_stl_path, glb_temp_path):
                         flash('glTF変換に失敗しました', 'danger')
-                        return redirect(url_for('stl_board.index'))
+                        return redirect(url_for('close_stl_board.index'))
 
                     with open(glb_temp_path, "rb") as glb_data:
                         s3.upload_fileobj(
@@ -274,10 +275,10 @@ def index():
 
                 except Exception as e:
                     flash(f"S3アップロード中にエラーが発生しました: {str(e)}", 'danger')
-                    return redirect(url_for('stl_board.index'))
+                    return redirect(url_for('close_stl_board.index'))
             else:
                 flash('STLファイルのみアップロードできます', 'danger')
-                return redirect(url_for('stl_board.index'))
+                return redirect(url_for('close_stl_board.index'))
 
         # =========================================
         # 2) 画像ファイルの処理（横幅1000pxに縮小してS3へ）
@@ -293,7 +294,7 @@ def index():
                 )
             except Exception as e:
                 flash(f"画像アップロード中にエラーが発生しました: {str(e)}", "danger")
-                return redirect(url_for("stl_board.index"))
+                return redirect(url_for("close_stl_board.index"))
 
         # =========================================
         # 3) YouTube URL の処理
@@ -317,7 +318,7 @@ def index():
             image_file_path=image_file_path,  # ★追加
         )
         flash('投稿が作成されました', 'success')
-        return redirect(url_for('stl_board.index'))
+        return redirect(url_for('close_stl_board.index'))
 
     # ==========================================================
     # 以下：表示処理（GET）
@@ -494,7 +495,7 @@ def index():
     likes = all_likes
 
     return render_template(
-        'pages/stl_board.html',
+        'pages/close_stl_board.html',
         form=form,
         posts=posts,
         selected_post=selected_post,
@@ -504,7 +505,7 @@ def index():
     )
 
 
-@bp.route('/add_comment/<post_id>', methods=['POST'])
+@bp_close.route('/add_comment/<post_id>', methods=['POST'])
 @login_required
 def add_comment(post_id):
     content = request.form.get('content')
@@ -512,7 +513,7 @@ def add_comment(post_id):
 
     if not content:
         flash('コメント内容を入力してください', 'danger')
-        return redirect(url_for('stl_board.index', post_id=post_id))
+        return redirect(url_for('close_stl_board.index', post_id=post_id))
 
     create_stl_comment(
         post_id=post_id,        
@@ -521,10 +522,10 @@ def add_comment(post_id):
         parent_comment_id=parent_id if parent_id else None
     )
     flash('コメントを追加しました', 'success')
-    return redirect(url_for('stl_board.index', post_id=post_id))
+    return redirect(url_for('close_stl_board.index', post_id=post_id))
 
 
-@bp.route('/like_post/<post_id>', methods=['POST'])
+@bp_close.route('/like_post/<post_id>', methods=['POST'])
 @login_required
 def like_post(post_id):
     post = get_stl_post_by_id(post_id)
@@ -539,10 +540,10 @@ def like_post(post_id):
         create_stl_like(post_id=post_id, user_id=current_user.id)
         flash('いいねしました', 'success')
 
-    return redirect(url_for('stl_board.index', post_id=post_id))
+    return redirect(url_for('close_stl_board.index', post_id=post_id))
 
 
-@bp.route('/delete/<post_id>', methods=['POST'])
+@bp_close.route('/delete/<post_id>', methods=['POST'])
 @login_required
 def delete_post(post_id):
     post = get_stl_post_by_id(post_id)
@@ -567,16 +568,16 @@ def delete_post(post_id):
     except Exception as e:
         flash(f'削除時にエラーが発生しました: {str(e)}', 'danger')
 
-    return redirect(url_for('stl_board.index'))
+    return redirect(url_for('close_stl_board.index'))
 
 
-@bp.route('/download/<filename>')
+@bp_close.route('/download/<filename>')
 def download(filename):
     upload_folder = os.path.join(current_app.static_folder, 'uploads', 'stl')
     return send_from_directory(upload_folder, filename)
 
 
-@bp.route('/post/<post_id>')
+@bp_close.route('/post/<post_id>')
 def view_post(post_id):
     post_item = get_stl_post_by_id(post_id)
     if not post_item:
@@ -687,13 +688,13 @@ def view_post(post_id):
     
     print(f"\n=== recent_posts数: {len(recent_posts)} ===\n")
 
-    return render_template('pages/stl_post_detail.html', 
+    return render_template('pages/close_stl_post_detail.html', 
                          post=post, 
                          comments=comments,
                          recent_posts=recent_posts)
 
 
-@bp.route('/edit/<post_id>', methods=['GET', 'POST'])
+@bp_close.route('/edit/<post_id>', methods=['GET', 'POST'])
 @login_required
 def edit_post(post_id):
     post_item = get_stl_post_by_id(post_id)
@@ -717,7 +718,7 @@ def edit_post(post_id):
             if stl_file and stl_file.filename:
                 if not stl_file.filename.lower().endswith(".stl"):
                     flash("STLファイルのみアップロードできます", "danger")
-                    return redirect(url_for("stl_board.edit_post", post_id=post_id))
+                    return redirect(url_for("close_stl_board.edit_post", post_id=post_id))
 
                 # 古いGLBを削除
                 if post_item.get("stl_file_path"):
@@ -747,7 +748,7 @@ def edit_post(post_id):
                 glb_temp_path = upload_stl_path.replace(".stl", ".glb")
                 if not convert_stl_to_gltf(upload_stl_path, glb_temp_path):
                     flash("glTF変換に失敗しました", "danger")
-                    return redirect(url_for("stl_board.edit_post", post_id=post_id))
+                    return redirect(url_for("close_stl_board.edit_post", post_id=post_id))
 
                 with open(glb_temp_path, "rb") as glb_data:
                     s3.upload_fileobj(
@@ -783,7 +784,7 @@ def edit_post(post_id):
                     )
                 except Exception as e:
                     flash(f"画像アップロード中にエラーが発生しました: {str(e)}", "danger")
-                    return redirect(url_for("stl_board.edit_post", post_id=post_id))
+                    return redirect(url_for("close_stl_board.edit_post", post_id=post_id))
 
             # ----------------------------
             # YouTube更新
@@ -808,7 +809,7 @@ def edit_post(post_id):
             )
 
             flash("投稿を更新しました", "success")
-            return redirect(url_for("stl_board.view_post", post_id=post_id))
+            return redirect(url_for("close_stl_board.view_post", post_id=post_id))
 
         except Exception as e:
             flash(f"更新中にエラーが発生しました: {str(e)}", "danger")

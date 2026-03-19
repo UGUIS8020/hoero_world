@@ -9,6 +9,7 @@ import zipfile
 from datetime import datetime, time, timezone
 from urllib.parse import unquote
 import re
+import math
 
 # サードパーティライブラリ
 import boto3
@@ -68,6 +69,7 @@ from utils.common_utils import (
     sanitize_filename,
 )
 from views.news.autotransplant_news import ai_collect_news
+from utils.stl_dynamo import list_stl_posts, create_stl_post, get_stl_post_by_id
 
 
 JST = pytz_timezone('Asia/Tokyo')
@@ -130,69 +132,104 @@ def index():
     form = BlogSearchForm()
     page = request.args.get('page', 1, type=int)
 
+    # blog（必要なら）
     all_posts = list_all_posts(limit=1000)
     blog_posts = paginate_posts(all_posts, page=page, per_page=10)
-
     blog_categories = list_blog_categories_all()
 
-    # トップページ用 Dynamo 記事（カード表示）
-    items = list_recent_posts(limit=2)
-    top_blog_posts = []
-    for it in items:
-        try:
-            pid = int(it.get("post_id"))
-        except Exception:
-            continue
+    # =========================
+    # ★トップに出す STL掲示板（最新2件）
+    #   サムネ優先順位: YouTube → STL → 画像
+    # =========================
+    top_stl_posts = []
+    try:
+        # ★ ユーザーテーブルを取得
+        users_table = current_app.config.get("HOERO_USERS_TABLE")
+        
+        stl_items = list_stl_posts(limit=2)
+        for it in stl_items:
+            pid = str(it.get("post_id", "")).strip()
+            if not pid:
+                continue
 
-        # ★ここで投稿ごとに youtube_id を生成する
-        youtube_url = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
-        yid = it.get("youtube_id", "") or extract_youtube_id(youtube_url)
+            # ★ 著者情報を取得
+            user_id = str(it.get("user_id", ""))
+            author_name = "Unknown"
+            if users_table and user_id:
+                try:
+                    user_response = users_table.get_item(Key={"user_id": user_id})
+                    user_data = user_response.get("Item", {})
+                    if user_data:
+                        author_name = user_data.get("display_name", "Unknown")
+                except Exception as e:
+                    current_app.logger.warning(f"ユーザー情報取得エラー (user_id: {user_id}): {e}")
 
-        top_blog_posts.append(
-            SimpleNamespace(
-                post_id=pid,
-                title=it.get("title", ""),
-                summary=it.get("summary", ""),
-                date=it.get("date", ""),
-                author_name=it.get("author_name", ""),
+            # --- YouTube ---
+            youtube_url = (it.get("youtube_url", "") or it.get("youtube_embed_url", "") or "").strip()
+            youtube_id = (it.get("youtube_id", "") or extract_youtube_id(youtube_url) or "").strip()
 
-                featured_image=it.get("featured_image", ""),
-                featured_video=it.get("featured_video", ""),
-                featured_thumbnail=it.get("featured_thumbnail", ""),
+            # --- STL(GLB) ---
+            stl_key = (it.get("stl_file_path") or "").lstrip("/")
+            stl_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{stl_key}" if stl_key else ""
 
-                youtube_id=yid,
-                youtube_embed_url=it.get("youtube_embed_url", ""),
-                youtube_url=it.get("youtube_url", ""),
+            # --- Image ---
+            image_key = (it.get("image_file_path") or "").lstrip("/")
+            image_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{image_key}" if image_key else ""
+
+            top_stl_posts.append(
+                SimpleNamespace(
+                    post_id=pid,
+                    title=it.get("title", ""),
+                    content=it.get("content", ""),
+                    created_at=(it.get("created_at") or "")[:10],
+                    author_name=author_name,  # ★ 取得した著者名を使用
+
+                    # STL
+                    stl_key=stl_key,
+                    stl_url=stl_url,
+                    stl_filename=it.get("stl_filename", ""),
+
+                    # YouTube
+                    youtube_url=youtube_url,
+                    youtube_id=youtube_id,
+
+                    # Image
+                    image_file_path=image_key,
+                    image_url=image_url,
+                )
             )
-        )
+    except Exception as e:
+        current_app.logger.warning("load top stl posts failed: %s", e)
 
-         # サイドバー「最新記事」用
-    items_recent = list_recent_posts(limit=5)
-    recent_blog_posts = []
-    for it in items_recent:
-        try:
-            pid = int(it.get("post_id"))
-        except Exception:
-            continue
-        recent_blog_posts.append(
-            SimpleNamespace(
-                post_id=pid,
-                title=it.get("title", ""),
-                featured_image=it.get("featured_image", ""),
+    # （サイドバー用：最新5件）
+    recent_stl_posts = []
+    try:
+        stl_recent_items = list_stl_posts(limit=5)
+        for it in stl_recent_items:
+            pid = str(it.get("post_id", "")).strip()
+            if not pid:
+                continue
+
+            # サイドバーは必要最低限でOK（タイトル+リンク用IDだけでもOK）
+            recent_stl_posts.append(
+                SimpleNamespace(
+                    post_id=pid,
+                    title=it.get("title", ""),
+                )
             )
-        )
+    except Exception as e:
+        current_app.logger.warning("load recent stl posts failed: %s", e)
 
+    # autotransplant_headlines はそのまま
     autotransplant_headlines = []
     try:
         from .news.autotransplant_news import dental_query_items
-        
         all_items = []
         for kind in ["research", "news", "case"]:
             items, _ = dental_query_items(kind=kind, lang="ja", limit=10)
             all_items.extend(items)
-        
+
         all_items.sort(key=lambda x: x.get("published_at", ""), reverse=True)
-        
         autotransplant_headlines = [
             {
                 "title": it.get("title"),
@@ -211,10 +248,10 @@ def index():
     return render_template(
         'main/index.html',
         blog_posts=blog_posts,
-        top_blog_posts=top_blog_posts,
-        recent_blog_posts=recent_blog_posts,
         blog_categories=blog_categories,
         form=form,
+        top_stl_posts=top_stl_posts,
+        recent_stl_posts=recent_stl_posts,
         autotransplant_headlines=autotransplant_headlines,
     )
 
@@ -487,6 +524,104 @@ class SimplePagination:
 def blog_maintenance():
     posts = list_recent_posts(limit=50)   # DynamoDB から取得
     return render_template("main/blog_maintenance.html", blog_posts=posts)
+
+# ========================================
+# 一般ユーザー向けブログ表示ページ
+# ========================================
+
+@bp.route("/blog")
+def blog_list():
+    """ブログ一覧ページ（一般公開）"""
+    page = request.args.get("page", 1, type=int)
+    per_page = 12
+    category_id = request.args.get("category")
+    
+    # 全投稿を取得
+    all_posts = list_recent_posts(limit=1000)
+    
+    # 公開フラグでフィルタリング
+    all_posts = [p for p in all_posts if p.get("is_published", True)]
+    
+    # カテゴリでフィルタリング
+    if category_id:
+        all_posts = [p for p in all_posts if p.get("category_id") == str(category_id)]
+    
+    # ページネーション処理
+    total = len(all_posts)
+    start = (page - 1) * per_page
+    end = start + per_page
+    posts_raw = all_posts[start:end]
+    
+    # ★ index と同じように SimpleNamespace に変換 + youtube_id を生成
+    blog_posts = []
+    for it in posts_raw:
+        try:
+            pid = int(it.get("post_id"))
+        except Exception:
+            continue
+        
+        # YouTube ID を抽出
+        youtube_url = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
+        yid = it.get("youtube_id", "") or extract_youtube_id(youtube_url)
+        
+        blog_posts.append(
+            SimpleNamespace(
+                post_id=pid,
+                title=it.get("title", ""),
+                summary=it.get("summary", ""),
+                text=it.get("text", ""),
+                date=it.get("date", ""),
+                author_name=it.get("author_name", ""),
+                category_name=it.get("category_name", ""),
+                
+                featured_image=it.get("featured_image", ""),
+                featured_video=it.get("featured_video", ""),
+                featured_thumbnail=it.get("featured_thumbnail", ""),
+                
+                youtube_id=yid,
+                youtube_embed_url=it.get("youtube_embed_url", ""),
+                youtube_url=it.get("youtube_url", ""),
+            )
+        )
+    
+    pagination = SimplePagination(
+        items=blog_posts,
+        page=page,
+        per_page=per_page,
+        total=total
+    )
+    
+    # カテゴリ一覧を取得
+    categories = list_all_blog_categories()
+    
+    return render_template(
+        "main/blog_list.html",
+        blog_posts=blog_posts,
+        pagination=pagination,
+        categories=categories,
+        current_category=category_id
+    )
+
+
+# ========================================
+# ヘルパー関数（必要に応じて追加）
+# ========================================
+
+def list_all_blog_categories():
+    """全カテゴリを取得"""
+    table = _blog_categories_table()
+    resp = table.scan()
+    items = resp.get("Items", [])
+    # category_id でソート
+    return sorted(items, key=lambda x: int(x.get("category_id", 0)))
+
+
+def get_blog_post_in_dynamo(post_id: str):
+    """単一の投稿を取得"""
+    table = _blog_posts_table()  # この関数が既にあると仮定
+    resp = table.get_item(Key={"post_id": post_id})
+    return resp.get("Item")
+
 
 @bp.route('/colors', methods=['GET', 'POST'])
 def colors():
@@ -1178,7 +1313,77 @@ def to_youtube_embed(url: str | None) -> str:
 
     return ""
 
-@bp.route('/<int:blog_post_id>/blog_post')
+# @bp.route('/<int:blog_post_id>/blog_post')
+# def blog_post(blog_post_id):
+#     form = BlogSearchForm()
+
+#     item = get_post_by_id(blog_post_id)
+#     if not item:
+#         abort(404)
+
+#     # --- ★ここで最新の表示名を解決する ---
+#     users_table = current_app.config.get("HOERO_USERS_TABLE")
+#     latest_author_name = item.get("author_name", "")  # fallback（記事に保存されてる名前）
+
+#     uid = str(item.get("user_id", ""))  # email or uuid
+#     if users_table and uid and "@" in uid:  # emailっぽい場合だけ users を引く（uuid混在対策）
+#         try:
+#             resp = users_table.get_item(Key={"user_id": uid})
+#             u = resp.get("Item")
+#             if u and u.get("display_name"):
+#                 latest_author_name = u["display_name"]
+#         except Exception as e:
+#             print(f"[WARN] users_table lookup failed: {uid} / {e}")
+
+#     # YouTube
+#     youtube_url = item.get("youtube_url", "")
+#     youtube_embed_url = to_youtube_embed(youtube_url)
+
+#     post = SimpleNamespace(
+#         id=int(item.get("post_id")),
+#         title=item.get("title", ""),
+#         text=item.get("text", ""),
+#         summary=item.get("summary", ""),
+#         featured_image=item.get("featured_image", ""),
+#         featured_video=item.get("featured_video", ""),
+#         youtube_url=youtube_url,
+#         youtube_embed_url=youtube_embed_url,
+#         date=item.get("date", ""),
+#         author_name=latest_author_name,   # ★ここがポイント
+#         category_name=item.get("category_name", ""),
+#     )
+
+#     # recent_posts（ここは表示名を出してないのでそのままでOK）
+#     recent_items = list_recent_posts(limit=5)
+#     recent_blog_posts = []
+#     for it in recent_items:
+#         try:
+#             pid = int(it.get("post_id"))
+#         except Exception:
+#             continue
+
+#         yurl = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
+#         yid = extract_youtube_id(yurl)
+
+#         recent_blog_posts.append(
+#             SimpleNamespace(
+#                 id=pid,
+#                 title=it.get("title", ""),
+#                 featured_image=it.get("featured_image", ""),
+#                 youtube_id=yid,
+#             )
+#         )
+
+#     return render_template(
+#         'main/blog_post.html',
+#         post=post,
+#         recent_blog_posts=recent_blog_posts,
+#         blog_categories=[],
+#         form=form
+#     )
+
+
+@bp.route('/blog/<int:blog_post_id>')  # ← URLを変更
 def blog_post(blog_post_id):
     form = BlogSearchForm()
 
@@ -1186,12 +1391,12 @@ def blog_post(blog_post_id):
     if not item:
         abort(404)
 
-    # --- ★ここで最新の表示名を解決する ---
+    # --- 最新の表示名を解決する ---
     users_table = current_app.config.get("HOERO_USERS_TABLE")
-    latest_author_name = item.get("author_name", "")  # fallback（記事に保存されてる名前）
+    latest_author_name = item.get("author_name", "")
 
-    uid = str(item.get("user_id", ""))  # email or uuid
-    if users_table and uid and "@" in uid:  # emailっぽい場合だけ users を引く（uuid混在対策）
+    uid = str(item.get("user_id", ""))
+    if users_table and uid and "@" in uid:
         try:
             resp = users_table.get_item(Key={"user_id": uid})
             u = resp.get("Item")
@@ -1214,11 +1419,11 @@ def blog_post(blog_post_id):
         youtube_url=youtube_url,
         youtube_embed_url=youtube_embed_url,
         date=item.get("date", ""),
-        author_name=latest_author_name,   # ★ここがポイント
+        author_name=latest_author_name,
         category_name=item.get("category_name", ""),
     )
 
-    # recent_posts（ここは表示名を出してないのでそのままでOK）
+    # 最新記事
     recent_items = list_recent_posts(limit=5)
     recent_blog_posts = []
     for it in recent_items:
@@ -1239,11 +1444,21 @@ def blog_post(blog_post_id):
             )
         )
 
+    # ★ カテゴリ一覧を追加
+    categories_raw = list_all_blog_categories()
+    blog_categories = [
+        SimpleNamespace(
+            id=int(c["category_id"]),
+            name=c.get("name", ""),
+        )
+        for c in categories_raw
+    ]
+
     return render_template(
         'main/blog_post.html',
         post=post,
         recent_blog_posts=recent_blog_posts,
-        blog_categories=[],
+        blog_categories=blog_categories,  # ← 空リストではなく実データ
         form=form
     )
 
