@@ -910,6 +910,9 @@ def meziro_upload():
     log = current_app.logger
     log.info("=== /meziro_upload START === ip=%s ua=%s", request.remote_addr, request.headers.get("User-Agent"))
 
+    received_at = datetime.now(pytz_timezone("Asia/Tokyo"))
+    received_at_str = received_at.strftime("%Y-%m-%d %H:%M:%S")
+
     # 受信フォーム値
     business_name    = request.form.get('businessName', '')
     user_name        = request.form.get('userName', '')
@@ -975,7 +978,7 @@ def meziro_upload():
 
     # 受付番号の採番
     session_id, warning_message = get_next_sequence_number()
-    id_str = f"{session_id:05d}"  # 6桁ゼロ埋め（元コード準拠）
+    id_str = f"{session_id:05d}"  
     log.info("発行受付番号: No.%s", id_str)
 
     # S3 バケット/リージョン
@@ -1028,7 +1031,8 @@ def meziro_upload():
 
             # 受付内容のテキストを zip に同梱
             form_data_text = (
-                f"【受付番号】No.{id_str}\n\n"
+                f"【受付番号】No.{id_str}\n"
+                f"【受信日時】{received_at_str}\n\n"
                 f"【事業者名】{business_name}\n"
                 f"【送信者名】{user_name}\n"
                 f"【メールアドレス】{user_email}\n"
@@ -1086,6 +1090,7 @@ def meziro_upload():
         full_message = f"""ユーザーから以下のメッセージが届きました：
 
 【受付番号】No.{id_str}
+【受信日時】{received_at_str}
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
@@ -1128,6 +1133,7 @@ def meziro_upload():
 以下の内容で受付を完了いたしました。
 
 【受付番号】No.{id_str}
+【受信日時】{received_at_str}
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
