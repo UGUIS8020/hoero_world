@@ -31,6 +31,7 @@ class AuthUser(UserMixin):
         building=None,
         administrator=False,
         password_hash=None,
+        dentists=None,
     ):
         self.user_id = user_id          # = hoero-users.user_id (= email)
         self.email = email
@@ -44,6 +45,7 @@ class AuthUser(UserMixin):
         self.building = building
         self.administrator = administrator
         self.password_hash = password_hash
+        self.dentists = dentists if dentists is not None else []
 
     @property
     def id(self):
@@ -91,6 +93,7 @@ def load_user(user_id: str):
         building=item.get("building"),
         administrator=is_admin,
         password_hash=item.get("password_hash"),
+        dentists=item.get("dentists", []),
     )
 
 

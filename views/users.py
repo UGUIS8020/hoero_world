@@ -326,7 +326,75 @@ def account_me():
         building=item.get("building"),
     )
 
-    return render_template('users/account.html', form=form, user=user)
+    dentists = item.get("dentists", [])
+
+    return render_template('users/account.html', form=form, user=user, dentists=dentists)
+
+
+@bp.route('/dentists/add', methods=['POST'])
+@login_required
+def dentist_add():
+    """歯科医師を追加する（自分のアカウント or 管理者）"""
+    target_user_id = request.form.get("target_user_id") or current_user.user_id
+
+    if target_user_id != current_user.user_id and not current_user.is_administrator:
+        abort(403)
+
+    name = request.form.get("dentist_name", "").strip()
+    if not name:
+        flash("歯科医師名を入力してください。")
+        return redirect(request.referrer or url_for("users.account_me"))
+
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    res = users_table.get_item(Key={"user_id": target_user_id})
+    item = res.get("Item")
+    if not item:
+        abort(404)
+
+    dentists = item.get("dentists", [])
+    if name not in dentists:
+        dentists.append(name)
+        item["dentists"] = dentists
+        users_table.put_item(Item=item)
+        flash(f"「{name}」を追加しました。")
+    else:
+        flash(f"「{name}」はすでに登録されています。")
+
+    if current_user.is_administrator and target_user_id != current_user.user_id:
+        return redirect(url_for("users.account", user_id=target_user_id))
+    return redirect(url_for("users.account_me"))
+
+
+@bp.route('/dentists/remove', methods=['POST'])
+@login_required
+def dentist_remove():
+    """歯科医師を削除する（自分のアカウント or 管理者）"""
+    target_user_id = request.form.get("target_user_id") or current_user.user_id
+
+    if target_user_id != current_user.user_id and not current_user.is_administrator:
+        abort(403)
+
+    name = request.form.get("dentist_name", "").strip()
+    if not name:
+        abort(400)
+
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    res = users_table.get_item(Key={"user_id": target_user_id})
+    item = res.get("Item")
+    if not item:
+        abort(404)
+
+    dentists = item.get("dentists", [])
+    if name in dentists:
+        dentists.remove(name)
+        item["dentists"] = dentists
+        users_table.put_item(Item=item)
+        flash(f"「{name}」を削除しました。")
+
+    if current_user.is_administrator and target_user_id != current_user.user_id:
+        return redirect(url_for("users.account", user_id=target_user_id))
+    return redirect(url_for("users.account_me"))
+
 
 @bp.route('/<user_id>/account', methods=['GET', 'POST'])
 @login_required
@@ -385,4 +453,6 @@ def account(user_id):
         building=item.get("building"),
     )
 
-    return render_template('users/account.html', form=form, user=user)
+    dentists = item.get("dentists", [])
+
+    return render_template('users/account.html', form=form, user=user, dentists=dentists)

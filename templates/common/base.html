@@ -216,14 +216,11 @@
               
 
               {% if current_user.is_authenticated %}
-              <!-- <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.blog_maintenance' %}active{% endif %}" href="{{ url_for('main.blog_maintenance') }}">ブログ</a>
-              </li> -->
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.category_maintenance' %}active{% endif %}" href="{{ url_for('main.category_maintenance') }}">カテゴリ</a>
-              </li>              
 
               {% if current_user.administrator %}
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.category_maintenance' %}active{% endif %}" href="{{ url_for('main.category_maintenance') }}">カテゴリ</a>
+              </li>
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'users.user_maintenance' %}active{% endif %}" href="{{url_for('users.user_maintenance')}}">ユーザー</a>
               </li>

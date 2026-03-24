@@ -1,0 +1,75 @@
+{% extends "common/base.html" %}
+{% block title %}指示書一覧 | 渋谷歯科技工所{% endblock %}
+{% block content %}
+
+<style>
+    .page-header {
+        background-color: rgb(243, 244, 245);
+        text-align: center;
+        padding: 20px;
+        color: #7c1820;
+        margin-bottom: 20px;
+    }
+    .status-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    .status-受付中   { background-color: #fff3cd; color: #856404; }
+    .status-製作中   { background-color: #cce5ff; color: #004085; }
+    .status-完了     { background-color: #d4edda; color: #155724; }
+</style>
+
+<div class="page-header">
+    <h2>指示書一覧</h2>
+</div>
+
+<div class="container" style="max-width: 1000px;">
+
+    {% if prescriptions %}
+    <table class="table table-hover table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>受付番号</th>
+                <th>送信日時</th>
+                {% if current_user.is_administrator %}
+                <th>事業者名</th>
+                {% endif %}
+                <th>担当医</th>
+                <th>患者名</th>
+                <th>セット希望日</th>
+                <th>製作物</th>
+                <th>状態</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in prescriptions %}
+            <tr>
+                <td>No.{{ p.prescription_id }}</td>
+                <td>{{ p.created_at[:10] }}</td>
+                {% if current_user.is_administrator %}
+                <td>{{ p.business_name }}</td>
+                {% endif %}
+                <td>{{ p.user_name }}</td>
+                <td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td>
+                <td>{{ p.appointment_date }}　{{ p.appointment_hour }}時</td>
+                <td>{{ p.project_type }}</td>
+                <td>
+                    <span class="status-badge status-{{ p.status }}">{{ p.status }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info text-center">まだ指示書はありません。</div>
+    {% endif %}
+
+    <div class="text-center mt-3">
+        <a href="{{ url_for('main.prescription') }}" class="btn btn-primary">指示書を新規作成</a>
+    </div>
+
+</div>
+
+{% endblock %}

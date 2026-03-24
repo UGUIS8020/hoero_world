@@ -30,6 +30,13 @@ flask_app.config['MAIL_DEBUG'] = False
 flask_app.config['WTF_CSRF_TIME_LIMIT'] = 10800
 flask_app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024
 
+# セッションクッキーのセキュリティ設定
+flask_app.config['SESSION_COOKIE_HTTPONLY'] = True   # JavaScriptからアクセス不可
+flask_app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # CSRF対策
+flask_app.config['SESSION_COOKIE_SECURE']   = IS_PROD  # 本番環境ではHTTPS必須
+flask_app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+flask_app.config['REMEMBER_COOKIE_SECURE']   = IS_PROD
+
 # CSRF
 csrf = CSRFProtect()
 csrf.init_app(flask_app)
@@ -61,6 +68,7 @@ flask_app.config["BLOG_CATEGORIES_TABLE"] = dynamodb.Table(os.getenv("BLOG_CATEG
 flask_app.config["STL_POSTS_TABLE"] = dynamodb.Table(os.getenv("STL_POSTS_TABLE_NAME", "hoero-stl-posts"))
 flask_app.config["STL_COMMENTS_TABLE"] = dynamodb.Table(os.getenv("STL_COMMENTS_TABLE_NAME", "hoero-stl-comments"))
 flask_app.config["STL_LIKES_TABLE"] = dynamodb.Table(os.getenv("STL_LIKES_TABLE_NAME", "hoero-stl-likes"))
+flask_app.config["PRESCRIPTIONS_TABLE"] = dynamodb.Table(os.getenv("PRESCRIPTIONS_TABLE_NAME", "hoero-prescriptions"))
 
 # 拡張初期化
 login_manager.init_app(flask_app)
