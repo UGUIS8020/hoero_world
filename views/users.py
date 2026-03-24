@@ -88,8 +88,8 @@ def logout():
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
-    if current_user.is_authenticated and not current_user.is_administrator:
-        return redirect(url_for('main.index'))
+    if not current_user.is_authenticated or not current_user.is_administrator:
+        abort(403)
 
     form = RegistrationForm()
 
@@ -328,44 +328,61 @@ def account_me():
 
     return render_template('users/account.html', form=form, user=user)
 
-@bp.route('/<int:user_id>/account', methods=['GET', 'POST'])
+@bp.route('/<user_id>/account', methods=['GET', 'POST'])
 @login_required
 def account(user_id):
-    user = User.query.get_or_404(user_id)
-    if user.id != current_user.id and not current_user.is_administrator:
+    if user_id != current_user.user_id and not current_user.is_administrator:
         abort(403)
-    form = UpdateUserForm(user_id)
+
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    res = users_table.get_item(Key={"user_id": user_id})
+    item = res.get("Item")
+    if not item:
+        abort(404)
+
+    form = UpdateUserForm(user_id=user_id)
+
     if form.validate_on_submit():
-        # 基本情報の更新
-        user.display_name = form.display_name.data
-        user.email = form.email.data
-        user.full_name = form.full_name.data
-        user.sender_name = form.sender_name.data
-        user.phone = form.phone.data
+        item["display_name"] = form.display_name.data
+        item["email"]        = form.email.data
+        item["full_name"]    = form.full_name.data
+        item["sender_name"]  = form.sender_name.data
+        item["phone"]        = form.phone.data
+        item["postal_code"]  = form.postal_code.data
+        item["prefecture"]   = form.prefecture.data
+        item["address"]      = form.address.data
+        item["building"]     = form.building.data
+        item["updated_at"]   = datetime.now(timezone.utc).isoformat()
 
-        # 住所情報の更新
-        user.postal_code = form.postal_code.data
-        user.prefecture = form.prefecture.data
-        user.address = form.address.data
-        user.building = form.building.data
-
-        # パスワードの更新（入力があれば）
         if form.password.data:
-            user.password = form.password.data
+            item["password_hash"] = generate_password_hash(form.password.data)
 
-        db.session.commit()
+        users_table.put_item(Item=item)
         flash('ユーザーアカウントが更新されました')
         return redirect(url_for('users.user_maintenance'))
+
     elif request.method == 'GET':
-        # フォームに現在の値をセット
-        form.display_name.data = user.display_name
-        form.email.data = user.email
-        form.full_name.data = user.full_name
-        form.sender_name.data = user.sender_name
-        form.phone.data = user.phone
-        form.postal_code.data = user.postal_code
-        form.prefecture.data = user.prefecture
-        form.address.data = user.address
-        form.building.data = user.building
+        form.display_name.data = item.get("display_name")
+        form.email.data        = item.get("email")
+        form.full_name.data    = item.get("full_name")
+        form.sender_name.data  = item.get("sender_name")
+        form.phone.data        = item.get("phone")
+        form.postal_code.data  = item.get("postal_code")
+        form.prefecture.data   = item.get("prefecture")
+        form.address.data      = item.get("address")
+        form.building.data     = item.get("building")
+
+    user = SimpleNamespace(
+        user_id=item.get("user_id"),
+        display_name=item.get("display_name"),
+        email=item.get("email"),
+        full_name=item.get("full_name"),
+        sender_name=item.get("sender_name"),
+        phone=item.get("phone"),
+        postal_code=item.get("postal_code"),
+        prefecture=item.get("prefecture"),
+        address=item.get("address"),
+        building=item.get("building"),
+    )
 
     return render_template('users/account.html', form=form, user=user)
