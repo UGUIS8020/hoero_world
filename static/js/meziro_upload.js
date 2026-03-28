@@ -310,6 +310,7 @@ async function uploadFiles(files) {
     const userName = document.getElementById("userName").value;
     const userEmail = document.getElementById("userEmail").value;
     const patientName = document.getElementById("PatientName").value;
+    const patientNameKana = document.getElementById("PatientNameKana") ? document.getElementById("PatientNameKana").value : "";
     const appointmentDate = document.getElementById("appointmentDate").value;
     const appointmentHour = document.getElementById("appointmentHour").value;
     const projectType = document.getElementById("projectType").value;
@@ -336,8 +337,7 @@ async function uploadFiles(files) {
         !patientName ||
         !appointmentDate ||
         !appointmentHour ||
-        !projectType ||
-        !userMessage
+        !projectType
     ) {
         showStatus("すべての必須項目を入力してください。", "error");
         return;
@@ -348,6 +348,7 @@ async function uploadFiles(files) {
     formData.append("userName", userName);
     formData.append("userEmail", userEmail);
     formData.append("PatientName", patientName);
+    formData.append("PatientNameKana", patientNameKana);
     formData.append("appointmentDate", appointmentDate);
     formData.append("appointmentHour", appointmentHour);
     formData.append("projectType", projectType);
@@ -674,7 +675,6 @@ document.getElementById("uploadButton").addEventListener("click", function () {
         "appointmentDate",
         "appointmentHour",
         "projectType",
-        "userMessage",
     ];
 
     let hasError = false;

@@ -87,7 +87,52 @@
                                 <div class="mb-3">
                                     {{ render_field(form.pass_confirm, class="form-control form-control-lg", placeholder="新パスワード(確認)") }}
                                 </div>                                             
-                                {{ form.submit(class="btn btn-outline-light w-100", value="更新") }}                 
+                                {{ form.submit(class="btn btn-outline-light w-100", value="更新") }}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 歯科医師管理セクション -->
+    <section id="dentist_management">
+        <div class="container my-3">
+            <div class="row">
+                <div class="col-lg-6 mx-auto">
+                    <div class="card bg-light text-center">
+                        <div class="card-body text-dark">
+                            <h4>所属歯科医師</h4>
+                            <p class="small">指示書送信時のプルダウンに表示されます。</p>
+
+                            {% if dentists %}
+                            <ul class="list-group list-group-flush mb-3">
+                                {% for dentist in dentists %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ dentist }}</span>
+                                    <form method="POST" action="{{ url_for('users.dentist_remove') }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="dentist_name" value="{{ dentist }}">
+                                        {% if user.user_id is defined and user.user_id != current_user.user_id %}
+                                        <input type="hidden" name="target_user_id" value="{{ user.user_id }}">
+                                        {% endif %}
+                                        <button type="submit" class="btn btn-sm btn-danger">削除</button>
+                                    </form>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-light opacity-75 small mb-3">まだ登録されていません。</p>
+                            {% endif %}
+
+                            <form method="POST" action="{{ url_for('users.dentist_add') }}" class="d-flex gap-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if user.user_id is defined and user.user_id != current_user.user_id %}
+                                <input type="hidden" name="target_user_id" value="{{ user.user_id }}">
+                                {% endif %}
+                                <input type="text" name="dentist_name" class="form-control" placeholder="例: 藤田 融" required>
+                                <button type="submit" class="btn btn-outline-light text-nowrap">追加</button>
                             </form>
                         </div>
                     </div>

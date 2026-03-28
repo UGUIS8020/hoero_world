@@ -202,6 +202,14 @@ a:active { color: #b22222; text-decoration: none; }
     <a href="https://line.me/ti/p/9KRzw2ndvX" target="_blank" rel="noopener noreferrer" class="btn" style="background-color: #00B900; color: white;"><b>LINEで連絡</b></a>
 </div>         
 
+{% if current_user.is_authenticated %}
+<a href="{{ url_for('main.prescription') }}" class="text-decoration-none">
+  <div class="alert alert-warning text-center shadow-sm" style="cursor: pointer; font-size: 1.5rem; font-weight: bold;">
+    Web歯科技工指示書
+  </div>
+</a>
+{% endif %}
+
 <!-- データ送信リンク -->
 <a href="{{ url_for('main.meziro_upload_index') }}" class="text-decoration-none">
   <div class="alert alert-primary text-center shadow-sm" style="cursor: pointer; font-size: 1.5rem; font-weight: bold;">

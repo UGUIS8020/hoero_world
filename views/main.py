@@ -901,9 +901,60 @@ def meziro():
 
     return render_template('main/meziro.html', s3_files=s3_files)
 
+@bp.route('/prescription/list', methods=['GET'])
+@login_required
+def prescription_list():
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+
+    if current_user.is_administrator:
+        # 管理者は全件取得
+        resp = prescriptions_table.scan()
+        items = resp.get("Items", [])
+    else:
+        # 一般ユーザーは自分の指示書のみ
+        from boto3.dynamodb.conditions import Key
+        resp = prescriptions_table.query(
+            IndexName="user_id-created_at-index",
+            KeyConditionExpression=Key("user_id").eq(current_user.email),
+            ScanIndexForward=False,  # 新しい順
+        )
+        items = resp.get("Items", [])
+
+    # 新しい順にソート
+    items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    return render_template('main/prescription_list.html', prescriptions=items)
+
+
+@bp.route('/prescription', methods=['GET'])
+@login_required
+def prescription():
+    dentists = getattr(current_user, "dentists", [])
+    sender_name = getattr(current_user, "sender_name", "") or ""
+    user_email = getattr(current_user, "email", "") or ""
+    return render_template(
+        'main/prescription.html',
+        dentists=dentists,
+        sender_name=sender_name,
+        user_email=user_email,
+    )
+
+
 @bp.route('/meziro_upload_index', methods=['GET'])
 def meziro_upload_index():
-    return render_template('main/meziro_upload_index.html')
+    dentists = []
+    sender_name = ""
+    user_email = ""
+    if current_user.is_authenticated:
+        dentists = getattr(current_user, "dentists", [])
+        sender_name = getattr(current_user, "sender_name", "") or ""
+        user_email = getattr(current_user, "email", "") or ""
+    return render_template(
+        'main/meziro_upload_index.html',
+        dentists=dentists,
+        sender_name=sender_name,
+        user_email=user_email,
+    )
 
 @bp.route('/meziro_upload', methods=['POST'])
 def meziro_upload():
@@ -918,6 +969,7 @@ def meziro_upload():
     user_name        = request.form.get('userName', '')
     user_email       = request.form.get('userEmail', '')
     patient_name     = request.form.get('patientName', '') or request.form.get('PatientName', '')  # どちらか来る想定なら保険
+    patient_name_kana = request.form.get('patientNameKana', '') or request.form.get('PatientNameKana', '')
     appointment_date = request.form.get('appointmentDate', '')
     appointment_hour = request.form.get('appointmentHour', '')
     project_type     = request.form.get('projectType', '')
@@ -935,16 +987,17 @@ def meziro_upload():
         log.warning("teeth のJSONパース失敗: raw=%s err=%s", teeth_raw[:200], e)
         teeth = []
 
-    # フォーム要約ログ（個人情報は最低限に）
+    # フォーム要約ログ（個人情報はマスキング）
+    masked_email = (user_email[:2] + "***@***") if user_email else ""
+    masked_name  = (user_name[:1] + "***") if user_name else ""
     log.info(
         "Form summary: business=%s, user=%s, email=%s, project=%s, crown=%s, shade=%s, teeth_count=%d",
-        business_name, user_name, user_email, project_type, crown_type, shade, len(teeth)
+        business_name, masked_name, masked_email, project_type, crown_type, shade, len(teeth)
     )
 
     # 必須チェック（warning で記録）
     if not message:
-        log.warning("必須エラー: message が空")
-        return jsonify({'error': 'メッセージが入力されていません'}), 400
+        message = ""
     if not business_name:
         log.warning("必須エラー: business_name が空")
         return jsonify({'error': '事業者名が入力されていません'}), 400
@@ -1014,8 +1067,8 @@ def meziro_upload():
                         ExtraArgs={'ContentType': 'application/octet-stream'}
                     )
 
-                public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
-                uploaded_urls.append(public_url)
+                download_url = url_for('main.meziro_download', key=s3_key, _external=True)
+                uploaded_urls.append(download_url)
                 numbered_ids.append(f"{id_str}_{index:03d}")
 
                 log.info("S3アップロードOK: key=%s size=%d", s3_key, file_size)
@@ -1036,7 +1089,7 @@ def meziro_upload():
                 f"【事業者名】{business_name}\n"
                 f"【送信者名】{user_name}\n"
                 f"【メールアドレス】{user_email}\n"
-                f"【患者名】{patient_name}\n"
+                f"【患者名】{patient_name}　{patient_name_kana}\n"
                 f"【セット希望日時】{appointment_date} {appointment_hour}時\n"
                 f"【製作物】{project_type}\n"
                 f"【クラウン種別】{crown_type}\n"
@@ -1072,8 +1125,8 @@ def meziro_upload():
                     ExtraArgs={'ContentType': 'application/zip'}
                 )
 
-            public_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
-            uploaded_urls.append(public_url)
+            download_url = url_for('main.meziro_download', key=s3_key, _external=True)
+            uploaded_urls.append(download_url)
             numbered_ids.append(id_str)
             log.info("ZIPのS3アップロードOK: key=%s size=%d", s3_key, zip_size)
 
@@ -1094,7 +1147,7 @@ def meziro_upload():
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
-【患者名】{patient_name}
+【患者名】{patient_name}　{patient_name_kana}
 【セット希望日時】{appointment_date} {appointment_hour}時
 【製作物】{project_type}
 【クラウン種別】{crown_type}
@@ -1137,7 +1190,7 @@ def meziro_upload():
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
-【患者名】{patient_name}
+【患者名】{patient_name}　{patient_name_kana}
 【セット希望日時】{appointment_date} {appointment_hour}時
 【製作物】{project_type}
 【クラウン種別】{crown_type}
@@ -1161,6 +1214,33 @@ email: shibuya8020@gmail.com
         except Exception as e:
             log.error("送信者への確認メール送信失敗: %s", e, exc_info=True)
 
+        # 指示書をDynamoDBに保存
+        try:
+            prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+            prescription_item = {
+                "prescription_id": id_str,
+                "user_id":         user_email,
+                "business_name":   business_name,
+                "user_name":       user_name,
+                "patient_name":    patient_name,
+                "patient_name_kana": patient_name_kana,
+                "appointment_date": appointment_date,
+                "appointment_hour": str(appointment_hour),
+                "project_type":    project_type,
+                "crown_type":      crown_type,
+                "teeth":           teeth,
+                "shade":           shade,
+                "message":         message,
+                "s3_keys":         [url_for('main.meziro_download', key=k.split('/meziro/download/')[-1], _external=False) if '/meziro/download/' in k else k for k in uploaded_urls],
+                "status":          "受付中",
+                "created_at":      received_at_str,
+                "updated_at":      received_at_str,
+            }
+            prescriptions_table.put_item(Item=prescription_item)
+            log.info("指示書をDynamoDBに保存: prescription_id=%s", id_str)
+        except Exception as e:
+            log.error("指示書のDynamoDB保存失敗: %s", e, exc_info=True)
+
     except Exception as e:
         # ルート全体の最後の砦
         log.error("アップロード処理中に未捕捉エラー: %s", e, exc_info=True)
@@ -1176,6 +1256,7 @@ email: shibuya8020@gmail.com
 
 
 @bp.route('/meziro/download/<path:key>')
+@login_required
 def meziro_download(key):
     try:
         # URLデコード

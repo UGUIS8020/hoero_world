@@ -72,13 +72,13 @@
                                         {# 6列目: 変更ボタン #}
                                         <td>
                                         {% if user.email == current_user.email %}
-                                            <!-- 自分自身のときだけ、DynamoDB版アカウント編集へ -->
                                             <a href="{{ url_for('users.account_me') }}" class="btn btn-secondary">
-                                            編集
+                                                編集
                                             </a>
                                         {% else %}
-                                            <!-- まだ他ユーザー編集は未対応なのでダミー表示 -->
-                                            <span class="text-muted">-</span>
+                                            <a href="{{ url_for('users.account', user_id=user.user_id) }}" class="btn btn-secondary">
+                                                編集
+                                            </a>
                                         {% endif %}
                                         </td>
                                     </tr>

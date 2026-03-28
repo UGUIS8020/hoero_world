@@ -1,0 +1,330 @@
+{% extends "common/base.html" %}
+{% block title %}Web歯科技工指示書 | 渋谷歯科技工所{% endblock %}
+{% block content %}
+
+<style>
+    h1 {
+        text-align: center;
+        color: #222222;
+        margin: 25px 0 0 0;
+        padding: 0;
+    }
+    h2 {
+        text-align: center;
+        color: #222222;
+        margin: 0;
+        padding: 5px 0 0 0;
+    }
+    .page-header {
+        background-color: rgb(243, 244, 245);
+        text-align: center;
+        padding: 20px;
+        color: #7c1820;
+        margin-bottom: 20px;
+    }
+    .clinic-info {
+        background-color: #f0f4f8;
+        border-left: 4px solid #7c1820;
+        padding: 10px 16px;
+        margin: 0 auto 16px auto;
+        max-width: 800px;
+        border-radius: 4px;
+        font-size: 0.95em;
+        color: #333;
+    }
+    .drop-zone {
+        border: 2px dashed #ccc;
+        padding: 20px;
+        text-align: center;
+        margin: 20px auto;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        max-width: 800px;
+    }
+    .drop-zone.active {
+        border-color: #007bff;
+        background-color: #e8f4ff;
+    }
+    .input-zone {
+        border: 2px dashed #ccc;
+        padding: 20px;
+        text-align: center;
+        margin: 20px auto;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        max-width: 800px;
+    }
+    .file-list {
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #ffffff;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+        background-color: #fafafa;
+        border-radius: 4px;
+        margin-bottom: 5px;
+        font-size: 0.95em;
+    }
+    .file-item:last-child { border-bottom: none; }
+    .file-name { flex: 1; text-align: left; word-break: break-word; }
+    .file-size { color: #666; font-size: 0.85em; margin-left: 10px; }
+    .file-remove { color: red; cursor: pointer; margin-left: 15px; }
+    .file-path { color: #666; font-size: 0.8em; display: block; word-break: break-all; }
+    .folder-item { background-color: #e8f4ff; font-weight: bold; }
+    .input-error {
+        border-color: #dc3545 !important;
+        background-color: #f8d7da !important;
+    }
+    #status {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .processing {
+        background-color: #e2e3e5;
+        color: #383d41;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 4px;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%   { opacity: 0.6; }
+        50%  { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+    .error   { background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-top: 10px; }
+    .success { background-color: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin-top: 10px; }
+    .info    { background-color: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 4px; margin-top: 10px; }
+    .progress-container { width: 100%; background-color: #f1f1f1; border-radius: 4px; margin-top: 10px; }
+    .progress-bar {
+        height: 20px;
+        background-color: #4caf50;
+        border-radius: 4px;
+        width: 0%;
+        transition: width 0.3s;
+        text-align: center;
+        line-height: 20px;
+        color: white;
+    }
+    .button-group { margin-top: 15px; }
+    button {
+        padding: 8px 16px;
+        margin: 0 5px;
+        border: none;
+        border-radius: 4px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+    }
+    button:hover     { background-color: #0069d9; }
+    button:disabled  { background-color: #6c757d; cursor: not-allowed; }
+    .file-summary    { padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-bottom: 10px; font-weight: bold; }
+    .folder-summary  { padding: 8px; margin: 5px 0; background-color: #f8f8f8; border-left: 3px solid #ddd; }
+    a:link, a:visited, a:hover, a:active { color: #8b0000; text-decoration: none; }
+</style>
+
+<div class="page-header">
+    <h1>Web歯科技工指示書</h1>
+</div>
+
+<!-- ログイン医院情報の表示 -->
+<div class="clinic-info">
+    <strong>{{ sender_name }}</strong>
+</div>
+
+<!-- ドロップゾーン -->
+<div class="drop-zone" id="dropZone">
+    <p>ここにファイル・フォルダをドラッグ＆ドロップするか、クリックして選択してください</p>
+    <p style="font-size: 0.9em; color: #666;">
+        最大ファイルサイズ: 2GB<br>
+        対応ファイル: すべて
+    </p>
+    <div class="button-group">
+        <input type="file" id="fileInput" name="files[]" multiple style="display: none">
+        <input type="file" id="folderInput" name="folders[]" multiple webkitdirectory directory style="display: none">
+        <button onclick="document.getElementById('fileInput').click()">ファイルを選択</button>
+        <button onclick="document.getElementById('folderInput').click()">フォルダを選択</button>
+    </div>
+</div>
+<div id="fileList" class="file-list"></div>
+
+<!-- 入力フォーム -->
+<div class="input-zone" id="input-zone">
+    <div class="mt-3 mb-2">
+
+        <!-- 歯科医院名（読み取り専用・メールアドレス併記） -->
+        <div class="mb-2">
+            <label class="form-label">事業者名</label>
+            <input type="text" id="businessName" class="form-control" value="{{ sender_name }}　ID:{{ user_email }}" readonly>
+        </div>
+
+        <!-- メールアドレス（非表示・送信用） -->
+        <input type="hidden" id="userEmail" value="{{ user_email }}">
+
+        <!-- 担当歯科医師（プルダウン or テキスト） -->
+        <div class="mb-2">
+            <label for="userName" class="form-label">担当歯科医師 <span class="text-danger">必須</span></label>
+            {% if dentists %}
+            <select id="userName" class="form-control" required>
+                <option value="" disabled selected>担当医を選択してください</option>
+                {% for d in dentists %}
+                <option value="{{ d }}">{{ d }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <input type="text" id="userName" class="form-control" placeholder="担当医・担当者名を入力してください" required>
+            {% endif %}
+        </div>
+
+        <!-- 患者名 -->
+        <div class="mb-2">
+            <label for="PatientName" class="form-label">患者名 <span class="text-danger">必須</span></label>
+            <input type="text" id="PatientName" class="form-control" placeholder="患者名を入力してください" required>
+        </div>
+
+        <!-- 患者名フリガナ -->
+        <div class="mb-2">
+            <label for="PatientNameKana" class="form-label">フリガナ</label>
+            <input type="text" id="PatientNameKana" class="form-control" placeholder="カタカナで入力してください">
+        </div>
+
+        <!-- セット希望日時 -->
+        <div class="mb-2">
+            <div class="text-center mb-2">
+                <label class="form-label">セット希望日時 <span class="text-danger">必須</span></label>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-auto">
+                    <label for="appointmentDate" class="form-label">日付:</label>
+                    <input type="date" id="appointmentDate" class="form-control" style="width: 200px;" required>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label">時間:</label>
+                    <div class="d-flex">
+                        <select id="appointmentHour" class="form-control" style="width: 200px;" required>
+                            <option value="" disabled selected>選択してください</option>
+                            {% for h in range(9, 21) %}
+                            <option value="{{ h }}">{{ h }}</option>
+                            {% endfor %}
+                        </select>
+                        <span class="align-self-center mx-1">時</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 製作物 -->
+        <div class="mb-2">
+            <label for="projectType" class="form-label">製作物 <span class="text-danger">必須</span></label>
+            <select id="projectType" class="form-control" required>
+                <option value="" disabled selected>製作物の種類を選択してください</option>
+                <option value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
+                <option value="replica-contrast">自家歯牙移植用レプリカ(造影剤有)</option>
+                <option value="Zirconia_Gradation">ジルコニアグラデーションクラウン</option>
+                <option value="milling_CADCAM">ミリング-CAD/CAM冠</option>
+                <option value="milling_PEEK">ミリング-PEEK冠</option>
+                <option value="milling_Zirconia">ミリング-ジルコニア</option>
+                <option value="other">その他</option>
+            </select>
+        </div>
+
+        <!-- 部位選択 -->
+        <div class="mb-2">
+            <label class="form-label">部位 <span class="text-danger">必須</span></label>
+
+            <!-- 上顎 -->
+            <div style="display: table; width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <div style="display: table-row;">
+                    {% for n in [8,7,6,5,4,3,2,1,1,2,3,4,5,6,7,8] %}
+                    <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">{{ n }}</div>
+                    {% endfor %}
+                </div>
+                <div style="display: table-row;">
+                    {% for v in [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28] %}
+                    <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;">
+                        <input type="checkbox" name="teeth[]" value="{{ v }}" style="transform: scale(1.2);">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- 下顎 -->
+            <div style="display: table; width: 100%; border-collapse: collapse; margin-top: 5px;">
+                <div style="display: table-row;">
+                    {% for v in [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38] %}
+                    <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;">
+                        <input type="checkbox" name="teeth[]" value="{{ v }}" style="transform: scale(1.2);">
+                    </div>
+                    {% endfor %}
+                </div>
+                <div style="display: table-row;">
+                    {% for n in [8,7,6,5,4,3,2,1,1,2,3,4,5,6,7,8] %}
+                    <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">{{ n }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- クラウン種別 -->
+            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-top: 8px;">
+                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="単冠" checked> 単冠</label>
+                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="連冠"> 連冠</label>
+                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="ブリッジ"> ブリッジ</label>
+                <label><input type="radio" name="crown_type" value="その他"> その他</label>
+            </div>
+
+            <!-- シェード -->
+            <div style="margin-top: 15px;">
+                <label for="shade" style="display: block; margin-bottom: 5px;">シェード</label>
+                <select id="shade" name="shade" class="form-control">
+                    <option value="">指定なし(指定不要なケース)</option>
+                    <option value="画像有り">画像有り</option>
+                    {% for s in ['A1','A2','A3','A3.5','A4','B1','B2','B3','B4','C1','C2','C3','C4','D2','D3','D4'] %}
+                    <option value="{{ s }}">{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 備考 -->
+<div class="mb-2" style="max-width: 800px; margin: 0 auto;">
+    <label for="userMessage" class="form-label">備考（指示の詳細）</label>
+    <textarea id="userMessage" class="form-control" rows="4"
+        placeholder="指示の詳細、備考など入力してください。"></textarea>
+</div>
+
+<div id="status"></div>
+<div id="progressContainer" class="progress-container" style="display: none;">
+    <div id="progressBar" class="progress-bar">0%</div>
+</div>
+
+<div class="button-group" style="text-align: center; margin-bottom: 20px;">
+    <button id="uploadButton" disabled>送信</button>
+    <button id="clearButton" disabled>クリア</button>
+</div>
+
+<script src="{{ url_for('static', filename='js/meziro_upload.js') }}"></script>
+
+<div class="text-center mt-4 mb-4">
+    <a href="{{ url_for('main.prescription_list') }}" class="btn btn-outline-secondary">
+        指示書一覧
+    </a>
+</div>
+
+{% endblock %}

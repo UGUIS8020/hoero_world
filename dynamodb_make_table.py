@@ -145,8 +145,35 @@ def ensure_dental_news(dynamodb):
     }
     ensure_table(dynamodb, spec)
 
+def ensure_prescriptions(dynamodb):
+    spec = {
+        "TableName": "hoero-prescriptions",
+        "AttributeDefinitions": [
+            {"AttributeName": "prescription_id", "AttributeType": "S"},
+            {"AttributeName": "user_id",          "AttributeType": "S"},
+            {"AttributeName": "created_at",        "AttributeType": "S"},
+        ],
+        "KeySchema": [
+            {"AttributeName": "prescription_id", "KeyType": "HASH"}
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "GlobalSecondaryIndexes": [
+            {
+                "IndexName": "user_id-created_at-index",
+                "KeySchema": [
+                    {"AttributeName": "user_id",    "KeyType": "HASH"},
+                    {"AttributeName": "created_at", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"}
+            }
+        ]
+    }
+    ensure_table(dynamodb, spec)
+
+
 if __name__ == "__main__":
     dynamodb = boto3.resource("dynamodb", region_name=REGION)
     # 必要な方だけ呼んでOK（両方作るなら両方呼ぶ）
     ensure_hoero_users(dynamodb)
     ensure_dental_news(dynamodb)
+    ensure_prescriptions(dynamodb)
