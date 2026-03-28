@@ -298,7 +298,8 @@ async function readEntryRecursively(entry) {
 
 // ドラッグ＆ドロップされたアイテムを処理
 async function uploadFiles(files) {
-    if (files.length === 0) return;
+    const isPrescriptionPage = !!document.getElementById("PatientNameKana");
+    if (files.length === 0 && !isPrescriptionPage) return;
 
     const formData = new FormData();
 
@@ -363,11 +364,12 @@ async function uploadFiles(files) {
 
     const paths = {};
 
-    for (const file of files) {
-        const path = getRelativePath(file);
-        formData.append("files[]", file);
-        // パス情報を別途送信
-        paths[file.name] = path;
+    if (files.length > 0) {
+        for (const file of files) {
+            const path = getRelativePath(file);
+            formData.append("files[]", file);
+            paths[file.name] = path;
+        }
     }
 
     // パス情報をJSONとして追加
@@ -376,7 +378,7 @@ async function uploadFiles(files) {
     // フォルダ構造の有無を判定
     const hasFolder = Object.values(paths).some((path) => path.includes("/"));
     formData.append("has_folder_structure", hasFolder.toString());
-    console.log("フォルダ構造の有無:", hasFolder); // デバッグ用    
+    console.log("フォルダ構造の有無:", hasFolder); // デバッグ用
 
     progressContainer.style.display = "block";
     showStatus("ファイルをアップロード中...", "processing");
