@@ -1,0 +1,31 @@
+# /etc/nginx/conf.d/ai-discussion.conf
+# または shibuya8020.com の既存サーバーブロックに下記 location を追記する
+
+# ── 既存サーバーブロックへの追記（推奨） ──
+# location /ai-discussion/ {
+#     proxy_pass http://127.0.0.1:8502/ai-discussion/;
+#     proxy_http_version 1.1;
+#     proxy_set_header Upgrade $http_upgrade;       # WebSocket必須
+#     proxy_set_header Connection "upgrade";         # WebSocket必須
+#     proxy_set_header Host $host;
+#     proxy_set_header X-Real-IP $remote_addr;
+#     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#     proxy_read_timeout 86400;                      # 長時間接続を許可
+# }
+
+# ── 単独サーバーブロックとして使う場合 ──
+server {
+    listen 80;
+    server_name shibuya8020.com;
+
+    location /ai-discussion/ {
+        proxy_pass http://127.0.0.1:8502/ai-discussion/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 86400;
+    }
+}
