@@ -926,6 +926,26 @@ def prescription_list():
     return render_template('main/prescription_list.html', prescriptions=items)
 
 
+@bp.route('/prescription/view/<prescription_id>', methods=['GET'])
+@login_required
+def prescription_view(prescription_id):
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
+    p = resp.get("Item")
+    if not p:
+        return "指示書が見つかりません", 404
+    # 管理者でなければ自分の指示書のみ
+    if not current_user.is_administrator and p.get("user_id") != current_user.email:
+        return "アクセス権限がありません", 403
+    return render_template('main/prescription_view.html', p=p)
+
+
+@bp.route('/clinic', methods=['GET'])
+@login_required
+def clinic_dashboard():
+    return render_template('main/clinic_dashboard.html')
+
+
 @bp.route('/prescription', methods=['GET'])
 @login_required
 def prescription():
@@ -970,6 +990,7 @@ def meziro_upload():
     user_email       = request.form.get('userEmail', '')
     patient_name     = request.form.get('patientName', '') or request.form.get('PatientName', '')  # どちらか来る想定なら保険
     patient_name_kana = request.form.get('patientNameKana', '') or request.form.get('PatientNameKana', '')
+    chart_number     = request.form.get('chartNumber', '')
     appointment_date = request.form.get('appointmentDate', '')
     appointment_hour = request.form.get('appointmentHour', '')
     project_type     = request.form.get('projectType', '')
@@ -1088,6 +1109,7 @@ def meziro_upload():
                     f"【事業者名】{business_name}\n"
                     f"【送信者名】{user_name}\n"
                     f"【メールアドレス】{user_email}\n"
+                    f"【カルテ番号】{chart_number}\n"
                     f"【患者名】{patient_name}　{patient_name_kana}\n"
                     f"【セット希望日時】{appointment_date} {appointment_hour}時\n"
                     f"【製作物】{project_type}\n"
@@ -1146,6 +1168,7 @@ def meziro_upload():
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
+【カルテ番号】{chart_number}
 【患者名】{patient_name}　{patient_name_kana}
 【セット希望日時】{appointment_date} {appointment_hour}時
 【製作物】{project_type}
@@ -1191,6 +1214,7 @@ def meziro_upload():
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
+【カルテ番号】{chart_number}
 【患者名】{patient_name}　{patient_name_kana}
 【セット希望日時】{appointment_date} {appointment_hour}時
 【製作物】{project_type}
@@ -1225,6 +1249,7 @@ email: shibuya8020@gmail.com
                 "user_name":       user_name,
                 "patient_name":    patient_name,
                 "patient_name_kana": patient_name_kana,
+                "chart_number":    chart_number,
                 "appointment_date": appointment_date,
                 "appointment_hour": str(appointment_hour),
                 "project_type":    project_type,

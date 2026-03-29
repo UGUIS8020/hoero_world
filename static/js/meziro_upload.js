@@ -312,6 +312,7 @@ async function uploadFiles(files) {
     const userEmail = document.getElementById("userEmail").value;
     const patientName = document.getElementById("PatientName").value;
     const patientNameKana = document.getElementById("PatientNameKana") ? document.getElementById("PatientNameKana").value : "";
+    const chartNumber = document.getElementById("ChartNumber") ? document.getElementById("ChartNumber").value : "";
     const appointmentDate = document.getElementById("appointmentDate").value;
     const appointmentHour = document.getElementById("appointmentHour").value;
     const projectType = document.getElementById("projectType").value;
@@ -350,6 +351,7 @@ async function uploadFiles(files) {
     formData.append("userEmail", userEmail);
     formData.append("PatientName", patientName);
     formData.append("PatientNameKana", patientNameKana);
+    formData.append("chartNumber", chartNumber);
     formData.append("appointmentDate", appointmentDate);
     formData.append("appointmentHour", appointmentHour);
     formData.append("projectType", projectType);
