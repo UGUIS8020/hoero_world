@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>指示書 No.{{ p.prescription_id }}</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            margin: 0;
+            padding: 20px 40px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #7c1820;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 22px;
+            color: #7c1820;
+            margin: 0 0 4px 0;
+        }
+        .header p {
+            margin: 0;
+            font-size: 13px;
+            color: #666;
+        }
+        .section {
+            margin-bottom: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+            text-align: left;
+        }
+        table th {
+            background-color: #f3f4f5;
+            width: 30%;
+            font-weight: bold;
+        }
+        .teeth-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .tooth {
+            display: inline-block;
+            padding: 3px 8px;
+            border: 1px solid #7c1820;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #7c1820;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .status-受付中 { background-color: #fff3cd; color: #856404; }
+        .status-製作中 { background-color: #cce5ff; color: #004085; }
+        .status-完了   { background-color: #d4edda; color: #155724; }
+        .footer {
+            margin-top: 30px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+        }
+        .print-btn {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 8px 24px;
+            background-color: #7c1820;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        @media print {
+            .print-btn { display: none; }
+            body { padding: 10px 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">印刷 / PDF保存</button>
+
+<div class="header">
+    <h1>歯科技工指示書</h1>
+    <p>渋谷歯科技工所　〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203　TEL: 048-961-8151</p>
+</div>
+
+<table>
+    <tr><th>受付番号</th><td>No.{{ p.prescription_id }}</td></tr>
+    <tr><th>送信日時</th><td>{{ p.created_at }}</td></tr>
+    <tr><th>状態</th><td><span class="status-badge status-{{ p.status }}">{{ p.status }}</span></td></tr>
+</table>
+
+<table>
+    <tr><th>事業者名</th><td>{{ p.business_name }}</td></tr>
+    <tr><th>担当歯科医師</th><td>{{ p.user_name }}</td></tr>
+    <tr><th>カルテ番号</th><td>{{ p.chart_number or '―' }}</td></tr>
+    <tr><th>患者名</th><td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td></tr>
+    <tr><th>セット希望日</th><td>{{ p.appointment_date }}　{{ p.appointment_hour }}時</td></tr>
+</table>
+
+<table>
+    <tr><th>製作物</th><td>{{ p.project_type }}</td></tr>
+    <tr><th>クラウン種別</th><td>{{ p.crown_type }}</td></tr>
+    <tr><th>シェード</th><td>{{ p.shade }}</td></tr>
+    <tr>
+        <th>対象部位</th>
+        <td>
+            <div class="teeth-grid">
+                {% for t in p.teeth %}
+                <span class="tooth">{{ t }}</span>
+                {% endfor %}
+            </div>
+        </td>
+    </tr>
+    <tr><th>備考</th><td style="white-space: pre-wrap;">{{ p.message or '―' }}</td></tr>
+</table>
+
+<div class="footer">
+    渋谷歯科技工所 / shibuya8020.com
+</div>
+
+</body>
+</html>

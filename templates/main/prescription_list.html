@@ -41,6 +41,7 @@
                 <th>セット希望日</th>
                 <th>製作物</th>
                 <th>状態</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -57,6 +58,9 @@
                 <td>{{ p.project_type }}</td>
                 <td>
                     <span class="status-badge status-{{ p.status }}">{{ p.status }}</span>
+                </td>
+                <td>
+                    <a href="{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}" target="_blank" class="btn btn-sm btn-outline-secondary">表示</a>
                 </td>
             </tr>
             {% endfor %}

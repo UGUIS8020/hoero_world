@@ -926,6 +926,26 @@ def prescription_list():
     return render_template('main/prescription_list.html', prescriptions=items)
 
 
+@bp.route('/prescription/view/<prescription_id>', methods=['GET'])
+@login_required
+def prescription_view(prescription_id):
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
+    p = resp.get("Item")
+    if not p:
+        return "指示書が見つかりません", 404
+    # 管理者でなければ自分の指示書のみ
+    if not current_user.is_administrator and p.get("user_id") != current_user.email:
+        return "アクセス権限がありません", 403
+    return render_template('main/prescription_view.html', p=p)
+
+
+@bp.route('/clinic', methods=['GET'])
+@login_required
+def clinic_dashboard():
+    return render_template('main/clinic_dashboard.html')
+
+
 @bp.route('/prescription', methods=['GET'])
 @login_required
 def prescription():
@@ -970,6 +990,7 @@ def meziro_upload():
     user_email       = request.form.get('userEmail', '')
     patient_name     = request.form.get('patientName', '') or request.form.get('PatientName', '')  # どちらか来る想定なら保険
     patient_name_kana = request.form.get('patientNameKana', '') or request.form.get('PatientNameKana', '')
+    chart_number     = request.form.get('chartNumber', '')
     appointment_date = request.form.get('appointmentDate', '')
     appointment_hour = request.form.get('appointmentHour', '')
     project_type     = request.form.get('projectType', '')
@@ -1011,16 +1032,9 @@ def meziro_upload():
         log.warning("必須エラー: project_type が空")
         return jsonify({'error': '製作物が選択されていません'}), 400
 
-    if 'files[]' not in request.files:
-        log.warning("必須エラー: files[] フィールドが存在しない")
-        return jsonify({'error': 'ファイルが選択されていません'}), 400
-
     files = request.files.getlist('files[]')
-    if not files or files[0].filename == '':
-        log.warning("必須エラー: files[] が空またはファイル名が空")
-        return jsonify({'error': 'ファイルが選択されていません'}), 400
-
-    log.info("受信ファイル数: %d (例: %s)", len(files), files[0].filename)
+    has_files = bool(files and files[0].filename != '')
+    log.info("受信ファイル数: %d", len(files) if has_files else 0)
 
     uploaded_urls = []
     numbered_ids  = []
@@ -1040,95 +1054,102 @@ def meziro_upload():
     log.info("S3 config: bucket=%s region=%s", bucket_name, region)
 
     try:
-        # ファイル加工（ZIP or 展開）
-        result, temp_dir = zip_handler_instance.process_files(files, has_folder)
-        log.info("process_files 完了: type=%s temp_dir=%s", type(result).__name__, temp_dir)
+        if not has_files:
+            # ファイルなしの場合はS3アップロードをスキップ
+            log.info("ファイルなし送信（指示書のみ）")
+            numbered_ids.append(id_str)
 
-        if isinstance(result, list):
-            # フォルダ構造のまま個別アップロード
-            folder_prefix = f"meziro/{id_str}/"
-            log.info("個別アップロード開始: prefix=%s, 件数=%d", folder_prefix, len(result))
+        else:
+            # ファイル加工（ZIP or 展開）
+            result, temp_dir = zip_handler_instance.process_files(files, has_folder)
+            log.info("process_files 完了: type=%s temp_dir=%s", type(result).__name__, temp_dir)
 
-            for index, file_path in enumerate(result, start=1):
-                original_filename = os.path.basename(file_path)
-                safe_filename     = sanitize_filename(original_filename)
-                s3_key            = f"{folder_prefix}{index:03d}_{safe_filename}"
-                s3_key            = get_unique_filename(bucket_name, s3_key)
+            if isinstance(result, list):
+                # フォルダ構造のまま個別アップロード
+                folder_prefix = f"meziro/{id_str}/"
+                log.info("個別アップロード開始: prefix=%s, 件数=%d", folder_prefix, len(result))
 
-                file_size = 0
+                for index, file_path in enumerate(result, start=1):
+                    original_filename = os.path.basename(file_path)
+                    safe_filename     = sanitize_filename(original_filename)
+                    s3_key            = f"{folder_prefix}{index:03d}_{safe_filename}"
+                    s3_key            = get_unique_filename(bucket_name, s3_key)
+
+                    file_size = 0
+                    try:
+                        file_size = os.path.getsize(file_path)
+                    except Exception:
+                        pass
+
+                    with open(file_path, 'rb') as f:
+                        s3.upload_fileobj(
+                            f, bucket_name, s3_key,
+                            ExtraArgs={'ContentType': 'application/octet-stream'}
+                        )
+
+                    download_url = url_for('main.meziro_download', key=s3_key, _external=True)
+                    uploaded_urls.append(download_url)
+                    numbered_ids.append(f"{id_str}_{index:03d}")
+
+                    log.info("S3アップロードOK: key=%s size=%d", s3_key, file_size)
+
+            else:
+                # ZIP アップロード
+                zip_file_path = result
                 try:
-                    file_size = os.path.getsize(file_path)
+                    zip_size = os.path.getsize(zip_file_path)
                 except Exception:
-                    pass
+                    zip_size = -1
+                log.info("ZIPアップロード準備: path=%s size=%d", zip_file_path, zip_size)
 
-                with open(file_path, 'rb') as f:
+                # 受付内容のテキストを zip に同梱
+                form_data_text = (
+                    f"【受付番号】No.{id_str}\n"
+                    f"【受信日時】{received_at_str}\n\n"
+                    f"【事業者名】{business_name}\n"
+                    f"【送信者名】{user_name}\n"
+                    f"【メールアドレス】{user_email}\n"
+                    f"【カルテ番号】{chart_number}\n"
+                    f"【患者名】{patient_name}　{patient_name_kana}\n"
+                    f"【セット希望日時】{appointment_date} {appointment_hour}時\n"
+                    f"【製作物】{project_type}\n"
+                    f"【クラウン種別】{crown_type}\n"
+                    f"【対象部位】{', '.join(teeth)}\n"
+                    f"【シェード】{shade}\n"
+                    f"【メッセージ】\n{message.strip()}\n\n"
+                    "  渋谷歯科技工所\n"
+                    "  〒343-0845\n"
+                    "  埼玉県越谷市南越谷4-9-6 新越谷プラザビル203\n"
+                    "  TEL: 048-961-8151\n"
+                    "  email:shibuya8020@gmail.com"
+                )
+
+                with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt', encoding='utf-8') as form_file:
+                    form_file.write(form_data_text)
+                    form_file_path = form_file.name
+
+                with zipfile.ZipFile(zip_file_path, 'a') as zipf:
+                    arcname = f"{id_str}_info.txt"
+                    zipf.write(form_file_path, arcname=arcname)
+                    log.info("ZIPへ info 追記: %s", arcname)
+
+                if os.path.exists(form_file_path):
+                    os.remove(form_file_path)
+
+                numbered_filename = f"{id_str}_files.zip"
+                s3_key = f"meziro/{numbered_filename}"
+                s3_key = get_unique_filename(bucket_name, s3_key)
+
+                with open(zip_file_path, 'rb') as f:
                     s3.upload_fileobj(
                         f, bucket_name, s3_key,
-                        ExtraArgs={'ContentType': 'application/octet-stream'}
+                        ExtraArgs={'ContentType': 'application/zip'}
                     )
 
                 download_url = url_for('main.meziro_download', key=s3_key, _external=True)
                 uploaded_urls.append(download_url)
-                numbered_ids.append(f"{id_str}_{index:03d}")
-
-                log.info("S3アップロードOK: key=%s size=%d", s3_key, file_size)
-
-        else:
-            # ZIP アップロード
-            zip_file_path = result
-            try:
-                zip_size = os.path.getsize(zip_file_path)
-            except Exception:
-                zip_size = -1
-            log.info("ZIPアップロード準備: path=%s size=%d", zip_file_path, zip_size)
-
-            # 受付内容のテキストを zip に同梱
-            form_data_text = (
-                f"【受付番号】No.{id_str}\n"
-                f"【受信日時】{received_at_str}\n\n"
-                f"【事業者名】{business_name}\n"
-                f"【送信者名】{user_name}\n"
-                f"【メールアドレス】{user_email}\n"
-                f"【患者名】{patient_name}　{patient_name_kana}\n"
-                f"【セット希望日時】{appointment_date} {appointment_hour}時\n"
-                f"【製作物】{project_type}\n"
-                f"【クラウン種別】{crown_type}\n"
-                f"【対象部位】{', '.join(teeth)}\n"
-                f"【シェード】{shade}\n"
-                f"【メッセージ】\n{message.strip()}\n\n"
-                "  渋谷歯科技工所\n"
-                "  〒343-0845\n"
-                "  埼玉県越谷市南越谷4-9-6 新越谷プラザビル203\n"
-                "  TEL: 048-961-8151\n"
-                "  email:shibuya8020@gmail.com"
-            )
-
-            with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.txt', encoding='utf-8') as form_file:
-                form_file.write(form_data_text)
-                form_file_path = form_file.name
-
-            with zipfile.ZipFile(zip_file_path, 'a') as zipf:
-                arcname = f"{id_str}_info.txt"
-                zipf.write(form_file_path, arcname=arcname)
-                log.info("ZIPへ info 追記: %s", arcname)
-
-            if os.path.exists(form_file_path):
-                os.remove(form_file_path)
-
-            numbered_filename = f"{id_str}_files.zip"
-            s3_key = f"meziro/{numbered_filename}"
-            s3_key = get_unique_filename(bucket_name, s3_key)
-
-            with open(zip_file_path, 'rb') as f:
-                s3.upload_fileobj(
-                    f, bucket_name, s3_key,
-                    ExtraArgs={'ContentType': 'application/zip'}
-                )
-
-            download_url = url_for('main.meziro_download', key=s3_key, _external=True)
-            uploaded_urls.append(download_url)
-            numbered_ids.append(id_str)
-            log.info("ZIPのS3アップロードOK: key=%s size=%d", s3_key, zip_size)
+                numbered_ids.append(id_str)
+                log.info("ZIPのS3アップロードOK: key=%s size=%d", s3_key, zip_size)
 
         # 一時ZIPがあれば削除
         if 'zip_file_path' in locals() and os.path.exists(zip_file_path):
@@ -1147,6 +1168,7 @@ def meziro_upload():
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
+【カルテ番号】{chart_number}
 【患者名】{patient_name}　{patient_name_kana}
 【セット希望日時】{appointment_date} {appointment_hour}時
 【製作物】{project_type}
@@ -1168,6 +1190,7 @@ def meziro_upload():
             msg = Message(
                 subject=f"【仕事が来たよ】No.{id_str}",
                 recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")],
+                reply_to="shibuya8020@gmail.com",
                 body=full_message
             )
             mail.send(msg)
@@ -1180,6 +1203,7 @@ def meziro_upload():
             confirmation_msg = Message(
                 subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
                 recipients=[user_email],
+                reply_to="shibuya8020@gmail.com",
                 body=f"""{user_name} 様
 
 この度は技工指示を送信いただき、誠にありがとうございます。
@@ -1190,6 +1214,7 @@ def meziro_upload():
 【事業者名】{business_name}
 【送信者名】{user_name}
 【メールアドレス】{user_email}
+【カルテ番号】{chart_number}
 【患者名】{patient_name}　{patient_name_kana}
 【セット希望日時】{appointment_date} {appointment_hour}時
 【製作物】{project_type}
@@ -1224,6 +1249,7 @@ email: shibuya8020@gmail.com
                 "user_name":       user_name,
                 "patient_name":    patient_name,
                 "patient_name_kana": patient_name_kana,
+                "chart_number":    chart_number,
                 "appointment_date": appointment_date,
                 "appointment_hour": str(appointment_hour),
                 "project_type":    project_type,
