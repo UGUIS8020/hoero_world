@@ -1,0 +1,18 @@
+[Unit]
+Description=AI Discussion App (Streamlit)
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/website/ai_discussion
+ExecStart=/home/ubuntu/website/ai_discussion/venv/bin/streamlit run discussion.py \
+    --server.port=8502 \
+    --server.baseUrlPath=ai-discussion \
+    --server.headless=true \
+    --server.address=127.0.0.1
+Restart=always
+RestartSec=5
+EnvironmentFile=/home/ubuntu/website/ai_discussion/.env
+
+[Install]
+WantedBy=multi-user.target
