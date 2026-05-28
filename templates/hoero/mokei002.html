@@ -1,0 +1,57 @@
+{% extends "common/base.html" %}
+{% block title %}ワックスアップ・埋没 | 渋谷歯科技工所{% endblock %}
+{% block description %}歯科技工のワックスアップと埋没の手順を画像で解説します。{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 mx-auto">
+
+    <nav aria-label="ページナビ" class="mb-3">
+      <a href="{{ url_for('hoero.mokei001') }}" class="btn btn-sm btn-outline-secondary">← 前へ：模型作り</a>
+      <a href="{{ url_for('hoero.cast') }}" class="btn btn-sm btn-outline-secondary float-end">次へ：鋳造 →</a>
+    </nav>
+
+    <div class="card shadow">
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h1 class="h3 mb-0">ワックスアップ・埋没</h1>
+      </div>
+      <div class="card-body hoero-card-body p-4" style="background-color: #666699;">
+
+        <p class="fw-bold">で、これがワックス。ロウソクのロウみたいな物。</p>
+        <div class="text-center mb-3">
+          <img src="{{ url_for('static', filename='hoero/mokei/mokei017.jpg') }}" class="img-fluid rounded">
+        </div>
+        <p>熱すると簡単に融けるので、ワックスポットでトロトロにして専用の道具で形を整えながら盛っていく。</p>
+
+        {% set items = [
+          ('mokei010.jpg', 'これがワックスアップ<br>ワックスを熱しながら盛り上げていって削るのが基本だ'),
+          ('mokei011.jpg', 'そして、作りたい歯の形になったらワックスアップは終了。<br>このワックスで作った型を<b>ワックスパターン</b>って言う。'),
+          ('mokei012.jpg', 'ワックスアップが終ったら次に「埋没」って作業をする<br>そのためにワックスアップした歯に棒を付けるこの棒が後に流し込む金属の通り道になる'),
+          ('mokei013.jpg', 'で・・ホーマーってやつに立てて'),
+          ('mokei014.jpg', 'リングを用意して埋没材をなじませて'),
+          ('mokei015.jpg', '少しづつ埋没材を入れていく'),
+          ('mokei016.jpg', '全部埋まったら埋没完了！'),
+        ] %}
+
+        {% for filename, caption in items %}
+        <div class="row align-items-center mb-4">
+          <div class="col-md-5 text-center">
+            <img src="{{ url_for('static', filename='hoero/mokei/' + filename) }}" class="img-fluid rounded">
+          </div>
+          <div class="col-md-7 mt-2 mt-md-0">
+            <p class="mb-0">{{ caption | safe }}</p>
+          </div>
+        </div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between">
+      <a href="{{ url_for('hoero.mokei001') }}" class="btn btn-outline-secondary">← 前へ：模型作り</a>
+      <a href="{{ url_for('hoero.cast') }}" class="btn btn-outline-secondary">次へ：鋳造 →</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

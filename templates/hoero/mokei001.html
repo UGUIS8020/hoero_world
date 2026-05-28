@@ -1,0 +1,61 @@
+{% extends "common/base.html" %}
+{% block title %}模型作り | 渋谷歯科技工所{% endblock %}
+{% block description %}歯科技工の基礎、模型作りの手順を画像で解説します。{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 mx-auto">
+
+    <nav aria-label="ページナビ" class="mb-3">
+      <a href="{{ url_for('main.index') }}" class="btn btn-sm btn-outline-secondary">← 一覧へ戻る</a>
+      <a href="{{ url_for('hoero.mokei002') }}" class="btn btn-sm btn-outline-secondary float-end">次へ：ワックスアップ・埋没 →</a>
+    </nav>
+
+    <div class="card shadow">
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h1 class="h3 mb-0">模型作り</h1>
+      </div>
+      <div class="card-body hoero-card-body p-4" style="background-color: #666699;">
+
+        <p class="fw-bold">まずここでは、仕事を始めるための基礎を説明します。</p>
+        <div class="text-center mb-4">
+          <img src="{{ url_for('static', filename='hoero/mokei/mokei001.jpg') }}" class="img-fluid rounded">
+        </div>
+
+        <p class="fw-bold">まず、仕事を始めるためには歯医者さんから患者さんの模型を受け取ってきます</p>
+        <p>何は無くとも模型が無いと何も出来ないから・・ね<br>
+        指示書といわれる製作物の指示が書いてある用紙が模型と組になってる</p>
+
+        {% set items = [
+          ('mokei002.jpg', '模型の周りを削って形を整えましょう'),
+          ('mokei003.jpg', '技工物を製作しやすい様に模型を加工するため裏にピンを立てます。<br>理由は後ほど明らかになるぞ！'),
+          ('mokei004.jpg', '模型の裏に維持溝といわれるミゾを彫り込む。<br>これは技工物製作中に模型の位置に誤差が出ないように元の位置に戻す為に必要なんだけど・・<br>完成した模型を見れば納得だよ'),
+          ('mokei005.jpg', 'そしたら・・型に石膏を流して台を作る'),
+          ('mokei006.jpg', 'クラウン（技工物）を作る歯の部位を分割する。<br>そうすると作業しやすくなる'),
+          ('mokei007.jpg', 'ほらほら、こんな感じに必要な部位を取り外して作業が出来るようになる。'),
+          ('mokei008.jpg', '歯（クラウン）を作らなければならない歯の模型のアップ'),
+          ('mokei009.jpg', 'どこまでクラウンをかぶせるか見極めるために邪魔な歯肉の部分を削って境目をきちっと出す。<br>トリミングって普段は言ってる。'),
+        ] %}
+
+        {% for filename, caption in items %}
+        <div class="row align-items-center mb-4">
+          <div class="col-md-5 text-center">
+            <img src="{{ url_for('static', filename='hoero/mokei/' + filename) }}" class="img-fluid rounded">
+          </div>
+          <div class="col-md-7 mt-2 mt-md-0">
+            <p class="mb-0">{{ caption | safe }}</p>
+          </div>
+        </div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between">
+      <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">← 一覧へ戻る</a>
+      <a href="{{ url_for('hoero.mokei002') }}" class="btn btn-outline-secondary">次へ：ワックスアップ・埋没 →</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

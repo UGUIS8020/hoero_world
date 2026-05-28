@@ -43,6 +43,16 @@ p {
     /* padding: 5px; */
     }
 
+/* hoeroコンテンツ：文字色を白で統一 */
+.hoero-card-body,
+.hoero-card-body h1,
+.hoero-card-body h2,
+.hoero-card-body h3,
+.hoero-card-body h4,
+.hoero-card-body p {
+    color: #ffffff !important;
+}
+
 /* ナビバーのユーザー名リンク専用スタイル */
 a.navbar-text.user-name {
     color: #007bff !important; /* 通常ユーザーは青 */
