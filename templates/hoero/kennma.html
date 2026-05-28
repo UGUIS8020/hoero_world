@@ -1,0 +1,56 @@
+{% extends "common/base.html" %}
+{% block title %}調整・研磨 | 渋谷歯科技工所{% endblock %}
+{% block description %}歯科技工のメタルクラウン調整・研磨の手順を画像で解説します。{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 mx-auto">
+
+    <nav aria-label="ページナビ" class="mb-3">
+      <a href="{{ url_for('hoero.cast') }}" class="btn btn-sm btn-outline-secondary">← 前へ：鋳造</a>
+      <a href="{{ url_for('hoero.tekigo') }}" class="btn btn-sm btn-outline-secondary float-end">次へ：臨床模型上での適合 →</a>
+    </nav>
+
+    <div class="card shadow">
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h1 class="h3 mb-0">調整・研磨</h1>
+      </div>
+      <div class="card-body hoero-card-body p-4" style="background-color: #666699;">
+
+        <p class="fw-bold">咬合器に付着した模型</p>
+        <div class="text-center mb-3">
+          <img src="{{ url_for('static', filename='hoero/cast/ken005.jpg') }}" class="img-fluid rounded">
+        </div>
+        <p>金属になった歯を最終的にこれに合わせるわけね<br>
+        隣の歯との接触の強さとか噛合わせの強さとか</p>
+
+        {% set items = [
+          ('ken006.jpg', '模型にちゃんと適合するか見てみる<br>これで入らないと内面を削ったりしてピッタリと合うまで調整する。<br>適合がいい＝ピッタリ'),
+          ('ken001.jpg', 'これが何にも適合以外調整してない状態ね'),
+          ('ken002.jpg', '隣の歯とのくっつき具合の調整。<br>当たってるとこに色が付く紙を使ってどこが強く当たってるか見ながら調整をしてく。<br>強すぎると患者さんにセットできないし歯に負担もかかる。緩すぎたら食べ物とか歯の隙間にはさまっちゃう<br>なんでもホドホドが一番ってことね'),
+          ('ken003.jpg', 'こんどは噛みあわせを調整してるとこ<br>これまた微妙なんだけど強くても弱くてもいけない絶妙な噛み具合を調整していくわけ・・'),
+          ('ken004.jpg', 'そして研磨終了！完成！<br>取引先の歯科医院に納品するだけ'),
+        ] %}
+
+        {% for filename, caption in items %}
+        <div class="row align-items-center mb-4">
+          <div class="col-md-5 text-center">
+            <img src="{{ url_for('static', filename='hoero/cast/' + filename) }}" class="img-fluid rounded">
+          </div>
+          <div class="col-md-7 mt-2 mt-md-0">
+            <p class="mb-0">{{ caption | safe }}</p>
+          </div>
+        </div>
+        {% endfor %}
+
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between">
+      <a href="{{ url_for('hoero.cast') }}" class="btn btn-outline-secondary">← 前へ：鋳造</a>
+      <a href="{{ url_for('hoero.tekigo') }}" class="btn btn-outline-secondary">次へ：臨床模型上での適合 →</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

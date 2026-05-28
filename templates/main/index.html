@@ -730,7 +730,8 @@ a:active { color: #b22222; text-decoration: none; }
   <div class="container">
     <header>
       <h1>index</h1>
-      <p class="lead">歯科技工士の仕事や実験・製作手順の資料です。</p>
+      <p class="lead mb-1">歯科技工士の仕事や実験・製作手順の資料です。</p>
+      <p class="text-muted small mb-0">旧website吠えろ歯科技工士時代からのコンテンツなので古いものもありますがご了承ください。</p>
     </header>
 
     <div class="grid">
@@ -759,11 +760,11 @@ a:active { color: #b22222; text-decoration: none; }
 
         <h2>技工物の製作手順</h2>
         <ul class="link-list">
-          <li><a href="shibuya/mokei001.html" target="_self">模型作り</a></li>
-          <li><a href="shibuya/mokei002.html" target="_self">ワックスアップ、埋没</a></li>
-          <li><a href="shibuya/mokei.cast.html" target="_self">鋳造</a></li>
-          <li><a href="shibuya/mokei.kennma.html" target="_self">調整・研磨</a></li>
-          <li><a href="shibuya/tekigo.html" target="_self">臨床模型上での適合</a></li>
+          <li><a href="{{ url_for('hoero.mokei001') }}">模型作り</a></li>
+          <li><a href="{{ url_for('hoero.mokei002') }}">ワックスアップ・埋没</a></li>
+          <li><a href="{{ url_for('hoero.cast') }}">鋳造</a></li>
+          <li><a href="{{ url_for('hoero.kennma') }}">調整・研磨</a></li>
+          <li><a href="{{ url_for('hoero.tekigo') }}">臨床模型上での適合</a></li>
         </ul>
       </section>
 
