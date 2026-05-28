@@ -630,8 +630,12 @@ def colors():
     return render_template('main/colors.html')
 
 @bp.route('/raiden')
-def raiden():    
+def raiden():
     return render_template('main/raiden.html')
+
+@bp.route('/recruit')
+def recruit():
+    return render_template('main/recruit.html')
 
 def save_resized_upload(file, save_path, max_width=1500):
     """
