@@ -212,8 +212,11 @@
               
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.missing_teeth_nation' %}active{% endif %}" href="{{ url_for('pages.news') }}">お知らせ</a>
-              </li>             
-              
+              </li>
+
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.recruit' %}active{% endif %}" href="{{ url_for('main.recruit') }}">求人</a>
+              </li>
 
               {% if current_user.is_authenticated %}
 
@@ -224,6 +227,7 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'users.user_maintenance' %}active{% endif %}" href="{{url_for('users.user_maintenance')}}">ユーザー</a>
               </li>
+
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint and request.endpoint.startswith('oralscan.') %}active{% endif %}" href="{{ url_for('oralscan.admin') }}">
                   <i class="fas fa-robot"></i> Oral Scan自動化
