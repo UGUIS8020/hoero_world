@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+static/uploads/
+static/videos/
+static/images/
+*.mp4
+*.stl
+*.glb
+*.log
+.git/
+.env
+node_modules/

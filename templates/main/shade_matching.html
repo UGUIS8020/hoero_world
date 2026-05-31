@@ -121,6 +121,8 @@
             <div class="text-center mt-2">
               <button id="pasteBtnColor" class="btn btn-warning px-4 ms-2" disabled>選択範囲を複製</button>
               <button id="resetBtnColor" class="btn btn-outline-secondary px-4 ms-2">選択リセット</button>
+              <button id="addImageBtn" class="btn btn-info px-4 ms-2">画像を追加</button>
+              <input type="file" id="addImageInput" accept="image/*" style="display:none;">
             </div>
           </div>
 
@@ -240,12 +242,21 @@
     img.src = imgSrc;
 
     /* 状態管理 */
-    let isDrawing = false, isDragging = false, isResizing = false, isPanning = false;
+    let isDrawing = false, isDragging = false, isResizing = false, isPanning = false, isRotating = false;
     let startX = 0, startY = 0, selX = 0, selY = 0, selW = 0, selH = 0;
-    let dragOffX = 0, dragOffY = 0, dragIndex = -1, selectedIndex = -1;
+    let dragOffX = 0, dragOffY = 0, dragIndex = -1, selectedIndex = -1, dragCxOffset = 0, dragCyOffset = 0;
     let resizeIndex = -1, resizeHandle = null, resizeStart = {};
-    let panIndex = -1, panMode = false, panStartMX = 0, panStartMY = 0, panStartPX = 0, panStartPY = 0;
+    let panIndex = -1, panMode = false, panStartMX = 0, panStartMY = 0, panStartPX = 0, panStartPY = 0, panStartCX = 0, panStartCY = 0;
+    let rotateIndex = -1, rotateStartAngle = 0, rotateStartRot = 0, rotateStartCxOff = 0, rotateStartCyOff = 0;
     let pastedList = [];
+
+    function rotHandleOffset() { return Math.max(40, canvas.width / 50); }
+    function hitRotationHandle(mx, my, item) {
+      if (item !== pastedList[selectedIndex]) return false;
+      const cx = item.x + item.dispW/2, cy = item.y - rotHandleOffset();
+      const r = Math.max(20, canvas.width/100) * 0.6;
+      return Math.sqrt((mx-cx)**2 + (my-cy)**2) <= r + hs()*0.6;
+    }
 
     function toCanvasCoords(e) {
       const rect = canvas.getBoundingClientRect();
@@ -287,8 +298,11 @@
       pastedList.forEach((p,i) => {
         ctx.save();
         ctx.beginPath(); ctx.rect(p.x,p.y,p.dispW,p.dispH); ctx.clip();
-        ctx.translate(p.x+p.dispW, p.y+p.dispH); ctx.rotate(Math.PI);
-        ctx.drawImage(p.croppedImg||img, p.srcX+(p.panX||0), p.srcY+(p.panY||0), p.srcW, p.srcH, 0, 0, p.dispW, p.dispH);
+        const cx = p.cx ?? (p.x+p.dispW/2), cy = p.cy ?? (p.y+p.dispH/2);
+        ctx.translate(cx, cy);
+        ctx.rotate((p.baseRotation??Math.PI) + (p.rotation||0));
+        const dW=p.drawW||p.dispW, dH=p.drawH||p.dispH;
+        ctx.drawImage(p.croppedImg||img, p.srcX+(p.panX||0), p.srcY+(p.panY||0), p.srcW, p.srcH, -dW/2, -dH/2, dW, dH);
         ctx.restore();
         if (panMode && i===panIndex) {
           ctx.strokeStyle='rgba(0,220,100,0.8)'; ctx.lineWidth=Math.max(2,canvas.width/400);
@@ -301,6 +315,12 @@
           const barW=Math.max(6,h*0.4), barH=h*1.6, midY=p.y+p.dispH/2, midX=p.x+p.dispW/2;
           [[p.x,midY],[p.x+p.dispW,midY]].forEach(([bx,by])=>{ ctx.fillRect(bx-barW/2,by-barH/2,barW,barH); ctx.strokeRect(bx-barW/2,by-barH/2,barW,barH); });
           [[midX,p.y],[midX,p.y+p.dispH]].forEach(([bx,by])=>{ ctx.fillRect(bx-barH/2,by-barW/2,barH,barW); ctx.strokeRect(bx-barH/2,by-barW/2,barH,barW); });
+          // 回転ハンドル（上部中央の円）
+          const rho = rotHandleOffset();
+          ctx.strokeStyle='rgba(80,80,80,0.8)'; ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(midX, p.y); ctx.lineTo(midX, p.y-rho); ctx.stroke();
+          ctx.fillStyle='rgba(100,180,255,0.9)';
+          ctx.beginPath(); ctx.arc(midX, p.y-rho, h*0.6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
         }
       });
       if (selW>0 && selH>0) {
@@ -321,46 +341,81 @@
       const p=toCanvasCoords(e);
       if (panMode && panIndex>=0 && hitIndex(p.x,p.y)===panIndex) {
         isPanning=true; panStartMX=p.x; panStartMY=p.y;
-        panStartPX=pastedList[panIndex].panX||0; panStartPY=pastedList[panIndex].panY||0; return;
+        panStartPX=pastedList[panIndex].panX||0; panStartPY=pastedList[panIndex].panY||0;
+        const pItem=pastedList[panIndex];
+        panStartCX=pItem.cx??(pItem.x+pItem.dispW/2);
+        panStartCY=pItem.cy??(pItem.y+pItem.dispH/2);
+        return;
       }
       if (panMode) { panMode=false; panIndex=-1; fullRedraw(); }
+      // 回転ハンドル優先
+      if (selectedIndex>=0 && hitRotationHandle(p.x,p.y,pastedList[selectedIndex])) {
+        isRotating=true; rotateIndex=selectedIndex;
+        const it=pastedList[selectedIndex];
+        const fx=it.x+it.dispW/2, fy=it.y+it.dispH/2;
+        rotateStartAngle=Math.atan2(p.y-fy, p.x-fx);
+        rotateStartRot=it.rotation||0;
+        rotateStartCxOff=(it.cx??fx)-fx;
+        rotateStartCyOff=(it.cy??fy)-fy;
+        return;
+      }
       for (let i=pastedList.length-1;i>=0;i--) {
         const handle=hitHandle(p.x,p.y,pastedList[i]);
         if (handle) {
           isResizing=true; resizeIndex=i; resizeHandle=handle; selectedIndex=i;
           const it=pastedList[i];
           resizeStart={mx:p.x,my:p.y,ix:it.x,iy:it.y,iw:it.dispW,ih:it.dispH,
+            drawW0:it.drawW||it.dispW, drawH0:it.drawH||it.dispH,
             srcX0:it.srcX,srcW0:it.srcW,origSrcX:it.origSrcX,origSrcW:it.origSrcW,
             srcY0:it.srcY,srcH0:it.srcH,origSrcY:it.origSrcY||0,origSrcH:it.origSrcH||it.srcH};
           fullRedraw(); return;
         }
       }
       const hi=hitIndex(p.x,p.y);
-      if (hi>=0) { isDragging=true; dragIndex=hi; selectedIndex=hi; dragOffX=p.x-pastedList[hi].x; dragOffY=p.y-pastedList[hi].y; fullRedraw(); }
+      if (hi>=0) {
+        isDragging=true; dragIndex=hi; selectedIndex=hi;
+        dragOffX=p.x-pastedList[hi].x; dragOffY=p.y-pastedList[hi].y;
+        const hi_item=pastedList[hi];
+        dragCxOffset=(hi_item.cx??(hi_item.x+hi_item.dispW/2))-(hi_item.x+hi_item.dispW/2);
+        dragCyOffset=(hi_item.cy??(hi_item.y+hi_item.dispH/2))-(hi_item.y+hi_item.dispH/2);
+        fullRedraw();
+      }
       else { selectedIndex=-1; isDrawing=true; startX=p.x; startY=p.y; selW=0; selH=0; pasteBtnEl.disabled=true; }
     });
     canvas.addEventListener('mousemove', e => {
       const p=toCanvasCoords(e);
+      if (isRotating && rotateIndex>=0) {
+        const it=pastedList[rotateIndex];
+        const fx=it.x+it.dispW/2, fy=it.y+it.dispH/2;
+        const angle=Math.atan2(p.y-fy, p.x-fx);
+        it.rotation=rotateStartRot+angle-rotateStartAngle;
+        const dRot=it.rotation-rotateStartRot;
+        const cos=Math.cos(dRot), sin=Math.sin(dRot);
+        it.cx=fx+rotateStartCxOff*cos-rotateStartCyOff*sin;
+        it.cy=fy+rotateStartCxOff*sin+rotateStartCyOff*cos;
+        canvas.style.cursor='grabbing'; fullRedraw(); return;
+      }
+      if (selectedIndex>=0 && pastedList[selectedIndex] && hitRotationHandle(p.x,p.y,pastedList[selectedIndex])) {
+        canvas.style.cursor='grab'; return;
+      }
       if (isPanning && panIndex>=0) {
-        const it=pastedList[panIndex], scale=it.dispW/it.srcW;
-        const src=it.croppedImg||img;
-        const sw2=src.naturalWidth??src.width, sh2=src.naturalHeight??src.height;
-        it.panX=Math.max(-it.srcX,Math.min(sw2-it.srcX-it.srcW, panStartPX+(p.x-panStartMX)/scale));
-        it.panY=Math.max(-it.srcY,Math.min(sh2-it.srcY-it.srcH, panStartPY+(p.y-panStartMY)/scale));
+        const it=pastedList[panIndex];
+        it.cx=panStartCX+(p.x-panStartMX);
+        it.cy=panStartCY+(p.y-panStartMY);
         canvas.style.cursor='grabbing'; fullRedraw(); return;
       }
       if (panMode && panIndex>=0 && hitIndex(p.x,p.y)===panIndex) { canvas.style.cursor='grab'; return; }
       if (isResizing && resizeIndex>=0) {
         const dx=p.x-resizeStart.mx, dy=p.y-resizeStart.my, it=pastedList[resizeIndex];
         switch(resizeHandle) {
-          case 'se': it.dispW=Math.max(10,resizeStart.iw+dx); it.dispH=Math.max(10,resizeStart.ih+dy); break;
-          case 'sw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.dispH=Math.max(10,resizeStart.ih+dy); break;
-          case 'ne': it.dispW=Math.max(10,resizeStart.iw+dx); it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; break;
-          case 'nw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; break;
-          case 'left': { const sc=resizeStart.iw/resizeStart.srcW0, cdx=Math.max((resizeStart.srcX0+resizeStart.srcW0-resizeStart.origSrcX-resizeStart.origSrcW)*sc,Math.min((resizeStart.srcW0-1)*sc,dx)); it.x=resizeStart.ix+cdx; it.dispW=resizeStart.iw-cdx; it.srcX=resizeStart.srcX0; it.srcW=resizeStart.srcW0-cdx/sc; break; }
-          case 'right': { const sc=resizeStart.iw/resizeStart.srcW0, cdx=Math.max(Math.max(1-resizeStart.iw,-(resizeStart.origSrcX+resizeStart.origSrcW-resizeStart.srcX0)*sc),Math.min((resizeStart.srcX0-resizeStart.origSrcX)*sc,dx)); it.dispW=resizeStart.iw+cdx; it.srcX=resizeStart.srcX0-cdx/sc; it.srcW=resizeStart.srcW0+cdx/sc; break; }
-          case 'top': { const sc=resizeStart.ih/resizeStart.srcH0, cdy=Math.max((resizeStart.srcH0-resizeStart.origSrcH)*sc,Math.min((resizeStart.srcH0-1)*sc,dy)); it.y=resizeStart.iy+cdy; it.dispH=resizeStart.ih-cdy; it.srcY=resizeStart.srcY0; it.srcH=resizeStart.srcH0-cdy/sc; break; }
-          case 'bottom': { const sc=resizeStart.ih/resizeStart.srcH0, cdy=Math.max(Math.max(1-resizeStart.ih,-(resizeStart.origSrcY+resizeStart.origSrcH-resizeStart.srcY0)*sc),Math.min((resizeStart.srcY0-resizeStart.origSrcY)*sc,dy)); it.dispH=resizeStart.ih+cdy; it.srcY=resizeStart.srcY0-cdy/sc; it.srcH=resizeStart.srcH0+cdy/sc; break; }
+          case 'se': it.dispW=Math.max(10,resizeStart.iw+dx); it.drawW=resizeStart.drawW0+(it.dispW-resizeStart.iw); it.dispH=Math.max(10,resizeStart.ih+dy); it.drawH=resizeStart.drawH0+(it.dispH-resizeStart.ih); it.cx=it.x+it.dispW/2; it.cy=it.y+it.dispH/2; break;
+          case 'sw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.drawW=resizeStart.drawW0+(it.dispW-resizeStart.iw); it.dispH=Math.max(10,resizeStart.ih+dy); it.drawH=resizeStart.drawH0+(it.dispH-resizeStart.ih); it.cx=it.x+it.dispW/2; it.cy=it.y+it.dispH/2; break;
+          case 'ne': it.dispW=Math.max(10,resizeStart.iw+dx); it.drawW=resizeStart.drawW0+(it.dispW-resizeStart.iw); it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; it.drawH=resizeStart.drawH0+(it.dispH-resizeStart.ih); it.cx=it.x+it.dispW/2; it.cy=it.y+it.dispH/2; break;
+          case 'nw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.drawW=resizeStart.drawW0+(it.dispW-resizeStart.iw); it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; it.drawH=resizeStart.drawH0+(it.dispH-resizeStart.ih); it.cx=it.x+it.dispW/2; it.cy=it.y+it.dispH/2; break;
+          case 'left': { const cdx=Math.max(0,Math.min(resizeStart.iw-1,dx)); it.x=resizeStart.ix+cdx; it.dispW=resizeStart.iw-cdx; break; }
+          case 'right': { it.dispW=Math.max(1,resizeStart.iw+dx); break; }
+          case 'top': { const cdy=Math.max(0,Math.min(resizeStart.ih-1,dy)); it.y=resizeStart.iy+cdy; it.dispH=resizeStart.ih-cdy; break; }
+          case 'bottom': { it.dispH=Math.max(1,resizeStart.ih+dy); break; }
         }
         fullRedraw(); return;
       }
@@ -375,14 +430,15 @@
         const over=pastedList.some(item=>hitIndex(p.x,p.y)>=0||hitHandle(p.x,p.y,item)!==null);
         if (!over) { selectedIndex=-1; fullRedraw(); }
       }
-      if (isDragging&&dragIndex>=0) { pastedList[dragIndex].x=p.x-dragOffX; pastedList[dragIndex].y=p.y-dragOffY; fullRedraw(); }
+      if (isDragging&&dragIndex>=0) { const d=pastedList[dragIndex]; d.x=p.x-dragOffX; d.y=p.y-dragOffY; d.cx=d.x+d.dispW/2+dragCxOffset; d.cy=d.y+d.dispH/2+dragCyOffset; fullRedraw(); }
       else if (isDrawing) { selX=Math.min(startX,p.x); selY=Math.min(startY,p.y); selW=Math.abs(p.x-startX); selH=Math.abs(p.y-startY); fullRedraw(); }
     });
     canvas.addEventListener('mouseleave', () => {
       if (!isDragging&&!isResizing&&!isPanning&&!isDrawing&&selectedIndex>=0) { selectedIndex=-1; fullRedraw(); }
     });
     canvas.addEventListener('mouseup', () => {
-      if (isPanning) { isPanning=false; canvas.style.cursor='grab'; }
+      if (isRotating) { isRotating=false; rotateIndex=-1; }
+      else if (isPanning) { isPanning=false; canvas.style.cursor='grab'; }
       else if (isResizing) { isResizing=false; resizeIndex=-1; resizeHandle=null; }
       else if (isDragging) { isDragging=false; dragIndex=-1; }
       else { isDrawing=false; if (selW>5&&selH>5) pasteBtnEl.disabled=false; }
@@ -397,7 +453,8 @@
       const offset=Math.round(Math.min(canvas.width,canvas.height)*0.03);
       const cc=document.createElement('canvas'); cc.width=sw; cc.height=sh;
       cc.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
-      pastedList.push({x:sx+offset,y:sy+offset,dispW:sw,dispH:sh,srcX:0,srcY:0,srcW:sw,srcH:sh,origSrcX:0,origSrcW:sw,origSrcY:0,origSrcH:sh,panX:0,panY:0,croppedImg:cc});
+      const ix=sx+offset, iy=sy+offset;
+      pastedList.push({x:ix,y:iy,cx:ix+sw/2,cy:iy+sh/2,dispW:sw,dispH:sh,drawW:sw,drawH:sh,srcX:0,srcY:0,srcW:sw,srcH:sh,origSrcX:0,origSrcW:sw,origSrcY:0,origSrcH:sh,panX:0,panY:0,rotation:0,croppedImg:cc});
       selX=selY=selW=selH=0; pasteBtnEl.disabled=true; fullRedraw();
     });
     resetBtnEl.addEventListener('click', () => {
@@ -408,6 +465,17 @@
       deleteSelected() {
         if (selectedIndex>=0) { pastedList.splice(selectedIndex,1); selectedIndex=-1; fullRedraw(); return true; }
         return false;
+      },
+      addImage(externalImg) {
+        const iw=externalImg.naturalWidth||externalImg.width;
+        const ih=externalImg.naturalHeight||externalImg.height;
+        const scale=Math.min(canvas.width/iw, canvas.height/ih);
+        const sw=Math.round(iw*scale), sh=Math.round(ih*scale);
+        const cc=document.createElement('canvas'); cc.width=iw; cc.height=ih;
+        cc.getContext('2d').drawImage(externalImg,0,0);
+        const ix=Math.round((canvas.width-sw)/2), iy=Math.round((canvas.height-sh)/2);
+        pastedList.push({x:ix,y:iy,cx:ix+sw/2,cy:iy+sh/2,dispW:sw,dispH:sh,drawW:sw,drawH:sh,srcX:0,srcY:0,srcW:iw,srcH:ih,origSrcX:0,origSrcW:iw,origSrcY:0,origSrcH:ih,panX:0,panY:0,rotation:0,baseRotation:0,croppedImg:cc});
+        selectedIndex=pastedList.length-1; fullRedraw();
       }
     };
     return editor;
@@ -426,6 +494,39 @@
     document.getElementById('pasteBtnColor'),
     document.getElementById('resetBtnColor')
   );
+
+  /* ── 画像を追加（元画像への外部画像オーバーレイ） ── */
+  const addImageBtn = document.getElementById('addImageBtn');
+  const addImageInput = document.getElementById('addImageInput');
+  if (addImageBtn) {
+    addImageBtn.addEventListener('click', () => addImageInput.click());
+    addImageInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const extImg = new Image();
+      extImg.onload = () => { colorEditor.addImage(extImg); URL.revokeObjectURL(url); };
+      extImg.src = url;
+      addImageInput.value = '';
+    });
+  }
+
+  /* ── 元画像へのドラッグ＆ドロップ追加 ── */
+  const colorCanvas = document.getElementById('colorCanvas');
+  if (colorCanvas) {
+    colorCanvas.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); colorCanvas.style.opacity = '0.75'; });
+    colorCanvas.addEventListener('dragleave', e => { e.stopPropagation(); colorCanvas.style.opacity = ''; });
+    colorCanvas.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation();
+      colorCanvas.style.opacity = '';
+      const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const extImg = new Image();
+      extImg.onload = () => { colorEditor.addImage(extImg); URL.revokeObjectURL(url); };
+      extImg.src = url;
+    });
+  }
 
   /* Deleteキー（最後に操作したcanvasのフレームを削除） */
   document.addEventListener('keydown', e => {

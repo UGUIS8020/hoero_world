@@ -704,15 +704,15 @@ def shade_matching_upload():
         if img.mode != 'RGB':
             img = img.convert('RGB')
 
-        # 横幅3000px超の場合のみリサイズ（縦は比率維持）
-        if img.width > 3000:
-            scale = 3000 / img.width
+        # 横幅2500px超の場合のみリサイズ（縦は比率維持）
+        if img.width > 2500:
+            scale = 2500 / img.width
             new_height = int(img.height * scale)
             try:
                 resample = Image.Resampling.LANCZOS
             except AttributeError:
                 resample = Image.LANCZOS  # type: ignore[attr-defined]
-            img = img.resize((3000, new_height), resample)
+            img = img.resize((2500, new_height), resample)
 
         assert img is not None
 
