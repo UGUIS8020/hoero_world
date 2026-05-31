@@ -1,0 +1,346 @@
+{% extends "common/base.html" %}
+{% block title %}Shade Matching | 渋谷歯科技工所{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 mx-auto">
+    <div class="card shadow">
+      <div class="card-header bg-dark text-white text-center py-3">
+        <h1 class="h2 mb-0">Shade Matching</h1>
+      </div>
+      <div class="card-body p-4">
+
+        <!-- 再アップロードボタン（画像あり時のみ表示） -->
+        {% if image_data %}
+        <div class="text-end mb-2">
+          <button id="showUploadBtn" class="btn btn-sm btn-outline-secondary">再アップロード</button>
+        </div>
+        {% endif %}
+
+        <!-- アップロードフォーム -->
+        <form id="uploadForm" action="{{ url_for('main.shade_matching') }}" method="post" enctype="multipart/form-data"
+              {% if image_data %}style="display:none;"{% endif %}>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div id="drop-area" class="mb-3 text-center"
+               style="border: 2px dashed #ccc; padding: 30px; border-radius: 8px; cursor: pointer;">
+            <p class="mb-2 text-muted">メイン画像をここにドラッグ＆ドロップ、または選択</p>
+            <p class="mb-2 text-muted small">（横幅2000pxに自動リサイズ）</p>
+            <input type="file" name="file" id="fileInput" accept="image/*" required class="form-control mt-2">
+          </div>
+          <div class="text-center">
+            <button type="submit" class="btn btn-dark px-5">アップロード</button>
+          </div>
+        </form>
+
+        <!-- エラー表示 -->
+        {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+
+        {% if image_data %}
+        <div class="mt-4">
+          <hr>
+
+          <!-- カラー画像 -->
+          <div class="mb-4">
+            <p class="text-center fw-bold mb-2">カラー</p>
+            <img src="data:image/jpeg;base64,{{ image_data }}"
+                 alt="カラー画像"
+                 class="img-fluid rounded shadow w-100">
+          </div>
+
+          <!-- グレースケール：切り抜き操作 -->
+          <div>
+            <p class="text-center fw-bold mb-1">グレースケール（彩度なし）</p>
+            <p class="text-center text-muted small mb-2">マウスでドラッグして範囲を選択 → 「切り抜く」</p>
+
+            <div style="position: relative; display: inline-block; width: 100%;">
+              <canvas id="grayCanvas"
+                      style="cursor: crosshair; width: 100%; display: block; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></canvas>
+            </div>
+
+            <div class="text-center mt-2">
+              <button id="cropBtn" class="btn btn-dark px-4" disabled>切り抜く</button>
+              <div class="d-inline-flex align-items-center ms-2">
+                <select id="splitCount" class="form-select form-select-sm" style="width:80px;">
+                  <option value="2">2本</option>
+                  <option value="3">3本</option>
+                  <option value="4" selected>4本</option>
+                </select>
+                <button id="splitBtn" class="btn btn-primary px-3 ms-1">自動分割</button>
+              </div>
+              <button id="resetBtn" class="btn btn-outline-secondary px-4 ms-2">選択リセット</button>
+            </div>
+          </div>
+
+          <!-- 手動切り抜き結果 -->
+          <div id="cropResult" class="mt-4" style="display:none;">
+            <hr>
+            <p class="text-center fw-bold mb-2">切り抜き結果</p>
+            <div class="text-center">
+              <canvas id="croppedCanvas" class="img-fluid rounded shadow"></canvas>
+            </div>
+            <div class="text-center mt-2">
+              <a id="downloadBtn" class="btn btn-success px-4" download="cropped.jpg">画像を保存</a>
+            </div>
+          </div>
+
+          <!-- 自動分割結果 -->
+          <div id="splitResult" class="mt-4" style="display:none;">
+            <hr>
+            <p class="text-center fw-bold mb-2">自動分割結果</p>
+            <div id="splitCanvases" class="d-flex flex-row gap-3 justify-content-center align-items-start flex-wrap"></div>
+          </div>
+
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #drop-area.highlight {
+    border-color: #333;
+    background-color: #f8f9fa;
+  }
+  .tooth-item {
+    text-align: center;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .tooth-item canvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+</style>
+
+<script>
+  /* ── 再アップロードボタン ── */
+  const showUploadBtn = document.getElementById('showUploadBtn');
+  if (showUploadBtn) {
+    showUploadBtn.addEventListener('click', () => {
+      const form = document.getElementById('uploadForm');
+      const isHidden = form.style.display === 'none';
+      form.style.display = isHidden ? 'block' : 'none';
+      showUploadBtn.textContent = isHidden ? '閉じる' : '再アップロード';
+    });
+  }
+
+  /* ── ドラッグ＆ドロップ アップロード ── */
+  const dropArea = document.getElementById('drop-area');
+  const fileInput = document.getElementById('fileInput');
+  if (dropArea) {
+    ['dragenter','dragover','dragleave','drop'].forEach(e =>
+      dropArea.addEventListener(e, ev => { ev.preventDefault(); ev.stopPropagation(); }));
+    ['dragenter','dragover'].forEach(e =>
+      dropArea.addEventListener(e, () => dropArea.classList.add('highlight')));
+    ['dragleave','drop'].forEach(e =>
+      dropArea.addEventListener(e, () => dropArea.classList.remove('highlight')));
+    dropArea.addEventListener('drop', e => {
+      if (e.dataTransfer.files.length > 0) fileInput.files = e.dataTransfer.files;
+    });
+  }
+
+  {% if image_gray %}
+  /* ── グレースケール canvas ── */
+  const canvas      = document.getElementById('grayCanvas');
+  const ctx         = canvas.getContext('2d');
+  const cropBtn     = document.getElementById('cropBtn');
+  const splitBtn    = document.getElementById('splitBtn');
+  const resetBtn    = document.getElementById('resetBtn');
+  const cropResult  = document.getElementById('cropResult');
+  const croppedCanvas  = document.getElementById('croppedCanvas');
+  const downloadBtn    = document.getElementById('downloadBtn');
+  const splitCount     = document.getElementById('splitCount');
+  const splitResult    = document.getElementById('splitResult');
+  const splitCanvases  = document.getElementById('splitCanvases');
+
+  const img = new Image();
+  img.src = 'data:image/jpeg;base64,{{ image_gray }}';
+  img.onload = () => {
+    canvas.width  = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    ctx.drawImage(img, 0, 0);
+  };
+
+  /* 選択矩形 */
+  let isDrawing = false;
+  let startX = 0, startY = 0, selX = 0, selY = 0, selW = 0, selH = 0;
+
+  function toCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) * (canvas.width  / rect.width),
+      y: (e.clientY - rect.top)  * (canvas.height / rect.height),
+    };
+  }
+
+  function redraw(sx, sy, sw, sh) {
+    ctx.drawImage(img, 0, 0);
+    if (!sw && !sh) return;
+    ctx.strokeStyle = '#ff3300';
+    ctx.lineWidth   = Math.max(2, canvas.width / 500);
+    ctx.setLineDash([8, 4]);
+    ctx.strokeRect(sx, sy, sw, sh);
+    ctx.fillStyle = 'rgba(255,100,0,0.08)';
+    ctx.fillRect(sx, sy, sw, sh);
+    ctx.setLineDash([]);
+  }
+
+  canvas.addEventListener('mousedown', e => {
+    const p = toCanvasCoords(e);
+    isDrawing = true; startX = p.x; startY = p.y; selW = 0; selH = 0;
+    cropBtn.disabled = true;
+    cropResult.style.display = 'none';
+  });
+  canvas.addEventListener('mousemove', e => {
+    if (!isDrawing) return;
+    const p = toCanvasCoords(e);
+    selX = Math.min(startX, p.x); selY = Math.min(startY, p.y);
+    selW = Math.abs(p.x - startX); selH = Math.abs(p.y - startY);
+    redraw(selX, selY, selW, selH);
+  });
+  canvas.addEventListener('mouseup', () => {
+    isDrawing = false;
+    if (selW > 5 && selH > 5) cropBtn.disabled = false;
+  });
+
+  /* タッチ対応 */
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }));
+  }, { passive: false });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }));
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => canvas.dispatchEvent(new MouseEvent('mouseup')));
+
+  /* 切り抜きボタン（180度回転） */
+  cropBtn.addEventListener('click', () => {
+    if (selW < 1 || selH < 1) return;
+    croppedCanvas.width  = selW;
+    croppedCanvas.height = selH;
+    const cCtx = croppedCanvas.getContext('2d');
+    cCtx.translate(selW, selH);
+    cCtx.rotate(Math.PI);
+    cCtx.drawImage(img, selX, selY, selW, selH, 0, 0, selW, selH);
+    cCtx.setTransform(1, 0, 0, 1, 0, 0);
+    cropResult.style.display = 'block';
+    downloadBtn.href = croppedCanvas.toDataURL('image/jpeg', 0.92);
+    cropResult.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  /* リセットボタン */
+  resetBtn.addEventListener('click', () => {
+    selX = selY = selW = selH = 0;
+    redraw(0, 0, 0, 0);
+    cropBtn.disabled = true;
+    cropResult.style.display = 'none';
+    splitResult.style.display = 'none';
+  });
+
+  /* ── 自動分割（4本）：選択範囲内を分割 ── */
+  splitBtn.addEventListener('click', () => {
+    if (selW < 10 || selH < 10) {
+      alert('先にグレースケール画像上でマウスドラッグして範囲を選択してください。');
+      return;
+    }
+
+    const sx = Math.round(selX), sy = Math.round(selY);
+    const sw = Math.round(selW), sh = Math.round(selH);
+
+    // 選択範囲のみオフスクリーンcanvasに描画してピクセル取得
+    const offscreen = document.createElement('canvas');
+    offscreen.width = sw; offscreen.height = sh;
+    const offCtx = offscreen.getContext('2d');
+    offCtx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+    const data = offCtx.getImageData(0, 0, sw, sh).data;
+
+    // 選択範囲内の列ごとの平均明度を計算
+    const colBrightness = new Float32Array(sw);
+    for (let x = 0; x < sw; x++) {
+      let sum = 0;
+      for (let y = 0; y < sh; y++) {
+        sum += data[(y * sw + x) * 4];
+      }
+      colBrightness[x] = sum / sh;
+    }
+
+    // 移動平均でスムージング
+    const winSize = Math.max(5, Math.floor(sw / 60));
+    const smoothed = new Float32Array(sw);
+    for (let x = 0; x < sw; x++) {
+      let sum = 0, cnt = 0;
+      for (let dx = -winSize; dx <= winSize; dx++) {
+        const nx = x + dx;
+        if (nx >= 0 && nx < sw) { sum += colBrightness[nx]; cnt++; }
+      }
+      smoothed[x] = sum / cnt;
+    }
+
+    // 分割数に応じた分割点を生成
+    const n = parseInt(splitCount.value);
+    const margin = Math.floor(sw * 0.08);
+    const zones = [];
+    for (let i = 1; i < n; i++) {
+      const center = Math.floor(sw * i / n);
+      zones.push([center - margin, center + margin]);
+    }
+
+    const splitPoints = zones.map(([s, e]) => {
+      let minVal = Infinity, minIdx = Math.floor((s + e) / 2);
+      for (let x = Math.max(0, s); x < Math.min(sw, e); x++) {
+        if (smoothed[x] < minVal) { minVal = smoothed[x]; minIdx = x; }
+      }
+      return minIdx;
+    });
+
+    // 4本に切り出して表示（選択範囲の座標に変換してimgから直接描画）
+    const boundaries = [0, ...splitPoints, sw];
+    const labels = ['歯①', '歯②', '歯③', '歯④'].slice(0, n);
+    splitCanvases.innerHTML = '';
+
+    boundaries.slice(0, -1).forEach((lx, i) => {
+      const rx = boundaries[i + 1];
+      const tw = rx - lx;
+
+      const toothCanvas = document.createElement('canvas');
+      toothCanvas.width  = tw;
+      toothCanvas.height = sh;
+      const tCtx = toothCanvas.getContext('2d');
+      // 180度回転して描画
+      tCtx.translate(tw, sh);
+      tCtx.rotate(Math.PI);
+      tCtx.drawImage(img, sx + lx, sy, tw, sh, 0, 0, tw, sh);
+      tCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+      const label = document.createElement('p');
+      label.className = 'fw-bold mb-1 text-center';
+      label.textContent = labels[i];
+
+      const dlBtn = document.createElement('a');
+      dlBtn.className = 'btn btn-sm btn-outline-dark mt-1 mb-3';
+      dlBtn.textContent = '保存';
+      dlBtn.download = `tooth_${i + 1}.jpg`;
+      dlBtn.href = toothCanvas.toDataURL('image/jpeg', 0.92);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'tooth-item';
+      wrap.appendChild(label);
+      wrap.appendChild(toothCanvas);
+      wrap.appendChild(document.createElement('br'));
+      wrap.appendChild(dlBtn);
+      splitCanvases.appendChild(wrap);
+    });
+
+    splitResult.style.display = 'block';
+    splitResult.scrollIntoView({ behavior: 'smooth' });
+  });
+  {% endif %}
+</script>
+{% endblock %}

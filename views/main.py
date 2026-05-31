@@ -637,6 +637,83 @@ def raiden():
 def recruit():
     return render_template('main/recruit.html')
 
+@bp.route('/shade_matching', methods=['GET', 'POST'])
+def shade_matching():
+    if request.method == 'POST':
+        return shade_matching_upload()
+    return render_template('main/shade_matching.html', image_data=None, image_gray=None, s3_key=None)
+
+@bp.route('/shade_matching/upload', methods=['POST'])
+def shade_matching_upload():
+    if 'file' not in request.files:
+        return render_template('main/shade_matching.html', image_data=None, error='ファイルがありません')
+
+    file = request.files['file']
+    if file.filename == '':
+        return render_template('main/shade_matching.html', image_data=None, error='ファイルが選択されていません')
+
+    try:
+        img = Image.open(file)
+        # EXIF情報に基づいて自動回転
+        try:
+            from PIL import ImageOps
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+
+        # RGBに変換（PNG等に対応）
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+
+        # 横幅2000pxにリサイズ（縦は比率維持）
+        if img.width > 2000:
+            scale = 2000 / img.width
+            new_height = int(img.height * scale)
+            try:
+                resample = Image.Resampling.LANCZOS
+            except AttributeError:
+                resample = Image.LANCZOS  # type: ignore[attr-defined]
+            img = img.resize((2000, new_height), resample)
+
+        assert img is not None
+
+        # カラー画像をJPEG変換（バイト列として保持）
+        buffered_color = io.BytesIO()
+        img.save(buffered_color, format='JPEG', quality=85)
+        color_bytes = buffered_color.getvalue()
+
+        # S3に保存（カラー）
+        safe_filename = sanitize_filename(file.filename)
+        s3_key = f'shade_matching/{safe_filename}'
+        s3.upload_fileobj(
+            io.BytesIO(color_bytes),
+            BUCKET_NAME,
+            s3_key,
+            ExtraArgs={'ContentType': 'image/jpeg'}
+        )
+
+        # デサチュレーション（彩度を0にする）
+        from PIL import ImageEnhance
+        img_gray = ImageEnhance.Color(img).enhance(0)
+        buffered_gray = io.BytesIO()
+        img_gray.save(buffered_gray, format='JPEG', quality=85)
+        gray_bytes = buffered_gray.getvalue()
+
+        # Base64でテンプレートへ渡す
+        img_str = base64.b64encode(color_bytes).decode()
+        img_gray_str = base64.b64encode(gray_bytes).decode()
+
+        return render_template('main/shade_matching.html',
+                               image_data=img_str,
+                               image_gray=img_gray_str,
+                               s3_key=s3_key,
+                               error=None)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return render_template('main/shade_matching.html', image_data=None, image_gray=None, s3_key=None, error=str(e))
+
 def save_resized_upload(file, save_path, max_width=1500):
     """
     アップロードされた画像を最大幅でリサイズして保存。
