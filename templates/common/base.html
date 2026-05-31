@@ -201,6 +201,9 @@
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.colors' %}active{% endif %}" href="{{ url_for('main.colors') }}">色分析</a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.shade_matching' %}active{% endif %}" href="{{ url_for('main.shade_matching') }}">shade分析</a>
+              </li>
 
               <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'pages.combination_checker' %}active{% endif %}" href="{{ url_for('pages.combination_checker') }}">MTN</a>

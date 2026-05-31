@@ -641,7 +641,32 @@ def recruit():
 def shade_matching():
     if request.method == 'POST':
         return shade_matching_upload()
-    return render_template('main/shade_matching.html', image_data=None, image_gray=None, s3_key=None)
+
+    uploaded_images = []
+    try:
+        response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix='shade_matching/')
+        contents = response.get('Contents', [])
+        contents.sort(key=lambda x: x['LastModified'], reverse=True)
+        for obj in contents:
+            key = obj['Key']
+            filename = os.path.basename(key)
+            if filename:
+                url = s3.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': BUCKET_NAME, 'Key': key},
+                    ExpiresIn=3600
+                )
+                uploaded_images.append({
+                    'filename': filename,
+                    'url': url,
+                    'last_modified': obj['LastModified'].strftime('%Y-%m-%d %H:%M')
+                })
+    except Exception:
+        pass
+
+    return render_template('main/shade_matching.html',
+                           image_data=None, image_gray=None, s3_key=None,
+                           uploaded_images=uploaded_images)
 
 @bp.route('/shade_matching/upload', methods=['POST'])
 def shade_matching_upload():
@@ -653,27 +678,41 @@ def shade_matching_upload():
         return render_template('main/shade_matching.html', image_data=None, error='ファイルが選択されていません')
 
     try:
-        img = Image.open(file)
-        # EXIF情報に基づいて自動回転
-        try:
-            from PIL import ImageOps
-            img = ImageOps.exif_transpose(img)
-        except Exception:
-            pass
+        # RAWファイルか判定して読み込み
+        raw_extensions = {'.nef', '.nrw', '.cr2', '.cr3', '.crw', '.arw', '.srf',
+                          '.sr2', '.dng', '.raf', '.rw2', '.orf', '.pef', '.raw',
+                          '.rwl', '.mrw', '.x3f', '.erf'}
+        filename_lower = (file.filename or '').lower()
+        ext = os.path.splitext(filename_lower)[1]
+
+        if ext in raw_extensions:
+            import rawpy
+            file_bytes = file.read()
+            with rawpy.imread(io.BytesIO(file_bytes)) as raw:
+                rgb_array = raw.postprocess(use_camera_wb=True, output_bps=8)
+            img = Image.fromarray(rgb_array)
+        else:
+            img = Image.open(file)
+            # EXIF情報に基づいて自動回転
+            try:
+                from PIL import ImageOps
+                img = ImageOps.exif_transpose(img)
+            except Exception:
+                pass
 
         # RGBに変換（PNG等に対応）
         if img.mode != 'RGB':
             img = img.convert('RGB')
 
-        # 横幅2000pxにリサイズ（縦は比率維持）
-        if img.width > 2000:
-            scale = 2000 / img.width
+        # 横幅3000px超の場合のみリサイズ（縦は比率維持）
+        if img.width > 3000:
+            scale = 3000 / img.width
             new_height = int(img.height * scale)
             try:
                 resample = Image.Resampling.LANCZOS
             except AttributeError:
                 resample = Image.LANCZOS  # type: ignore[attr-defined]
-            img = img.resize((2000, new_height), resample)
+            img = img.resize((3000, new_height), resample)
 
         assert img is not None
 
