@@ -1,5 +1,48 @@
 {% extends "common/base.html" %}
-{% block title %}Shade Matching | 渋谷歯科技工所{% endblock %}
+{% block title %}シェードマッチング（歯の色合わせ）| Shade Matching | 渋谷歯科技工所{% endblock %}
+
+{% block keywords %}シェードマッチング,歯の色合わせ,シェードガイド,デンタルカラー,歯科技工,グレースケール分析,shade matching,dental shade,tooth color,shade guide{% endblock %}
+
+{% block description %}歯科技工士向けシェードマッチングツール。画像をアップロードしてグレースケール変換・選択範囲の複製・トリミング・比較分析が行えます。RAWファイル対応。/ Shade matching tool for dental technicians. Upload images, convert to grayscale, duplicate and trim selections, and compare tooth colors precisely.{% endblock %}
+
+{% block og_type %}article{% endblock %}
+{% block og_description %}歯科技工士向けシェードマッチングツール。画像をアップロードしてグレースケール変換・選択範囲の複製・トリミング・比較分析が行えます。RAWファイル対応。/ Shade matching tool for dental technicians. Upload, analyze and compare tooth colors with grayscale conversion and selection tools.{% endblock %}
+{% block og_url %}https://shibuya8020.com/shade_matching{% endblock %}
+
+{% block canonical %}https://shibuya8020.com/shade_matching{% endblock %}
+
+{% block extra_meta %}
+<meta name="robots" content="index, follow">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "シェードマッチング / Shade Matching",
+  "description": "歯科技工士向けシェードマッチングツール。画像のグレースケール変換、選択範囲の複製・トリミング・比較分析をブラウザ上で行えます。RAW・JPEG対応。/ A shade matching tool for dental technicians. Analyze tooth color using grayscale desaturation, selection duplication, trimming, and visual comparison. Supports RAW and JPEG formats.",
+  "url": "https://shibuya8020.com/shade_matching",
+  "applicationCategory": "MedicalApplication",
+  "operatingSystem": "Web Browser",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "JPY"
+  },
+  "creator": {
+    "@type": "Organization",
+    "name": "渋谷歯科技工所",
+    "url": "https://shibuya8020.com"
+  },
+  "featureList": [
+    "グレースケール（デサチュレーション）変換 / Grayscale desaturation conversion",
+    "選択範囲の複製・オーバーレイ / Selection duplication and overlay",
+    "180度回転表示 / 180-degree rotation display",
+    "フレームのトリミング・リサイズ / Frame trimming and resizing",
+    "フレーム内画像のパン操作 / Pan inside frame",
+    "RAWファイル対応（NEF・CR2・ARW等）/ RAW file support (NEF, CR2, ARW, etc.)"
+  ]
+}
+</script>
+{% endblock %}
 
 {% block content %}
 <div class="row">
