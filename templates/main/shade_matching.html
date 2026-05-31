@@ -23,14 +23,40 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div id="drop-area" class="mb-3 text-center"
                style="border: 2px dashed #ccc; padding: 30px; border-radius: 8px; cursor: pointer;">
-            <p class="mb-2 text-muted">メイン画像をここにドラッグ＆ドロップ、または選択</p>
-            <p class="mb-2 text-muted small">（横幅2000pxに自動リサイズ）</p>
-            <input type="file" name="file" id="fileInput" accept="image/*" required class="form-control mt-2">
+            <p class="mb-1 text-muted">メイン画像をここにドラッグ＆ドロップ、または選択</p>
+            <p class="text-muted small mb-2">※ JPEGを推奨します。RAWファイルは処理に時間がかかります。</p>
+            <input type="file" name="file" id="fileInput" accept="image/*,.nef,.nrw,.cr2,.cr3,.arw,.dng,.raf,.rw2,.orf,.pef,.raw" required class="form-control mt-2">
           </div>
           <div class="text-center">
-            <button type="submit" class="btn btn-dark px-5">アップロード</button>
+            <button type="submit" class="btn btn-dark px-5">分析開始</button>
           </div>
         </form>
+
+        <!-- アップロード済み画像リスト（管理者のみ） -->
+        {% if current_user.is_authenticated and current_user.is_administrator and uploaded_images %}
+        <div class="mt-3">
+          <hr>
+          <h6 class="fw-bold mb-2">アップロード済み画像</h6>
+          <div class="list-group">
+            {% for item in uploaded_images %}
+            <div class="list-group-item py-2">
+              <div class="d-flex align-items-center gap-3">
+                <a href="{{ item.url }}" target="_blank" rel="noopener" style="flex-shrink:0;">
+                  <img src="{{ item.url }}" alt="{{ item.filename }}"
+                       style="width:80px; height:60px; object-fit:cover; border-radius:4px; cursor:pointer;">
+                </a>
+                <div class="flex-grow-1 min-width-0">
+                  <div class="d-flex align-items-center gap-3">
+                    <span class="fw-bold text-truncate">{{ item.filename }}</span>
+                    <small class="text-muted text-nowrap">{{ item.last_modified }}</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
 
         <!-- エラー表示 -->
         {% if error %}
@@ -41,27 +67,32 @@
         <div class="mt-4">
           <hr>
 
-          <!-- カラー画像 -->
+          <!-- 元画像 -->
           <div class="mb-4">
-            <p class="text-center fw-bold mb-2">カラー</p>
-            <img src="data:image/jpeg;base64,{{ image_data }}"
-                 alt="カラー画像"
-                 class="img-fluid rounded shadow w-100">
+            <p class="text-center fw-bold mb-1">元画像</p>
+            <p class="text-center text-muted small mb-2">マウスでドラッグして範囲を選択</p>
+            <div style="display: inline-block; width: 100%;">
+              <canvas id="colorCanvas"
+                      style="cursor: crosshair; width: 100%; display: block; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></canvas>
+            </div>
+            <div class="text-center mt-2">
+              <button id="pasteBtnColor" class="btn btn-warning px-4 ms-2" disabled>選択範囲を複製</button>
+              <button id="resetBtnColor" class="btn btn-outline-secondary px-4 ms-2">選択リセット</button>
+            </div>
           </div>
 
-          <!-- グレースケール：切り抜き操作 -->
+          <!-- グレースケール -->
           <div>
             <p class="text-center fw-bold mb-1">グレースケール（彩度なし）</p>
-            <p class="text-center text-muted small mb-2">マウスでドラッグして範囲を選択 → 「切り抜く」</p>
-
-            <div style="position: relative; display: inline-block; width: 100%;">
+            <p class="text-center text-muted small mb-2">マウスでドラッグして範囲を選択</p>
+            <div style="display: inline-block; width: 100%;">
               <canvas id="grayCanvas"
                       style="cursor: crosshair; width: 100%; display: block; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);"></canvas>
             </div>
-
             <div class="text-center mt-2">
-              <button id="cropBtn" class="btn btn-dark px-4" disabled>切り抜く</button>
-              <div class="d-inline-flex align-items-center ms-2">
+              <button id="cropBtn" class="btn btn-dark px-4" disabled style="display:none;">切り抜く</button>
+              <button id="pasteBtn" class="btn btn-warning px-4 ms-2" disabled>選択範囲を複製</button>
+              <div class="d-inline-flex align-items-center ms-2" style="display:none !important;">
                 <select id="splitCount" class="form-select form-select-sm" style="width:80px;">
                   <option value="2">2本</option>
                   <option value="3">3本</option>
@@ -83,6 +114,11 @@
             <div class="text-center mt-2">
               <a id="downloadBtn" class="btn btn-success px-4" download="cropped.jpg">画像を保存</a>
             </div>
+          </div>
+
+          <!-- すべてリセット -->
+          <div class="text-center mt-4">
+            <button id="fullResetBtn" class="btn btn-outline-danger px-5">すべてリセット</button>
           </div>
 
           <!-- 自動分割結果 -->
@@ -146,201 +182,221 @@
   }
 
   {% if image_gray %}
-  /* ── グレースケール canvas ── */
-  const canvas      = document.getElementById('grayCanvas');
-  const ctx         = canvas.getContext('2d');
-  const cropBtn     = document.getElementById('cropBtn');
-  const splitBtn    = document.getElementById('splitBtn');
-  const resetBtn    = document.getElementById('resetBtn');
-  const cropResult  = document.getElementById('cropResult');
-  const croppedCanvas  = document.getElementById('croppedCanvas');
-  const downloadBtn    = document.getElementById('downloadBtn');
-  const splitCount     = document.getElementById('splitCount');
-  const splitResult    = document.getElementById('splitResult');
-  const splitCanvases  = document.getElementById('splitCanvases');
 
-  const img = new Image();
-  img.src = 'data:image/jpeg;base64,{{ image_gray }}';
-  img.onload = () => {
-    canvas.width  = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    ctx.drawImage(img, 0, 0);
-  };
+  /* ── canvasエディタ ファクトリ関数 ── */
+  let lastActiveEditor = null;
 
-  /* 選択矩形 */
-  let isDrawing = false;
-  let startX = 0, startY = 0, selX = 0, selY = 0, selW = 0, selH = 0;
-
-  function toCanvasCoords(e) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (e.clientX - rect.left) * (canvas.width  / rect.width),
-      y: (e.clientY - rect.top)  * (canvas.height / rect.height),
+  function createCanvasEditor(canvas, imgSrc, pasteBtnEl, resetBtnEl) {
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width  = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
     };
-  }
+    img.src = imgSrc;
 
-  function redraw(sx, sy, sw, sh) {
-    ctx.drawImage(img, 0, 0);
-    if (!sw && !sh) return;
-    ctx.strokeStyle = '#ff3300';
-    ctx.lineWidth   = Math.max(2, canvas.width / 500);
-    ctx.setLineDash([8, 4]);
-    ctx.strokeRect(sx, sy, sw, sh);
-    ctx.fillStyle = 'rgba(255,100,0,0.08)';
-    ctx.fillRect(sx, sy, sw, sh);
-    ctx.setLineDash([]);
-  }
+    /* 状態管理 */
+    let isDrawing = false, isDragging = false, isResizing = false, isPanning = false;
+    let startX = 0, startY = 0, selX = 0, selY = 0, selW = 0, selH = 0;
+    let dragOffX = 0, dragOffY = 0, dragIndex = -1, selectedIndex = -1;
+    let resizeIndex = -1, resizeHandle = null, resizeStart = {};
+    let panIndex = -1, panMode = false, panStartMX = 0, panStartMY = 0, panStartPX = 0, panStartPY = 0;
+    let pastedList = [];
 
-  canvas.addEventListener('mousedown', e => {
-    const p = toCanvasCoords(e);
-    isDrawing = true; startX = p.x; startY = p.y; selW = 0; selH = 0;
-    cropBtn.disabled = true;
-    cropResult.style.display = 'none';
-  });
-  canvas.addEventListener('mousemove', e => {
-    if (!isDrawing) return;
-    const p = toCanvasCoords(e);
-    selX = Math.min(startX, p.x); selY = Math.min(startY, p.y);
-    selW = Math.abs(p.x - startX); selH = Math.abs(p.y - startY);
-    redraw(selX, selY, selW, selH);
-  });
-  canvas.addEventListener('mouseup', () => {
-    isDrawing = false;
-    if (selW > 5 && selH > 5) cropBtn.disabled = false;
-  });
-
-  /* タッチ対応 */
-  canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    canvas.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }));
-  }, { passive: false });
-  canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }));
-  }, { passive: false });
-  canvas.addEventListener('touchend', () => canvas.dispatchEvent(new MouseEvent('mouseup')));
-
-  /* 切り抜きボタン（180度回転） */
-  cropBtn.addEventListener('click', () => {
-    if (selW < 1 || selH < 1) return;
-    croppedCanvas.width  = selW;
-    croppedCanvas.height = selH;
-    const cCtx = croppedCanvas.getContext('2d');
-    cCtx.translate(selW, selH);
-    cCtx.rotate(Math.PI);
-    cCtx.drawImage(img, selX, selY, selW, selH, 0, 0, selW, selH);
-    cCtx.setTransform(1, 0, 0, 1, 0, 0);
-    cropResult.style.display = 'block';
-    downloadBtn.href = croppedCanvas.toDataURL('image/jpeg', 0.92);
-    cropResult.scrollIntoView({ behavior: 'smooth' });
-  });
-
-  /* リセットボタン */
-  resetBtn.addEventListener('click', () => {
-    selX = selY = selW = selH = 0;
-    redraw(0, 0, 0, 0);
-    cropBtn.disabled = true;
-    cropResult.style.display = 'none';
-    splitResult.style.display = 'none';
-  });
-
-  /* ── 自動分割（4本）：選択範囲内を分割 ── */
-  splitBtn.addEventListener('click', () => {
-    if (selW < 10 || selH < 10) {
-      alert('先にグレースケール画像上でマウスドラッグして範囲を選択してください。');
-      return;
+    function toCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top)  * (canvas.height / rect.height),
+      };
     }
-
-    const sx = Math.round(selX), sy = Math.round(selY);
-    const sw = Math.round(selW), sh = Math.round(selH);
-
-    // 選択範囲のみオフスクリーンcanvasに描画してピクセル取得
-    const offscreen = document.createElement('canvas');
-    offscreen.width = sw; offscreen.height = sh;
-    const offCtx = offscreen.getContext('2d');
-    offCtx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    const data = offCtx.getImageData(0, 0, sw, sh).data;
-
-    // 選択範囲内の列ごとの平均明度を計算
-    const colBrightness = new Float32Array(sw);
-    for (let x = 0; x < sw; x++) {
-      let sum = 0;
-      for (let y = 0; y < sh; y++) {
-        sum += data[(y * sw + x) * 4];
+    function hs() { return Math.max(24, canvas.width / 70); }
+    function corners(p) {
+      return { nw:[p.x,p.y], ne:[p.x+p.dispW,p.y], sw:[p.x,p.y+p.dispH], se:[p.x+p.dispW,p.y+p.dispH] };
+    }
+    function hitHandle(mx, my, item) {
+      const h = hs() / 2;
+      for (const [name,[cx,cy]] of Object.entries(corners(item)))
+        if (Math.abs(mx-cx)<=h && Math.abs(my-cy)<=h) return name;
+      const insideY = my > item.y+h && my < item.y+item.dispH-h;
+      if (insideY) {
+        if (Math.abs(mx-item.x)<=h) return 'left';
+        if (Math.abs(mx-(item.x+item.dispW))<=h) return 'right';
       }
-      colBrightness[x] = sum / sh;
-    }
-
-    // 移動平均でスムージング
-    const winSize = Math.max(5, Math.floor(sw / 60));
-    const smoothed = new Float32Array(sw);
-    for (let x = 0; x < sw; x++) {
-      let sum = 0, cnt = 0;
-      for (let dx = -winSize; dx <= winSize; dx++) {
-        const nx = x + dx;
-        if (nx >= 0 && nx < sw) { sum += colBrightness[nx]; cnt++; }
+      const insideX = mx > item.x+h && mx < item.x+item.dispW-h;
+      if (insideX) {
+        if (Math.abs(my-item.y)<=h) return 'top';
+        if (Math.abs(my-(item.y+item.dispH))<=h) return 'bottom';
       }
-      smoothed[x] = sum / cnt;
+      return null;
     }
-
-    // 分割数に応じた分割点を生成
-    const n = parseInt(splitCount.value);
-    const margin = Math.floor(sw * 0.08);
-    const zones = [];
-    for (let i = 1; i < n; i++) {
-      const center = Math.floor(sw * i / n);
-      zones.push([center - margin, center + margin]);
-    }
-
-    const splitPoints = zones.map(([s, e]) => {
-      let minVal = Infinity, minIdx = Math.floor((s + e) / 2);
-      for (let x = Math.max(0, s); x < Math.min(sw, e); x++) {
-        if (smoothed[x] < minVal) { minVal = smoothed[x]; minIdx = x; }
+    function hitIndex(x, y) {
+      for (let i=pastedList.length-1;i>=0;i--) {
+        const p=pastedList[i];
+        if (x>=p.x && x<=p.x+p.dispW && y>=p.y && y<=p.y+p.dispH) return i;
       }
-      return minIdx;
+      return -1;
+    }
+    function fullRedraw() {
+      ctx.drawImage(img, 0, 0);
+      const h = hs();
+      pastedList.forEach((p,i) => {
+        ctx.save();
+        ctx.beginPath(); ctx.rect(p.x,p.y,p.dispW,p.dispH); ctx.clip();
+        ctx.translate(p.x+p.dispW, p.y+p.dispH); ctx.rotate(Math.PI);
+        ctx.drawImage(p.croppedImg||img, p.srcX+(p.panX||0), p.srcY+(p.panY||0), p.srcW, p.srcH, 0, 0, p.dispW, p.dispH);
+        ctx.restore();
+        if (panMode && i===panIndex) {
+          ctx.strokeStyle='rgba(0,220,100,0.8)'; ctx.lineWidth=Math.max(2,canvas.width/400);
+          ctx.setLineDash([6,3]); ctx.strokeRect(p.x,p.y,p.dispW,p.dispH); ctx.setLineDash([]);
+        } else if (i===selectedIndex) {
+          ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=Math.max(2,canvas.width/600);
+          ctx.setLineDash([6,4]); ctx.strokeRect(p.x,p.y,p.dispW,p.dispH); ctx.setLineDash([]);
+          ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.strokeStyle='rgba(80,80,80,0.8)'; ctx.lineWidth=1;
+          Object.values(corners(p)).forEach(([cx,cy])=>{ ctx.fillRect(cx-h/2,cy-h/2,h,h); ctx.strokeRect(cx-h/2,cy-h/2,h,h); });
+          const barW=Math.max(6,h*0.4), barH=h*1.6, midY=p.y+p.dispH/2, midX=p.x+p.dispW/2;
+          [[p.x,midY],[p.x+p.dispW,midY]].forEach(([bx,by])=>{ ctx.fillRect(bx-barW/2,by-barH/2,barW,barH); ctx.strokeRect(bx-barW/2,by-barH/2,barW,barH); });
+          [[midX,p.y],[midX,p.y+p.dispH]].forEach(([bx,by])=>{ ctx.fillRect(bx-barH/2,by-barW/2,barH,barW); ctx.strokeRect(bx-barH/2,by-barW/2,barH,barW); });
+        }
+      });
+      if (selW>0 && selH>0) {
+        ctx.strokeStyle='#ff3300'; ctx.lineWidth=Math.max(2,canvas.width/500);
+        ctx.setLineDash([8,4]); ctx.strokeRect(selX,selY,selW,selH);
+        ctx.fillStyle='rgba(255,100,0,0.08)'; ctx.fillRect(selX,selY,selW,selH); ctx.setLineDash([]);
+      }
+    }
+
+    canvas.addEventListener('dblclick', e => {
+      const p=toCanvasCoords(e), hi=hitIndex(p.x,p.y);
+      if (hi>=0) { panMode=true; panIndex=hi; selectedIndex=-1; }
+      else { panMode=false; panIndex=-1; }
+      fullRedraw();
+    });
+    canvas.addEventListener('mousedown', e => {
+      lastActiveEditor = editor;
+      const p=toCanvasCoords(e);
+      if (panMode && panIndex>=0 && hitIndex(p.x,p.y)===panIndex) {
+        isPanning=true; panStartMX=p.x; panStartMY=p.y;
+        panStartPX=pastedList[panIndex].panX||0; panStartPY=pastedList[panIndex].panY||0; return;
+      }
+      if (panMode) { panMode=false; panIndex=-1; fullRedraw(); }
+      for (let i=pastedList.length-1;i>=0;i--) {
+        const handle=hitHandle(p.x,p.y,pastedList[i]);
+        if (handle) {
+          isResizing=true; resizeIndex=i; resizeHandle=handle; selectedIndex=i;
+          const it=pastedList[i];
+          resizeStart={mx:p.x,my:p.y,ix:it.x,iy:it.y,iw:it.dispW,ih:it.dispH,
+            srcX0:it.srcX,srcW0:it.srcW,origSrcX:it.origSrcX,origSrcW:it.origSrcW,
+            srcY0:it.srcY,srcH0:it.srcH,origSrcY:it.origSrcY||0,origSrcH:it.origSrcH||it.srcH};
+          fullRedraw(); return;
+        }
+      }
+      const hi=hitIndex(p.x,p.y);
+      if (hi>=0) { isDragging=true; dragIndex=hi; selectedIndex=hi; dragOffX=p.x-pastedList[hi].x; dragOffY=p.y-pastedList[hi].y; fullRedraw(); }
+      else { selectedIndex=-1; isDrawing=true; startX=p.x; startY=p.y; selW=0; selH=0; pasteBtnEl.disabled=true; }
+    });
+    canvas.addEventListener('mousemove', e => {
+      const p=toCanvasCoords(e);
+      if (isPanning && panIndex>=0) {
+        const it=pastedList[panIndex], scale=it.dispW/it.srcW;
+        const src=it.croppedImg||img;
+        const sw2=src.naturalWidth??src.width, sh2=src.naturalHeight??src.height;
+        it.panX=Math.max(-it.srcX,Math.min(sw2-it.srcX-it.srcW, panStartPX+(p.x-panStartMX)/scale));
+        it.panY=Math.max(-it.srcY,Math.min(sh2-it.srcY-it.srcH, panStartPY+(p.y-panStartMY)/scale));
+        canvas.style.cursor='grabbing'; fullRedraw(); return;
+      }
+      if (panMode && panIndex>=0 && hitIndex(p.x,p.y)===panIndex) { canvas.style.cursor='grab'; return; }
+      if (isResizing && resizeIndex>=0) {
+        const dx=p.x-resizeStart.mx, dy=p.y-resizeStart.my, it=pastedList[resizeIndex];
+        switch(resizeHandle) {
+          case 'se': it.dispW=Math.max(10,resizeStart.iw+dx); it.dispH=Math.max(10,resizeStart.ih+dy); break;
+          case 'sw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.dispH=Math.max(10,resizeStart.ih+dy); break;
+          case 'ne': it.dispW=Math.max(10,resizeStart.iw+dx); it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; break;
+          case 'nw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; break;
+          case 'left': { const sc=resizeStart.iw/resizeStart.srcW0, cdx=Math.max((resizeStart.srcX0+resizeStart.srcW0-resizeStart.origSrcX-resizeStart.origSrcW)*sc,Math.min((resizeStart.srcW0-1)*sc,dx)); it.x=resizeStart.ix+cdx; it.dispW=resizeStart.iw-cdx; it.srcX=resizeStart.srcX0; it.srcW=resizeStart.srcW0-cdx/sc; break; }
+          case 'right': { const sc=resizeStart.iw/resizeStart.srcW0, cdx=Math.max(Math.max(1-resizeStart.iw,-(resizeStart.origSrcX+resizeStart.origSrcW-resizeStart.srcX0)*sc),Math.min((resizeStart.srcX0-resizeStart.origSrcX)*sc,dx)); it.dispW=resizeStart.iw+cdx; it.srcX=resizeStart.srcX0-cdx/sc; it.srcW=resizeStart.srcW0+cdx/sc; break; }
+          case 'top': { const sc=resizeStart.ih/resizeStart.srcH0, cdy=Math.max((resizeStart.srcH0-resizeStart.origSrcH)*sc,Math.min((resizeStart.srcH0-1)*sc,dy)); it.y=resizeStart.iy+cdy; it.dispH=resizeStart.ih-cdy; it.srcY=resizeStart.srcY0; it.srcH=resizeStart.srcH0-cdy/sc; break; }
+          case 'bottom': { const sc=resizeStart.ih/resizeStart.srcH0, cdy=Math.max(Math.max(1-resizeStart.ih,-(resizeStart.origSrcY+resizeStart.origSrcH-resizeStart.srcY0)*sc),Math.min((resizeStart.srcY0-resizeStart.origSrcY)*sc,dy)); it.dispH=resizeStart.ih+cdy; it.srcY=resizeStart.srcY0-cdy/sc; it.srcH=resizeStart.srcH0+cdy/sc; break; }
+        }
+        fullRedraw(); return;
+      }
+      let cursor='crosshair';
+      for (let i=pastedList.length-1;i>=0;i--) {
+        const h=hitHandle(p.x,p.y,pastedList[i]);
+        if (h) { cursor={nw:'nw-resize',ne:'ne-resize',sw:'sw-resize',se:'se-resize',left:'ew-resize',right:'ew-resize',top:'ns-resize',bottom:'ns-resize'}[h]; break; }
+        if (hitIndex(p.x,p.y)>=0) { cursor='move'; break; }
+      }
+      canvas.style.cursor=cursor;
+      if (!isDragging&&!isResizing&&!isPanning&&!isDrawing&&selectedIndex>=0) {
+        const over=pastedList.some(item=>hitIndex(p.x,p.y)>=0||hitHandle(p.x,p.y,item)!==null);
+        if (!over) { selectedIndex=-1; fullRedraw(); }
+      }
+      if (isDragging&&dragIndex>=0) { pastedList[dragIndex].x=p.x-dragOffX; pastedList[dragIndex].y=p.y-dragOffY; fullRedraw(); }
+      else if (isDrawing) { selX=Math.min(startX,p.x); selY=Math.min(startY,p.y); selW=Math.abs(p.x-startX); selH=Math.abs(p.y-startY); fullRedraw(); }
+    });
+    canvas.addEventListener('mouseleave', () => {
+      if (!isDragging&&!isResizing&&!isPanning&&!isDrawing&&selectedIndex>=0) { selectedIndex=-1; fullRedraw(); }
+    });
+    canvas.addEventListener('mouseup', () => {
+      if (isPanning) { isPanning=false; canvas.style.cursor='grab'; }
+      else if (isResizing) { isResizing=false; resizeIndex=-1; resizeHandle=null; }
+      else if (isDragging) { isDragging=false; dragIndex=-1; }
+      else { isDrawing=false; if (selW>5&&selH>5) pasteBtnEl.disabled=false; }
+    });
+    canvas.addEventListener('touchstart', e=>{ e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousedown',{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY})); },{passive:false});
+    canvas.addEventListener('touchmove', e=>{ e.preventDefault(); canvas.dispatchEvent(new MouseEvent('mousemove',{clientX:e.touches[0].clientX,clientY:e.touches[0].clientY})); },{passive:false});
+    canvas.addEventListener('touchend', ()=>canvas.dispatchEvent(new MouseEvent('mouseup')));
+
+    pasteBtnEl.addEventListener('click', () => {
+      if (selW<1||selH<1) return;
+      const sx=Math.round(selX),sy=Math.round(selY),sw=Math.round(selW),sh=Math.round(selH);
+      const offset=Math.round(Math.min(canvas.width,canvas.height)*0.03);
+      const cc=document.createElement('canvas'); cc.width=sw; cc.height=sh;
+      cc.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+      pastedList.push({x:sx+offset,y:sy+offset,dispW:sw,dispH:sh,srcX:0,srcY:0,srcW:sw,srcH:sh,origSrcX:0,origSrcW:sw,origSrcY:0,origSrcH:sh,panX:0,panY:0,croppedImg:cc});
+      selX=selY=selW=selH=0; pasteBtnEl.disabled=true; fullRedraw();
+    });
+    resetBtnEl.addEventListener('click', () => {
+      selX=selY=selW=selH=0; isDrawing=false; pasteBtnEl.disabled=true; fullRedraw();
     });
 
-    // 4本に切り出して表示（選択範囲の座標に変換してimgから直接描画）
-    const boundaries = [0, ...splitPoints, sw];
-    const labels = ['歯①', '歯②', '歯③', '歯④'].slice(0, n);
-    splitCanvases.innerHTML = '';
+    const editor = {
+      deleteSelected() {
+        if (selectedIndex>=0) { pastedList.splice(selectedIndex,1); selectedIndex=-1; fullRedraw(); return true; }
+        return false;
+      }
+    };
+    return editor;
+  }
 
-    boundaries.slice(0, -1).forEach((lx, i) => {
-      const rx = boundaries[i + 1];
-      const tw = rx - lx;
+  /* ── エディタ生成 ── */
+  const grayEditor  = createCanvasEditor(
+    document.getElementById('grayCanvas'),
+    'data:image/jpeg;base64,{{ image_gray }}',
+    document.getElementById('pasteBtn'),
+    document.getElementById('resetBtn')
+  );
+  const colorEditor = createCanvasEditor(
+    document.getElementById('colorCanvas'),
+    'data:image/jpeg;base64,{{ image_data }}',
+    document.getElementById('pasteBtnColor'),
+    document.getElementById('resetBtnColor')
+  );
 
-      const toothCanvas = document.createElement('canvas');
-      toothCanvas.width  = tw;
-      toothCanvas.height = sh;
-      const tCtx = toothCanvas.getContext('2d');
-      // 180度回転して描画
-      tCtx.translate(tw, sh);
-      tCtx.rotate(Math.PI);
-      tCtx.drawImage(img, sx + lx, sy, tw, sh, 0, 0, tw, sh);
-      tCtx.setTransform(1, 0, 0, 1, 0, 0);
-
-      const label = document.createElement('p');
-      label.className = 'fw-bold mb-1 text-center';
-      label.textContent = labels[i];
-
-      const dlBtn = document.createElement('a');
-      dlBtn.className = 'btn btn-sm btn-outline-dark mt-1 mb-3';
-      dlBtn.textContent = '保存';
-      dlBtn.download = `tooth_${i + 1}.jpg`;
-      dlBtn.href = toothCanvas.toDataURL('image/jpeg', 0.92);
-
-      const wrap = document.createElement('div');
-      wrap.className = 'tooth-item';
-      wrap.appendChild(label);
-      wrap.appendChild(toothCanvas);
-      wrap.appendChild(document.createElement('br'));
-      wrap.appendChild(dlBtn);
-      splitCanvases.appendChild(wrap);
-    });
-
-    splitResult.style.display = 'block';
-    splitResult.scrollIntoView({ behavior: 'smooth' });
+  /* Deleteキー（最後に操作したcanvasのフレームを削除） */
+  document.addEventListener('keydown', e => {
+    if (e.key==='Delete'||e.key==='Backspace') {
+      if (lastActiveEditor) lastActiveEditor.deleteSelected();
+    }
   });
+
+  /* すべてリセット */
+  document.getElementById('fullResetBtn').addEventListener('click', () => {
+    window.location.href = "{{ url_for('main.shade_matching') }}";
+  });
+
+
   {% endif %}
 </script>
 {% endblock %}
