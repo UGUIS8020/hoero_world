@@ -374,8 +374,12 @@
         if (handle) {
           isResizing=true; resizeIndex=i; resizeHandle=handle; selectedIndex=i;
           const it=pastedList[i];
+          const _dW=it.drawW||it.dispW, _dH=it.drawH||it.dispH;
+          const _cx=it.cx??(it.x+it.dispW/2), _cy=it.cy??(it.y+it.dispH/2);
           resizeStart={mx:p.x,my:p.y,ix:it.x,iy:it.y,iw:it.dispW,ih:it.dispH,
-            drawW0:it.drawW||it.dispW, drawH0:it.drawH||it.dispH,
+            drawW0:_dW, drawH0:_dH,
+            contentLeft:_cx-_dW/2, contentRight:_cx+_dW/2,
+            contentTop:_cy-_dH/2, contentBottom:_cy+_dH/2,
             srcX0:it.srcX,srcW0:it.srcW,origSrcX:it.origSrcX,origSrcW:it.origSrcW,
             srcY0:it.srcY,srcH0:it.srcH,origSrcY:it.origSrcY||0,origSrcH:it.origSrcH||it.srcH};
           fullRedraw(); return;
@@ -422,10 +426,10 @@
           case 'sw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.drawW=resizeStart.drawW0+(it.dispW-resizeStart.iw); it.dispH=Math.max(10,resizeStart.ih+dy); it.drawH=resizeStart.drawH0+(it.dispH-resizeStart.ih); it.cx=it.x+it.dispW/2; it.cy=it.y+it.dispH/2; break;
           case 'ne': it.dispW=Math.max(10,resizeStart.iw+dx); it.drawW=resizeStart.drawW0+(it.dispW-resizeStart.iw); it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; it.drawH=resizeStart.drawH0+(it.dispH-resizeStart.ih); it.cx=it.x+it.dispW/2; it.cy=it.y+it.dispH/2; break;
           case 'nw': it.dispW=Math.max(10,resizeStart.iw-dx); it.x=resizeStart.ix+resizeStart.iw-it.dispW; it.drawW=resizeStart.drawW0+(it.dispW-resizeStart.iw); it.dispH=Math.max(10,resizeStart.ih-dy); it.y=resizeStart.iy+resizeStart.ih-it.dispH; it.drawH=resizeStart.drawH0+(it.dispH-resizeStart.ih); it.cx=it.x+it.dispW/2; it.cy=it.y+it.dispH/2; break;
-          case 'left': { const cdx=Math.max(0,Math.min(resizeStart.iw-1,dx)); it.x=resizeStart.ix+cdx; it.dispW=resizeStart.iw-cdx; break; }
-          case 'right': { it.dispW=Math.max(1,resizeStart.iw+dx); break; }
-          case 'top': { const cdy=Math.max(0,Math.min(resizeStart.ih-1,dy)); it.y=resizeStart.iy+cdy; it.dispH=resizeStart.ih-cdy; break; }
-          case 'bottom': { it.dispH=Math.max(1,resizeStart.ih+dy); break; }
+          case 'left': { const cdx=Math.max(resizeStart.contentLeft-resizeStart.ix, Math.min(resizeStart.iw-1,dx)); it.x=resizeStart.ix+cdx; it.dispW=resizeStart.iw-cdx; break; }
+          case 'right': { it.dispW=Math.max(1,Math.min(resizeStart.contentRight-resizeStart.ix, resizeStart.iw+dx)); break; }
+          case 'top': { const cdy=Math.max(resizeStart.contentTop-resizeStart.iy, Math.min(resizeStart.ih-1,dy)); it.y=resizeStart.iy+cdy; it.dispH=resizeStart.ih-cdy; break; }
+          case 'bottom': { it.dispH=Math.max(1,Math.min(resizeStart.contentBottom-resizeStart.iy, resizeStart.ih+dy)); break; }
         }
         fullRedraw(); return;
       }
