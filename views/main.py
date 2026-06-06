@@ -1883,7 +1883,7 @@ def verify_recaptcha(response_token):
 @bp.route('/inquiry', methods=['GET', 'POST'])
 def inquiry():
     # 一時的にフォームを無効化（スパム対策）
-    FORM_TEMPORARILY_DISABLED = True  # ここをFalseにすれば復旧
+    FORM_TEMPORARILY_DISABLED = False  # ここをFalseにすれば復旧
     
     form = InquiryForm()
     inquiry_id = request.args.get("id")
