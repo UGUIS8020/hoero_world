@@ -1899,11 +1899,11 @@ def inquiry():
             flash('不正な送信が検出されました。', 'danger')
             return redirect(url_for('main.inquiry'))
         
-        # reCAPTCHA検証
-        recaptcha_response = request.form.get('g-recaptcha-response')
-        if not recaptcha_response or not verify_recaptcha(recaptcha_response):
-            flash('reCAPTCHA認証が必要です。', 'danger')
-            return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id)
+        # reCAPTCHA検証（無効化中）
+        # recaptcha_response = request.form.get('g-recaptcha-response')
+        # if not recaptcha_response or not verify_recaptcha(recaptcha_response):
+        #     flash('reCAPTCHA認証が必要です。', 'danger')
+        #     return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id)
 
         # DynamoDB保存
         inquiry = InquiryDDB.create(
