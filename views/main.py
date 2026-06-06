@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
-from datetime import datetime, time, timezone
+from datetime import datetime, time
 from urllib.parse import unquote
 import re
 import math
@@ -1393,7 +1393,7 @@ email: shibuya8020@gmail.com
 
     # レスポンス
     if numbered_ids:
-        resp_message = f"アップロード完了 受付No.{id_str}"
+        resp_message = f"アップロード完了受け付けました\n受付No.{id_str}"
     else:
         resp_message = "アップロード成功（ファイルはありません）"
 
@@ -1913,15 +1913,31 @@ def inquiry():
             text=form.text.data
         )
 
-        # メール送信（管理者 + 自動返信）
+        # メール送信（AWS SES経由・管理者 + 自動返信）
         try:
+            import smtplib
+            from email.mime.text import MIMEText
+
+            ses_server   = os.getenv("SES_MAIL_SERVER")
+            ses_port     = int(os.getenv("SES_MAIL_PORT", 587))
+            ses_user     = os.getenv("SES_MAIL_USERNAME")
+            ses_password = os.getenv("SES_MAIL_PASSWORD")
+            ses_sender   = os.getenv("SES_MAIL_SENDER")
+            notify_to    = os.getenv("MAIL_NOTIFICATION_RECIPIENT")
+
+            def send_ses(subject, body, to_list):
+                msg = MIMEText(body, 'plain', 'utf-8')
+                msg['Subject'] = subject
+                msg['From']    = ses_sender
+                msg['To']      = ', '.join(to_list)
+                with smtplib.SMTP(ses_server, ses_port) as s:
+                    s.ehlo()
+                    s.starttls()
+                    s.login(ses_user, ses_password)
+                    s.sendmail(ses_sender, to_list, msg.as_string())
+
             # 管理者への通知
-            msg = Message(
-                subject=f"【お問い合わせ】{inquiry['title']}",
-                sender=os.getenv("MAIL_INQUIRY_SENDER"),
-                recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")]
-            )
-            msg.body = f"""以下の内容でお問い合わせがありました：
+            admin_body = f"""以下の内容でお問い合わせがありました：
 
 ■名前: {inquiry['name']}
 ■メール: {inquiry['email']}
@@ -1929,18 +1945,13 @@ def inquiry():
 ■内容:
 {inquiry['text']}
 
-■日時: {datetime.now(timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')}
+■日時: {datetime.now(pytz_timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')}
 ■送信者IP: {request.environ.get('REMOTE_ADDR', 'unknown')}
 """
-            mail.send(msg)
+            send_ses(f"【お問い合わせ】{inquiry['title']}", admin_body, [notify_to])
 
-            # 🔹 自動返信メール（ユーザー向け）
-            auto_reply = Message(
-                subject="【渋谷歯科技工所】お問い合わせありがとうございました",
-                sender=os.getenv("MAIL_INQUIRY_SENDER"),
-                recipients=[inquiry['email']]
-            )
-            auto_reply.body = f"""{inquiry['name']} 様
+            # 自動返信メール（ユーザー向け）
+            reply_body = f"""{inquiry['name']} 様
 
 このたびはお問い合わせいただきありがとうございます。
 以下の内容で受け付けました。
@@ -1960,7 +1971,7 @@ TEL: 048-961-8151
 email:shibuya8020@gmail.com
 ------------------------------------------------------------
 """
-            mail.send(auto_reply)
+            send_ses("【渋谷歯科技工所】お問い合わせありがとうございました", reply_body, [inquiry['email']])
 
         except Exception as e:
             flash("メール送信中にエラーが発生しました。", "danger")
