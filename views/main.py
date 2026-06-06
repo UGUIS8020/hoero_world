@@ -1934,7 +1934,7 @@ def inquiry():
                     s.ehlo()
                     s.starttls()
                     s.login(ses_user, ses_password)
-                    s.sendmail(ses_sender, to_list, msg.as_string())
+                    s.send_message(msg)
 
             # 管理者への通知
             admin_body = f"""以下の内容でお問い合わせがありました：
