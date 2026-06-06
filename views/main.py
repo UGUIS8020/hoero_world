@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
-from datetime import datetime, time, timezone
+from datetime import datetime, time
 from urllib.parse import unquote
 import re
 import math
@@ -1945,7 +1945,7 @@ def inquiry():
 ■内容:
 {inquiry['text']}
 
-■日時: {datetime.now(timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')}
+■日時: {datetime.now(pytz_timezone('Asia/Tokyo')).strftime('%Y-%m-%d %H:%M')}
 ■送信者IP: {request.environ.get('REMOTE_ADDR', 'unknown')}
 """
             send_ses(f"【お問い合わせ】{inquiry['title']}", admin_body, [notify_to])
