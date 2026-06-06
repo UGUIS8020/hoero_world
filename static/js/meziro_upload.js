@@ -36,7 +36,7 @@ async function readAllEntries(reader) {
 }
 
 function showStatus(message, type) {
-    status.innerHTML = `<div class="${type}">${message}</div>`;
+    status.innerHTML = `<div class="${type}">${message.replace(/\n/g, '<br>')}</div>`;
 }
 
 function formatFileSize(bytes) {

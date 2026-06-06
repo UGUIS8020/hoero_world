@@ -1393,7 +1393,7 @@ email: shibuya8020@gmail.com
 
     # レスポンス
     if numbered_ids:
-        resp_message = f"アップロード完了 受付No.{id_str}"
+        resp_message = f"アップロード完了受け付けました\n受付No.{id_str}"
     else:
         resp_message = "アップロード成功（ファイルはありません）"
 
