@@ -414,16 +414,18 @@ async function uploadFiles(files) {
                 selectedFiles = [];
                 updateButtonState();
                 progressContainer.style.display = "none";
-                // フォーム全フィールドをリセット
-                ["businessName","userEmail","PatientName","appointmentDate","userMessage"].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.value = "";
+                // input-zone内の全フィールドをリセット（readonlyは除く）
+                document.querySelectorAll("#input-zone input:not([readonly]), #input-zone select, #input-zone textarea").forEach(el => {
+                    if (el.type === "checkbox") {
+                        el.checked = false;
+                    } else if (el.type === "radio") {
+                        el.checked = el.defaultChecked;
+                    } else if (el.tagName === "SELECT") {
+                        el.selectedIndex = 0;
+                    } else {
+                        el.value = "";
+                    }
                 });
-                ["userName","appointmentHour","projectType","shade"].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.selectedIndex = 0;
-                });
-                document.querySelectorAll("input[name='teeth[]']").forEach(cb => cb.checked = false);
             } else {
                 // 修正：throw ではなく直接処理
                 console.error("HTTPエラー:", xhr.status, xhr.statusText);
