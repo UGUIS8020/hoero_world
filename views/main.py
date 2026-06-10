@@ -2299,4 +2299,61 @@ def ai_collect_dental():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
-    
+
+
+@bp.route('/sitemap.xml')
+def sitemap():
+    from flask import Response
+
+    base = 'https://shibuya8020.com'
+
+    static_urls = [
+        ('/', '1.0', 'weekly'),
+        ('/recruit', '0.9', 'monthly'),
+        ('/inquiry', '0.8', 'monthly'),
+        ('/blog', '0.8', 'weekly'),
+        ('/shade_matching', '0.7', 'monthly'),
+        ('/pages/root_replica', '0.7', 'monthly'),
+        ('/pages/root_replica_case', '0.7', 'monthly'),
+        ('/pages/root_replica_info', '0.7', 'monthly'),
+        ('/pages/root_replica_qa', '0.7', 'monthly'),
+        ('/pages/zirconia', '0.7', 'monthly'),
+        ('/news/autotransplant_news', '0.6', 'daily'),
+    ]
+
+    urls = []
+    for path, priority, changefreq in static_urls:
+        urls.append(f"""  <url>
+    <loc>{base}{path}</loc>
+    <changefreq>{changefreq}</changefreq>
+    <priority>{priority}</priority>
+  </url>""")
+
+    try:
+        posts = list_recent_posts(limit=200)
+        for post in posts:
+            if not post.get('is_published', True):
+                continue
+            pid = post.get('post_id')
+            if pid:
+                urls.append(f"""  <url>
+    <loc>{base}/blog/{pid}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+    except Exception:
+        pass
+
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    xml += '\n'.join(urls)
+    xml += '\n</urlset>'
+
+    return Response(xml, mimetype='application/xml')
+
+
+@bp.route('/robots.txt')
+def robots():
+    from flask import Response
+    content = "User-agent: *\nAllow: /\nSitemap: https://shibuya8020.com/sitemap.xml\n"
+    return Response(content, mimetype='text/plain')
