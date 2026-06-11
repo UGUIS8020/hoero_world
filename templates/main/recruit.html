@@ -44,11 +44,15 @@
     "currency": "JPY",
     "value": {
       "@type": "QuantitativeValue",
+      "minValue": 200000,
       "unitText": "MONTH"
     }
   },
   "qualifications": "歯科技工士免許",
-  "educationRequirements": "歯科技工士免許をお持ちの方（新卒歓迎）"
+  "educationRequirements": {
+    "@type": "EducationalOccupationalCredential",
+    "credentialCategory": "professional license"
+  }
 }
 </script>
 {% endblock %}
