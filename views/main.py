@@ -18,7 +18,7 @@ import requests
 from boto3.dynamodb.conditions import Attr
 from dotenv import load_dotenv
 from moviepy import VideoFileClip
-from PIL import Image
+from PIL import Image, ImageOps
 from pytz import timezone as pytz_timezone
 
 # Flask関連
@@ -1156,6 +1156,10 @@ def meziro_upload():
     has_files = bool(files and files[0].filename != '')
     log.info("受信ファイル数: %d", len(files) if has_files else 0)
 
+    images = request.files.getlist('images[]')
+    has_images = bool(images and images[0].filename != '')
+    log.info("受信画像数: %d", len(images) if has_images else 0)
+
     uploaded_urls = []
     numbered_ids  = []
 
@@ -1279,6 +1283,41 @@ def meziro_upload():
             except Exception as e:
                 log.warning("一時ZIP削除失敗: %s err=%s", zip_file_path, e)
 
+        # 画像ファイルの処理（リサイズ → S3保存）
+        image_keys = []
+        if has_images:
+            img_prefix = f"meziro/{id_str}/images/"
+            fmt_map = {'.jpg': 'JPEG', '.jpeg': 'JPEG', '.png': 'PNG', '.gif': 'GIF', '.webp': 'WEBP'}
+            ct_map  = {'JPEG': 'image/jpeg', 'PNG': 'image/png', 'GIF': 'image/gif', 'WEBP': 'image/webp'}
+            for idx, img_file in enumerate(images, start=1):
+                if not img_file or not img_file.filename:
+                    continue
+                try:
+                    raw = Image.open(io.BytesIO(img_file.read()))
+                    pil_img: Image.Image = ImageOps.exif_transpose(raw) or raw  # EXIF回転補正
+                    if pil_img.width > 2000:
+                        new_h = int(pil_img.height * 2000 / pil_img.width)
+                        pil_img = pil_img.resize((2000, new_h), Image.Resampling.LANCZOS)
+                    orig_name = sanitize_filename(img_file.filename)
+                    ext  = os.path.splitext(orig_name)[1].lower()
+                    fmt  = fmt_map.get(ext, 'JPEG')
+                    if fmt == 'JPEG' and pil_img.mode in ('RGBA', 'P', 'LA'):
+                        pil_img = pil_img.convert('RGB')
+                    buf = io.BytesIO()
+                    if fmt == 'JPEG':
+                        pil_img.save(buf, format='JPEG', quality=90)
+                    else:
+                        pil_img.save(buf, format=fmt)
+                    buf.seek(0)
+                    final_w = pil_img.width
+                    s3_img_key = get_unique_filename(bucket_name, f"{img_prefix}{idx:03d}_{orig_name}")
+                    s3.upload_fileobj(buf, bucket_name, s3_img_key,
+                                      ExtraArgs={'ContentType': ct_map.get(fmt, 'image/jpeg')})
+                    image_keys.append(s3_img_key)
+                    log.info("画像S3アップロードOK: key=%s w=%d", s3_img_key, final_w)
+                except Exception as img_err:
+                    log.error("画像処理エラー: filename=%s err=%s", img_file.filename, img_err, exc_info=True)
+
         # メール本文
         url_text = "\n".join(uploaded_urls)
         full_message = f"""ユーザーから以下のメッセージが届きました：
@@ -1378,6 +1417,7 @@ email: shibuya8020@gmail.com
                 "shade":           shade,
                 "message":         message,
                 "s3_keys":         [url_for('main.meziro_download', key=k.split('/meziro/download/')[-1], _external=False) if '/meziro/download/' in k else k for k in uploaded_urls],
+                "image_keys":      image_keys,
                 "status":          "受付中",
                 "created_at":      received_at_str,
                 "updated_at":      received_at_str,

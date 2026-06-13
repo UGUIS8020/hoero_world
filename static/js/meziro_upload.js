@@ -10,6 +10,7 @@ const progressBar = document.getElementById("progressBar");
 
 let selectedFiles = []; // 選択されたファイルを保持
 let totalSize = 0;
+let selectedImages = []; // 画像添付欄で選択した画像ファイルを保持
 
 // 100件以上のファイルを取得するために必要な関数
 async function readAllEntries(reader) {
@@ -360,6 +361,11 @@ async function uploadFiles(files) {
     formData.append("crown_type", crownType);
     formData.append("teeth", JSON.stringify(selectedTeeth)); // JSON文字列として送信
 
+    // ▼ 画像添付ファイルを追加
+    selectedImages.forEach((imgFile) => {
+        formData.append("images[]", imgFile);
+    });
+
     // ▼ ファイル処理
     let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
     let uploadedBytes = 0;
@@ -412,6 +418,8 @@ async function uploadFiles(files) {
                 showStatus(result.message || "アップロード成功", "success");
                 fileList.innerHTML = "";
                 selectedFiles = [];
+                selectedImages = [];
+                renderImageThumbnails();
                 updateButtonState();
                 progressContainer.style.display = "none";
                 // input-zone内の全フィールドをリセット（readonlyは除く）
@@ -679,6 +687,43 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         );
     });
+});
+
+// ---- 画像添付エリア ----
+function renderImageThumbnails() {
+    const container = document.getElementById("imageThumbnails");
+    container.innerHTML = "";
+    selectedImages.forEach((file, index) => {
+        const item = document.createElement("div");
+        item.className = "image-thumb-item";
+
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        img.title = file.name;
+        img.addEventListener("click", () => window.open(img.src, "_blank"));
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "image-thumb-remove";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => {
+            URL.revokeObjectURL(img.src);
+            selectedImages.splice(index, 1);
+            renderImageThumbnails();
+        });
+
+        item.appendChild(img);
+        item.appendChild(removeBtn);
+        container.appendChild(item);
+    });
+}
+
+document.getElementById("imageInput").addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    selectedImages.push(file);
+    renderImageThumbnails();
+    // inputをリセットして同じ画像を再選択できるようにする
+    this.value = "";
 });
 
 document.getElementById("uploadButton").addEventListener("click", function () {
