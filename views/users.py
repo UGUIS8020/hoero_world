@@ -99,8 +99,9 @@ def preregister():
             flash('パスワードが一致しません。', 'danger')
             return render_template('users/preregister.html')
 
-        if len(password) < 8:
-            flash('パスワードは8文字以上で入力してください。', 'danger')
+        import re
+        if len(password) < 8 or not re.search(r'[A-Za-z]', password) or not re.search(r'[0-9]', password) or not re.search(r'[^A-Za-z0-9]', password):
+            flash('パスワードは英字・数字・記号を含めて8文字以上で入力してください。', 'danger')
             return render_template('users/preregister.html')
 
         # メールアドレス重複チェック
