@@ -277,7 +277,7 @@ def account_me():
     if form.validate_on_submit():
         # フォームの内容で item を更新
         item["display_name"] = form.display_name.data
-        item["email"]        = form.email.data
+        # email はログインIDのため更新不可（変更は管理者対応）
         item["full_name"]    = form.full_name.data
         item["sender_name"]  = form.sender_name.data
         item["phone"]        = form.phone.data
@@ -412,7 +412,7 @@ def account(user_id):
 
     if form.validate_on_submit():
         item["display_name"] = form.display_name.data
-        item["email"]        = form.email.data
+        # email はログインIDのため更新不可（変更は管理者対応）
         item["full_name"]    = form.full_name.data
         item["sender_name"]  = form.sender_name.data
         item["phone"]        = form.phone.data

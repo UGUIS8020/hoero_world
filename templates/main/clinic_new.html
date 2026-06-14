@@ -1,0 +1,161 @@
+{% extends "common/base.html" %}
+{% block title %}新規医院登録 | 渋谷歯科技工所{% endblock %}
+{% block content %}
+
+<style>
+    .page-header {
+        background-color: rgb(243, 244, 245);
+        text-align: center;
+        padding: 20px;
+        color: #7c1820;
+        margin-bottom: 20px;
+        margin-top: -2rem;
+    }
+    .section-title {
+        font-weight: bold;
+        border-bottom: 2px solid #7c1820;
+        padding-bottom: 4px;
+        margin: 20px 0 12px;
+        color: #7c1820;
+    }
+    .dentist-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 6px;
+        align-items: center;
+    }
+    .dentist-row input {
+        flex: 1;
+    }
+    .btn-remove-dentist {
+        color: #dc3545;
+        background: none;
+        border: none;
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 0 4px;
+    }
+</style>
+
+<div class="page-header">
+    <h2 id="pageTitle">新規登録</h2>
+</div>
+
+<div class="container" style="max-width: 700px;">
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="alert alert-danger">{{ messages[0] }}</div>
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('main.clinic_new') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="section-title">アカウント種別</div>
+
+        <div class="mb-3 d-flex gap-4">
+            <label class="form-check-label d-flex align-items-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="account_type" value="clinic" class="form-check-input" checked onchange="updateAccountType()">
+                歯科医院
+            </label>
+            <label class="form-check-label d-flex align-items-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="account_type" value="lab" class="form-check-input" onchange="updateAccountType()">
+                歯科技工所（DL）
+            </label>
+        </div>
+
+        <div class="section-title" id="sectionInfoTitle">医院情報</div>
+
+        <div class="mb-3">
+            <label class="form-label" id="labelSenderName">医院名 <span class="text-danger">必須</span></label>
+            <input type="text" name="sender_name" id="inputSenderName" class="form-control" placeholder="例：藤田歯科医院" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">担当者名</label>
+            <input type="text" name="full_name" class="form-control" placeholder="例：藤田 融">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">電話番号</label>
+            <input type="tel" name="phone" class="form-control" placeholder="例：0489708000">
+        </div>
+
+        <div class="section-title">住所</div>
+
+        <div class="mb-3">
+            <label class="form-label">郵便番号</label>
+            <input type="text" name="postal_code" class="form-control" placeholder="例：3430025" style="max-width:180px;">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">都道府県</label>
+            <input type="text" name="prefecture" class="form-control" placeholder="例：埼玉県" style="max-width:180px;">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">住所</label>
+            <input type="text" name="address" class="form-control" placeholder="例：越谷市大沢3-6-1">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">建物名・部屋番号</label>
+            <input type="text" name="building" class="form-control" placeholder="例：パルテきたこし1F">
+        </div>
+
+        <div class="section-title">担当医師</div>
+
+        <div id="dentistList">
+            <div class="dentist-row">
+                <input type="text" name="dentists[]" class="form-control" placeholder="例：藤田 融">
+                <button type="button" class="btn-remove-dentist" onclick="removeDentist(this)">×</button>
+            </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary mt-1" onclick="addDentist()">＋ 担当医師を追加</button>
+
+        <div class="section-title">ログイン情報</div>
+
+        <div class="mb-3">
+            <label class="form-label">メールアドレス <span class="text-danger">必須</span></label>
+            <input type="email" name="email" class="form-control" placeholder="例：clinic@example.com" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">パスワード <span class="text-danger">必須</span></label>
+            <input type="password" name="password" class="form-control" placeholder="8文字以上推奨" required>
+        </div>
+
+        <div class="d-flex gap-2 mt-4 mb-5 justify-content-center">
+            <button type="submit" class="btn btn-danger px-4">登録する</button>
+            <a href="{{ url_for('main.clinic_list') }}" class="btn btn-outline-secondary px-4">キャンセル</a>
+        </div>
+
+    </form>
+</div>
+
+<script>
+function updateAccountType() {
+    const isLab = document.querySelector('input[name="account_type"]:checked').value === 'lab';
+    document.getElementById('pageTitle').textContent = isLab ? '新規技工所登録' : '新規医院登録';
+    document.getElementById('sectionInfoTitle').textContent = isLab ? '技工所情報' : '医院情報';
+    document.getElementById('labelSenderName').innerHTML = (isLab ? '技工所名' : '医院名') + ' <span class="text-danger">必須</span>';
+    document.getElementById('inputSenderName').placeholder = isLab ? '例：渋谷歯科技工所' : '例：藤田歯科医院';
+}
+
+function addDentist() {
+    const list = document.getElementById('dentistList');
+    const row = document.createElement('div');
+    row.className = 'dentist-row';
+    row.innerHTML = `
+        <input type="text" name="dentists[]" class="form-control" placeholder="例：担当医師名">
+        <button type="button" class="btn-remove-dentist" onclick="removeDentist(this)">×</button>
+    `;
+    list.appendChild(row);
+}
+
+function removeDentist(btn) {
+    const list = document.getElementById('dentistList');
+    if (list.children.length > 1) {
+        btn.closest('.dentist-row').remove();
+    } else {
+        btn.closest('.dentist-row').querySelector('input').value = '';
+    }
+}
+</script>
+
+{% endblock %}

@@ -2,8 +2,8 @@
 {% block title %}歯科医院メニュー | 渋谷歯科技工所{% endblock %}
 {% block content %}
 
-<div class="container py-5" style="max-width: 600px;">
-  <h2 class="mb-4 text-center fw-bold">歯科医院メニュー</h2>
+<div class="container pb-5" style="max-width: 600px;">
+  <h2 class="mb-4 text-center fw-bold">{{ clinic_name }}</h2>
 
   <div class="d-grid gap-3">
 
@@ -12,8 +12,8 @@
         <div class="card-body d-flex align-items-center p-4">
           <span style="font-size: 2rem; margin-right: 1rem;">📋</span>
           <div>
-            <div class="fw-bold fs-5">新規指示書</div>
-            <div class="text-muted small">新しい技工指示書を作成します</div>
+            <div class="fw-bold fs-5">新規歯科技工指示書</div>
+            <div class="text-muted small">新しい歯科技工指示書を作成します</div>
           </div>
         </div>
       </div>
@@ -24,7 +24,7 @@
         <div class="card-body d-flex align-items-center p-4">
           <span style="font-size: 2rem; margin-right: 1rem;">📂</span>
           <div>
-            <div class="fw-bold fs-5">作成済み指示書</div>
+            <div class="fw-bold fs-5">依頼済み指示書</div>
             <div class="text-muted small">過去に送信した指示書を確認します</div>
           </div>
         </div>
@@ -42,6 +42,20 @@
         </div>
       </div>
     </a>
+
+    {% if current_user.is_administrator %}
+    <a href="{{ url_for('main.clinic_list') }}" class="text-decoration-none">
+      <div class="card shadow-sm border-danger">
+        <div class="card-body d-flex align-items-center p-4">
+          <span style="font-size: 2rem; margin-right: 1rem;">🏥</span>
+          <div>
+            <div class="fw-bold fs-5">登録歯科医院一覧</div>
+            <div class="text-muted small">登録済みの歯科医院を確認します（管理者専用）</div>
+          </div>
+        </div>
+      </div>
+    </a>
+    {% endif %}
 
   </div>
 </div>

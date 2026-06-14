@@ -87,15 +87,55 @@
             font-size: 14px;
             cursor: pointer;
         }
+        .back-btn {
+            display: inline-block;
+            margin: 0 auto 20px 0;
+            padding: 6px 20px;
+            background-color: #f8f9fa;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .zip-dl-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            background-color: #17a2b8;
+            color: white !important;
+            border-radius: 4px;
+            font-size: 13px;
+            text-decoration: none;
+        }
+        .zip-dl-btn:hover { background-color: #138496; }
         @media print {
-            .print-btn { display: none; }
+            .print-btn  { display: none; }
+            .back-btn   { display: none; }
+            .btn-row    { display: none; }
+            .zip-dl-btn { display: none; }
             body { padding: 10px 20px; }
         }
     </style>
 </head>
 <body>
 
-<button class="print-btn" onclick="window.print()">印刷 / PDF保存</button>
+<div class="btn-row" style="position: relative;">
+    <div style="display: flex; gap: 8px;">
+        <a class="back-btn" onclick="history.back(); return false;" href="#">← 戻る</a>
+        {% if not current_user.is_administrator %}
+        <a class="back-btn" href="{{ url_for('main.clinic_dashboard') }}">医院トップへ</a>
+        {% endif %}
+    </div>
+    <button class="print-btn" onclick="window.print()"
+            style="position: absolute; left: 50%; transform: translateX(-50%); margin: 0;">印刷 / PDF保存</button>
+</div>
 
 <div class="header">
     <h1>歯科技工指示書</h1>
@@ -110,7 +150,7 @@
 
 <table>
     <tr><th>事業者名</th><td>{{ p.business_name }}</td></tr>
-    <tr><th>担当歯科医師</th><td>{{ p.user_name }}</td></tr>
+    <tr><th>担当</th><td>{{ p.user_name }}</td></tr>
     <tr><th>カルテ番号</th><td>{{ p.chart_number or '―' }}</td></tr>
     <tr><th>患者名</th><td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td></tr>
     <tr><th>セット希望日</th><td>{{ p.appointment_date }}　{{ p.appointment_hour }}時</td></tr>
@@ -124,14 +164,102 @@
         <th>対象部位</th>
         <td>
             <div class="teeth-grid">
-                {% for t in p.teeth %}
-                <span class="tooth">{{ t }}</span>
-                {% endfor %}
+                {% if p.teeth_abutment or p.teeth_missing or p.teeth_fabrication %}
+                    {% for t in p.teeth_abutment or [] %}
+                    <span class="tooth" style="background-color:#cce5ff; color:#004085; border-color:#004085;">支 {{ t }}</span>
+                    {% endfor %}
+                    {% for t in p.teeth_missing or [] %}
+                    <span class="tooth" style="background-color:#e9ecef; color:#6c757d; border-color:#aaa;">✕ {{ t }}</span>
+                    {% endfor %}
+                    {% for t in p.teeth_fabrication or [] %}
+                    <span class="tooth" style="background-color:#ffe0b2; border-color:#dc3545; display:inline-flex; align-items:center; gap:3px;">
+                        <span style="display:inline-block; width:10px; height:10px; border:2.5px solid #dc3545; border-radius:50%; flex-shrink:0;"></span>{{ t }}
+                    </span>
+                    {% endfor %}
+                {% else %}
+                    {% for t in p.teeth %}
+                    <span class="tooth">{{ t }}</span>
+                    {% endfor %}
+                {% endif %}
             </div>
         </td>
     </tr>
     <tr><th>備考</th><td style="white-space: pre-wrap;">{{ p.message or '―' }}</td></tr>
 </table>
+
+{% if file_items %}
+<div class="section" style="margin-bottom: 20px;">
+    <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">アップロード済みファイル</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+        {% for fi in file_items %}
+        <div style="display: flex; align-items: center; gap: 6px;">
+            {% if current_user.is_administrator %}
+            <a href="{{ fi.url }}" class="zip-dl-btn">⬇ {{ fi.name }}</a>
+            {% else %}
+            <span style="color: #555; font-size: 13px; padding: 4px 10px; border: 1px solid #ccc; border-radius: 4px;">{{ fi.name }}</span>
+            {% endif %}
+            {% if can_delete %}
+            <button class="delete-file-btn" data-key="{{ fi.key }}" data-type="file"
+                    style="padding: 4px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                削除
+            </button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if image_items %}
+<div class="section" style="margin-bottom: 20px;">
+    <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">添付画像</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+        {% for item in image_items %}
+        <div style="position: relative; display: inline-block;">
+            <a href="{{ item.url }}" target="_blank">
+                <img src="{{ item.url }}" style="max-width: 200px; max-height: 200px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; display: block;">
+            </a>
+            {% if can_delete %}
+            <button class="delete-file-btn" data-key="{{ item.key }}" data-type="image"
+                    style="position: absolute; top: 4px; right: 4px; padding: 2px 8px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;">
+                削除
+            </button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.delete-file-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        if (!confirm('このファイルを削除しますか？この操作は取り消せません。')) return;
+        var key = this.dataset.key;
+        var type = this.dataset.type;
+        var container = this.closest('[style*="position: relative"]') || this.closest('[style*="display: flex"]');
+        var self = this;
+        var formData = new FormData();
+        formData.append('s3_key', key);
+        formData.append('file_type', type);
+        formData.append('csrf_token', '{{ csrf_token() }}');
+        fetch('{{ url_for("main.delete_prescription_file", prescription_id=p.prescription_id) }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var el = self.closest('div[style*="position: relative"]') || self.parentElement;
+                el.remove();
+            } else {
+                alert('削除に失敗しました: ' + (data.error || '不明なエラー'));
+            }
+        })
+        .catch(function() { alert('通信エラーが発生しました。'); });
+    });
+});
+</script>
 
 <div class="footer">
     渋谷歯科技工所 / shibuya8020.com

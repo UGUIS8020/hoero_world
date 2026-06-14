@@ -10,6 +10,7 @@ const progressBar = document.getElementById("progressBar");
 
 let selectedFiles = []; // 選択されたファイルを保持
 let totalSize = 0;
+let selectedImages = []; // 画像添付欄で選択した画像ファイルを保持
 
 // 100件以上のファイルを取得するために必要な関数
 async function readAllEntries(reader) {
@@ -298,7 +299,7 @@ async function readEntryRecursively(entry) {
 
 // ドラッグ＆ドロップされたアイテムを処理
 async function uploadFiles(files) {
-    const isPrescriptionPage = !!document.getElementById("PatientNameKana");
+    const isPrescriptionPage = !!document.getElementById("ChartNumber");
     if (files.length === 0 && !isPrescriptionPage) return;
 
     const formData = new FormData();
@@ -307,11 +308,15 @@ async function uploadFiles(files) {
     formData.append("csrf_token", csrf_token);
 
     // テキスト系入力を収集
-    const businessName = document.getElementById("businessName").value;
+    const businessName = document.getElementById("businessName") ? document.getElementById("businessName").value : "";
     const userName = document.getElementById("userName").value;
     const userEmail = document.getElementById("userEmail").value;
-    const patientName = document.getElementById("PatientName").value;
-    const patientNameKana = document.getElementById("PatientNameKana") ? document.getElementById("PatientNameKana").value : "";
+    const patientLastName = (document.getElementById("PatientLastName")?.value || "").trim();
+    const patientFirstName = (document.getElementById("PatientFirstName")?.value || "").trim();
+    const patientName = [patientLastName, patientFirstName].filter(Boolean).join("　");
+    const patientLastNameKana = (document.getElementById("PatientLastNameKana")?.value || "").trim();
+    const patientFirstNameKana = (document.getElementById("PatientFirstNameKana")?.value || "").trim();
+    const patientNameKana = [patientLastNameKana, patientFirstNameKana].filter(Boolean).join("　");
     const chartNumber = document.getElementById("ChartNumber") ? document.getElementById("ChartNumber").value : "";
     const appointmentDate = document.getElementById("appointmentDate").value;
     const appointmentHour = document.getElementById("appointmentHour").value;
@@ -325,18 +330,24 @@ async function uploadFiles(files) {
     );
     const crownType = crownRadio ? crownRadio.value : "";
 
-    // teeth[]（チェックボックス）
-    const selectedTeeth = [];
-    document.querySelectorAll('input[name="teeth[]"]:checked').forEach((cb) => {
-        selectedTeeth.push(cb.value);
+    // teeth（トグルセル）
+    const teethAbutment     = [];
+    const teethMissing      = [];
+    const teethFabrication  = [];
+    document.querySelectorAll('.tooth-cell').forEach((cell) => {
+        const state = parseInt(cell.dataset.state || 0);
+        if (state === 1) teethAbutment.push(cell.dataset.value);
+        else if (state === 2) teethMissing.push(cell.dataset.value);
+        else if (state === 3) teethFabrication.push(cell.dataset.value);
     });
+    const selectedTeeth = [...teethAbutment, ...teethMissing, ...teethFabrication];
 
     // ▼ 必須フィールドのバリデーション
     if (
-        !businessName ||
         !userName ||
         !userEmail ||
-        !patientName ||
+        !patientLastName ||
+        !patientFirstName ||
         !appointmentDate ||
         !appointmentHour ||
         !projectType
@@ -358,7 +369,15 @@ async function uploadFiles(files) {
     formData.append("shade", shade);
     formData.append("userMessage", userMessage);
     formData.append("crown_type", crownType);
-    formData.append("teeth", JSON.stringify(selectedTeeth)); // JSON文字列として送信
+    formData.append("teeth", JSON.stringify(selectedTeeth));
+    formData.append("teeth_abutment", JSON.stringify(teethAbutment));
+    formData.append("teeth_missing", JSON.stringify(teethMissing));
+    formData.append("teeth_fabrication", JSON.stringify(teethFabrication));
+
+    // ▼ 画像添付ファイルを追加
+    selectedImages.forEach((imgFile) => {
+        formData.append("images[]", imgFile);
+    });
 
     // ▼ ファイル処理
     let totalBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -412,6 +431,8 @@ async function uploadFiles(files) {
                 showStatus(result.message || "アップロード成功", "success");
                 fileList.innerHTML = "";
                 selectedFiles = [];
+                selectedImages = [];
+                renderImageThumbnails();
                 updateButtonState();
                 progressContainer.style.display = "none";
                 // input-zone内の全フィールドをリセット（readonlyは除く）
@@ -426,6 +447,8 @@ async function uploadFiles(files) {
                         el.value = "";
                     }
                 });
+                // シェードシステムをリセット後、選択肢も更新
+                if (typeof updateShadeOptions === "function") updateShadeOptions();
             } else {
                 // 修正：throw ではなく直接処理
                 console.error("HTTPエラー:", xhr.status, xhr.statusText);
@@ -681,12 +704,83 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+// カルテ番号「不明」チェックボックス
+function toggleChartUnknown(checkbox) {
+    const field = document.getElementById("ChartNumber");
+    if (checkbox.checked) {
+        field.value = "不明";
+        field.disabled = true;
+    } else {
+        field.value = "";
+        field.disabled = false;
+        field.focus();
+    }
+}
+
+// ---- 画像添付エリア ----
+function renderImageThumbnails() {
+    const container = document.getElementById("imageThumbnails");
+    container.innerHTML = "";
+    selectedImages.forEach((file, index) => {
+        const item = document.createElement("div");
+        item.className = "image-thumb-item";
+
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        img.title = file.name;
+        img.addEventListener("click", () => window.open(img.src, "_blank"));
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "image-thumb-remove";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => {
+            URL.revokeObjectURL(img.src);
+            selectedImages.splice(index, 1);
+            renderImageThumbnails();
+        });
+
+        item.appendChild(img);
+        item.appendChild(removeBtn);
+        container.appendChild(item);
+    });
+}
+
+document.getElementById("imageInput").addEventListener("change", function (e) {
+    Array.from(e.target.files).forEach(file => {
+        if (file) selectedImages.push(file);
+    });
+    renderImageThumbnails();
+    this.value = "";
+});
+
+// 画像エリアのドラッグ＆ドロップ
+const imageUploadArea = document.getElementById("imageUploadArea");
+
+imageUploadArea.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    imageUploadArea.classList.add("drag-over");
+});
+
+imageUploadArea.addEventListener("dragleave", () => {
+    imageUploadArea.classList.remove("drag-over");
+});
+
+imageUploadArea.addEventListener("drop", (e) => {
+    e.preventDefault();
+    imageUploadArea.classList.remove("drag-over");
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+    if (files.length === 0) return;
+    files.forEach(file => selectedImages.push(file));
+    renderImageThumbnails();
+});
+
 document.getElementById("uploadButton").addEventListener("click", function () {
     const requiredFields = [
-        "businessName",
         "userName",
         "userEmail",
-        "PatientName",
+        "PatientLastName",
+        "PatientFirstName",
+        "ChartNumber",
         "appointmentDate",
         "appointmentHour",
         "projectType",
@@ -703,7 +797,10 @@ document.getElementById("uploadButton").addEventListener("click", function () {
     });
 
     // 未入力のものを赤くする
+    const chartUnknown = document.getElementById("chartUnknown");
     requiredFields.forEach((id) => {
+        // カルテ番号は「不明」チェック時はスキップ
+        if (id === "ChartNumber" && chartUnknown && chartUnknown.checked) return;
         const element = document.getElementById(id);
         if (element && !element.value.trim()) {
             element.classList.add("input-error");
