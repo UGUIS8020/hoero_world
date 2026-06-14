@@ -82,31 +82,80 @@ def login():
     return render_template('users/login.html', form=form)
 @bp.route('/preregister', methods=['GET', 'POST'])
 def preregister():
-    if request.method == 'POST':
-        clinic_name  = request.form.get('clinic_name', '').strip()
-        director_name = request.form.get('director_name', '').strip()
-        phone        = request.form.get('phone', '').strip()
-        email        = request.form.get('email', '').strip().lower()
+    import os, requests as req_lib
+    recaptcha_site_key = os.getenv('RECAPTCHA_SITE_KEY', '')
 
-        if not all([clinic_name, director_name, phone, email]):
+    if request.method == 'POST':
+        clinic_name    = request.form.get('clinic_name', '').strip()
+        director_name  = request.form.get('director_name', '').strip()
+        phone          = request.form.get('phone', '').strip()
+        email          = request.form.get('email', '').strip().lower()
+        password       = request.form.get('password', '')
+        password_confirm = request.form.get('password_confirm', '')
+        recaptcha_response = request.form.get('g-recaptcha-response', '')
+
+        # 入力チェック
+        if not all([clinic_name, director_name, phone, email, password]):
             flash('すべての項目を入力してください。', 'danger')
-            return render_template('users/preregister.html')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
+
+        if password != password_confirm:
+            flash('パスワードが一致しません。', 'danger')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
+
+        if len(password) < 8:
+            flash('パスワードは8文字以上で入力してください。', 'danger')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
+
+        # reCAPTCHA 検証
+        secret_key = os.getenv('RECAPTCHA_SECRET_KEY', '')
+        if secret_key:
+            verify = req_lib.post('https://www.google.com/recaptcha/api/siteverify', data={
+                'secret': secret_key,
+                'response': recaptcha_response,
+            }, timeout=5)
+            if not verify.json().get('success'):
+                flash('reCAPTCHA の確認に失敗しました。もう一度お試しください。', 'danger')
+                return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
+
+        # メールアドレス重複チェック
+        users_table = current_app.config["HOERO_USERS_TABLE"]
+        existing = users_table.get_item(Key={"user_id": email}).get("Item")
+        if existing:
+            flash('このメールアドレスはすでに登録されています。', 'danger')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
+
+        # アカウント作成
+        from werkzeug.security import generate_password_hash
+        now = datetime.now(timezone.utc).isoformat()
+        item = {
+            "user_id":       email,
+            "email":         email,
+            "display_name":  clinic_name,
+            "sender_name":   clinic_name,
+            "full_name":     director_name,
+            "phone":         phone,
+            "password_hash": generate_password_hash(password),
+            "administrator": 0,
+            "created_at":    now,
+            "updated_at":    now,
+        }
+        users_table.put_item(Item=item)
 
         # 管理者への通知メール
         try:
             from extensions import mail
             from flask_mail import Message
             admin_msg = Message(
-                subject=f"【仮登録申請】{clinic_name}",
+                subject=f"【新規登録】{clinic_name}",
                 recipients=["shibuya8020@gmail.com"],
-                body=f"""新規アカウントの仮登録申請が届きました。
+                body=f"""新規アカウントが登録されました。
 
 【医院名】{clinic_name}
 【院長名】{director_name}
 【電話番号】{phone}
 【メールアドレス】{email}
-
-上記の内容でアカウントを作成し、ログイン情報をお送りください。
+【登録日時】{now}
 
 --------------------------------
 渋谷歯科技工所 自動通知
@@ -114,21 +163,18 @@ def preregister():
             )
             mail.send(admin_msg)
 
-            # 申請者への確認メール
+            # 登録者への完了メール
             confirm_msg = Message(
-                subject="【渋谷歯科技工所】アカウント仮登録を受け付けました",
+                subject="【渋谷歯科技工所】アカウント登録が完了しました",
                 recipients=[email],
                 body=f"""{clinic_name} {director_name} 様
 
-アカウントの仮登録申請を受け付けました。
-内容を確認の上、担当者よりログイン情報をお送りします。
-今しばらくお待ちください。
+アカウント登録が完了しました。
+以下のメールアドレスとご登録のパスワードでログインできます。
 
-【申請内容】
-医院名　　：{clinic_name}
-院長名　　：{director_name}
-電話番号　：{phone}
-メール　　：{email}
+【ログインID（メールアドレス）】{email}
+
+歯科技工物受付システムをすぐにご利用いただけます。
 
 --------------------------------
 渋谷歯科技工所
@@ -139,14 +185,12 @@ email: shibuya8020@gmail.com
             )
             mail.send(confirm_msg)
         except Exception as e:
-            current_app.logger.error("仮登録メール送信失敗: %s", e)
-            flash('メール送信に失敗しました。お手数ですが直接お電話ください。', 'danger')
-            return render_template('users/preregister.html')
+            current_app.logger.error("登録完了メール送信失敗: %s", e)
 
-        flash('仮登録を受け付けました。ログイン情報をメールでお送りします。', 'success')
+        flash('アカウント登録が完了しました。ログインしてご利用ください。', 'success')
         return redirect(url_for('users.login'))
 
-    return render_template('users/preregister.html')
+    return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
 
 
 @bp.route('/logout')
