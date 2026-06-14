@@ -19,6 +19,17 @@
         </div>
       </div>
     </a>
+    <a href="{{ url_for('main.prescription_list') }}" class="text-decoration-none">
+      <div class="card shadow-sm border-success">
+        <div class="card-body d-flex align-items-center p-4">
+          <span style="font-size: 2rem; margin-right: 1rem;">📋</span>
+          <div>
+            <div class="fw-bold fs-5">全指示書一覧</div>
+            <div class="text-muted small">全歯科医院の指示書を確認します（管理者専用）</div>
+          </div>
+        </div>
+      </div>
+    </a>
     {% endif %}
 
     <a href="{{ url_for('main.prescription') }}" class="text-decoration-none">
@@ -57,19 +68,6 @@
       </div>
     </a>
 
-    {% if current_user.is_administrator %}
-    <a href="{{ url_for('main.prescription_list') }}" class="text-decoration-none">
-      <div class="card shadow-sm border-success">
-        <div class="card-body d-flex align-items-center p-4">
-          <span style="font-size: 2rem; margin-right: 1rem;">📋</span>
-          <div>
-            <div class="fw-bold fs-5">全指示書一覧</div>
-            <div class="text-muted small">全歯科医院の指示書を確認します（管理者専用）</div>
-          </div>
-        </div>
-      </div>
-    </a>
-    {% endif %}
 
   </div>
 </div>
