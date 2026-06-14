@@ -59,11 +59,6 @@
                                    placeholder="もう一度入力してください" required>
                         </div>
 
-                        <!-- reCAPTCHA -->
-                        <div class="mb-3 d-flex justify-content-center">
-                            <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
-                        </div>
-
                         <button type="submit" class="btn btn-warning w-100 fw-bold" style="font-size: 1.1rem;">
                             登録してすぐ使う
                         </button>
@@ -82,5 +77,4 @@
         </div>
     </div>
 </div>
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 {% endblock %}
