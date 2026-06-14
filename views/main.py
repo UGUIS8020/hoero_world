@@ -1386,9 +1386,6 @@ def meziro_upload():
     # 必須チェック（warning で記録）
     if not message:
         message = ""
-    if not business_name:
-        log.warning("必須エラー: business_name が空")
-        return jsonify({'error': '事業者名が入力されていません'}), 400
     if not user_name:
         log.warning("必須エラー: user_name が空")
         return jsonify({'error': '送信者名が入力されていません'}), 400
@@ -1608,7 +1605,7 @@ def meziro_upload():
         try:
             confirmation_msg = Message(
                 subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
-                recipients=[user_email],
+                recipients=[user_email, "shibuya8020@gmail.com"],
                 reply_to="shibuya8020@gmail.com",
                 body=f"""{user_name} 様
 

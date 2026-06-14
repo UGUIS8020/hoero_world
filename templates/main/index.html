@@ -199,13 +199,11 @@ a:active { color: #b22222; text-decoration: none; }
     </div>
 </section>
 
-{% if current_user.is_authenticated %}
 <a href="{{ url_for('main.clinic_dashboard') }}" class="text-decoration-none">
   <div class="alert alert-warning text-center shadow-sm" style="cursor: pointer; font-size: 1.5rem; font-weight: bold; margin-top: 1rem; margin-bottom: 0;">
-    Web歯科技工指示書
+    歯科技工物受付
   </div>
 </a>
-{% endif %}
 
 <!-- 連絡先情報 -->
 <h2>〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203</h2>

@@ -416,10 +416,7 @@ async function uploadFiles(files) {
         // プログレス処理
         xhr.upload.onprogress = function (event) {
             if (event.lengthComputable) {
-                uploadedBytes = event.loaded;
-                const percentage = Math.round(
-                    (uploadedBytes / totalBytes) * 100
-                );
+                const percentage = Math.min(100, Math.round((event.loaded / event.total) * 100));
                 progressBar.style.width = percentage + "%";
                 progressBar.textContent = percentage + "%";
             }

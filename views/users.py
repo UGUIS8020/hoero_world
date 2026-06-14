@@ -80,6 +80,104 @@ def login():
         return redirect(next_url)
 
     return render_template('users/login.html', form=form)
+@bp.route('/preregister', methods=['GET', 'POST'])
+def preregister():
+    if request.method == 'POST':
+        clinic_name      = request.form.get('clinic_name', '').strip()
+        director_name    = request.form.get('director_name', '').strip()
+        phone            = request.form.get('phone', '').strip()
+        email            = request.form.get('email', '').strip().lower()
+        password         = request.form.get('password', '')
+        password_confirm = request.form.get('password_confirm', '')
+
+        # 入力チェック
+        if not all([clinic_name, director_name, phone, email, password]):
+            flash('すべての項目を入力してください。', 'danger')
+            return render_template('users/preregister.html')
+
+        if password != password_confirm:
+            flash('パスワードが一致しません。', 'danger')
+            return render_template('users/preregister.html')
+
+        if len(password) < 8:
+            flash('パスワードは8文字以上で入力してください。', 'danger')
+            return render_template('users/preregister.html')
+
+        # メールアドレス重複チェック
+        users_table = current_app.config["HOERO_USERS_TABLE"]
+        existing = users_table.get_item(Key={"user_id": email}).get("Item")
+        if existing:
+            flash('このメールアドレスはすでに登録されています。', 'danger')
+            return render_template('users/preregister.html')
+
+        # アカウント作成
+        from werkzeug.security import generate_password_hash
+        now = datetime.now(timezone.utc).isoformat()
+        item = {
+            "user_id":       email,
+            "email":         email,
+            "display_name":  clinic_name,
+            "sender_name":   clinic_name,
+            "full_name":     director_name,
+            "phone":         phone,
+            "password_hash": generate_password_hash(password),
+            "administrator": 0,
+            "created_at":    now,
+            "updated_at":    now,
+        }
+        users_table.put_item(Item=item)
+
+        # 管理者への通知メール
+        try:
+            from extensions import mail
+            from flask_mail import Message
+            admin_msg = Message(
+                subject=f"【新規登録】{clinic_name}",
+                recipients=["shibuya8020@gmail.com"],
+                body=f"""新規アカウントが登録されました。
+
+【医院名】{clinic_name}
+【院長名】{director_name}
+【電話番号】{phone}
+【メールアドレス】{email}
+【登録日時】{now}
+
+--------------------------------
+渋谷歯科技工所 自動通知
+"""
+            )
+            mail.send(admin_msg)
+
+            # 登録者への完了メール
+            confirm_msg = Message(
+                subject="【渋谷歯科技工所】アカウント登録が完了しました",
+                recipients=[email],
+                body=f"""{clinic_name} {director_name} 様
+
+アカウント登録が完了しました。
+以下のメールアドレスとご登録のパスワードでログインできます。
+
+【ログインID（メールアドレス）】{email}
+
+歯科技工物受付システムをすぐにご利用いただけます。
+
+--------------------------------
+渋谷歯科技工所
+〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+TEL: 048-961-8151
+email: shibuya8020@gmail.com
+"""
+            )
+            mail.send(confirm_msg)
+        except Exception as e:
+            current_app.logger.error("登録完了メール送信失敗: %s", e)
+
+        flash('アカウント登録が完了しました。ログインしてご利用ください。', 'success')
+        return redirect(url_for('users.login'))
+
+    return render_template('users/preregister.html')
+
+
 @bp.route('/logout')
 @login_required
 def logout():
