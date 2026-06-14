@@ -1,5 +1,5 @@
 {% extends "common/base.html" %}
-{% block title %}Web歯科技工指示書 | 渋谷歯科技工所{% endblock %}
+{% block title %}歯科技工物受付 | 渋谷歯科技工所{% endblock %}
 {% block content %}
 
 <style>
@@ -192,7 +192,7 @@
 </style>
 
 <div class="page-header" style="position: relative;">
-    <h1>Web歯科技工指示書</h1>
+    <h1>歯科技工物受付</h1>
     <a href="{{ url_for('main.clinic_dashboard') }}" class="btn btn-outline-secondary btn-sm"
        style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%);">医院トップへ</a>
 </div>
@@ -286,7 +286,7 @@
             <select id="projectType" class="form-control" required>
                 <option value="" disabled selected>製作物の種類を選択してください</option>
                 <optgroup label="── 歯科医院 ──">
-                    <option value="Zirconia_Gradation">ジルコニアグラデーションクラウン</option>
+                    <option value="Zirconia_Gradation">ジルコニアクラウン(A1~A4指定で細かい指定なし)</option>
                     <option value="Zirconia_Stain">ジルコニアクラウン(ステイン)</option>
                     <option value="Zirconia_Layering">ジルコニアクラウン(レイヤリング)</option>
                     <option value="surgical_guide">サージカルガイド</option>
