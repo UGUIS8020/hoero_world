@@ -244,7 +244,7 @@
               </li> 
 
               <li class="nav-item">
-                <a href="{{ url_for('main.clinic_dashboard') if not current_user.administrator else url_for('users.account_me') }}"
+                <a href="{{ url_for('main.clinic_dashboard') }}"
                   class="navbar-text ms-3 no-underline {% if current_user.administrator %}admin-name{% else %}user-name{% endif %}">
                   {{ current_user.display_name[:10] }}
                 </a>
