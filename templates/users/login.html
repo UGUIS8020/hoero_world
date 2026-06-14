@@ -2,10 +2,43 @@
 {% block content %}
     <section id="login">
         <div class="container my-5">
-            <div class="row">
-                <div class="col-lg-4 mx-auto">
-                    <div class="card bg-light border border-primary text-center">
-                        <div class="card-body">
+            <div class="row justify-content-center g-4">
+
+                <!-- メリット説明 -->
+                <div class="col-lg-5">
+                    <div class="card border-warning shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-3" style="color: #7c1820;">歯科技工物受付 アカウントのメリット</h5>
+                            <ul class="list-unstyled" style="line-height: 2;">
+                                <li>📋 <strong>指示書をWeb上で作成・送信</strong><br>
+                                    <span class="text-muted small">紙の指示書不要。担当医・患者情報を入力するだけで完結します。</span>
+                                </li>
+                                <li class="mt-2">📂 <strong>送信済み指示書の履歴確認</strong><br>
+                                    <span class="text-muted small">過去の指示書をいつでも確認できます。</span>
+                                </li>
+                                <li class="mt-2">🦷 <strong>部位・シェード・製作物を正確に記録</strong><br>
+                                    <span class="text-muted small">歯牙グリッドで部位を視覚的に指定できます。</span>
+                                </li>
+                                <li class="mt-2">📁 <strong>画像・ファイルの添付送信</strong><br>
+                                    <span class="text-muted small">写真やSTLファイルをまとめて送信できます。</span>
+                                </li>
+                                <li class="mt-2">✉️ <strong>受付完了メールを自動送信</strong><br>
+                                    <span class="text-muted small">送信後すぐに受付確認メールが届きます。</span>
+                                </li>
+                            </ul>
+                            <div class="mt-3 p-3 rounded" style="background-color: #fff8e1; font-size: 0.9em; color: #555;">
+                                アカウント登録は無料です。<br>
+                                ご登録は渋谷歯科技工所までお問い合わせください。<br>
+                                <strong>TEL: 048-961-8151</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ログインフォーム -->
+                <div class="col-lg-4">
+                    <div class="card bg-light border border-primary text-center h-100">
+                        <div class="card-body p-4">
                             <h3>ログイン</h3>
                             <form method="POST">
                                 {{ form.hidden_tag() }}
@@ -15,16 +48,14 @@
                                 <div class="mb-3">
                                     {{ render_field(form.password, class="form-control form-control-lg", placeholder="パスワード") }}
                                 </div>
-                                {{ form.submit(class="btn btn-primary w-100", value="ログイン") }}   
-                                
-                                                               
+                                {{ form.submit(class="btn btn-primary w-100", value="ログイン") }}
                             </form>
-                            
                             <a href="{{ url_for('users.register') }}" class="btn btn-outline-primary w-100 mt-2">新規登録</a>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
-    </section>    
+    </section>
 {% endblock %}
