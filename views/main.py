@@ -1163,24 +1163,32 @@ def clinic_view(user_id):
         abort(404)
     prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
     from boto3.dynamodb.conditions import Key as DKey
-    # clinic_id GSI を優先し、なければ user_id GSI にフォールバック
+    merged = {}
     clinic_id_val = clinic.get("clinic_id")
-    try:
-        if clinic_id_val:
+    # clinic_id GSI クエリ（ログイン送信分）
+    if clinic_id_val:
+        try:
             p_resp = prescriptions_table.query(
                 IndexName="clinic_id-created_at-index",
                 KeyConditionExpression=DKey("clinic_id").eq(clinic_id_val),
                 ScanIndexForward=False,
             )
-        else:
-            raise Exception("clinic_id なし")
-    except Exception:
-        p_resp = prescriptions_table.query(
+            for item in p_resp.get("Items", []):
+                merged[item["prescription_id"]] = item
+        except Exception:
+            pass
+    # user_id GSI クエリ（未ログイン送信分を含む）
+    try:
+        p_resp2 = prescriptions_table.query(
             IndexName="user_id-created_at-index",
             KeyConditionExpression=DKey("user_id").eq(user_id),
             ScanIndexForward=False,
         )
-    prescriptions = p_resp.get("Items", [])
+        for item in p_resp2.get("Items", []):
+            merged[item["prescription_id"]] = item
+    except Exception:
+        pass
+    prescriptions = sorted(merged.values(), key=lambda x: x.get("created_at", ""), reverse=True)
     return render_template('main/clinic_view.html', clinic=clinic, prescriptions=prescriptions)
 
 
