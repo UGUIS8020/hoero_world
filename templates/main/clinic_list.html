@@ -1,0 +1,119 @@
+{% extends "common/base.html" %}
+{% block title %}登録歯科医院一覧 | 渋谷歯科技工所{% endblock %}
+{% block content %}
+
+<style>
+    .page-header {
+        background-color: rgb(243, 244, 245);
+        text-align: center;
+        padding: 20px;
+        color: #7c1820;
+        margin-bottom: 20px;
+        margin-top: -2rem;
+    }
+    .dentist-list {
+        font-size: 0.85em;
+        color: #555;
+        margin: 0;
+        padding-left: 1em;
+        white-space: nowrap;
+    }
+    .clinic-id-badge {
+        font-size: 0.8em;
+        background-color: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        padding: 1px 7px;
+    }
+    .badge-clinic {
+        font-size: 0.75em;
+        background-color: #cce5ff;
+        color: #004085;
+        border-radius: 4px;
+        padding: 2px 8px;
+        white-space: nowrap;
+    }
+    .badge-lab {
+        font-size: 0.75em;
+        background-color: #d4edda;
+        color: #155724;
+        border-radius: 4px;
+        padding: 2px 8px;
+        white-space: nowrap;
+    }
+</style>
+
+<div class="page-header">
+    <h2>登録歯科医院一覧</h2>
+</div>
+
+<div class="container-fluid px-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="text-muted mb-0">登録医院数：{{ clinics | length }} 件</p>
+        <a href="{{ url_for('main.clinic_new') }}" class="btn btn-danger btn-sm">＋ 新規医院登録</a>
+    </div>
+
+    {% if clinics %}
+    <table class="table table-hover table-bordered align-middle w-100">
+        <thead class="table-dark">
+            <tr>
+                <th style="width:80px;">ID</th>
+                <th style="width:90px;">種別</th>
+                <th>名称</th>
+                <th>担当者</th>
+                <th>メールアドレス</th>
+                <th>電話番号</th>
+                <th>所在地</th>
+                <th style="min-width: 140px;">担当医師</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in clinics %}
+            <tr style="cursor: pointer;" onclick="location.href='{{ url_for('main.clinic_view', user_id=c.user_id) }}'">
+                <td><span class="clinic-id-badge">{{ c.clinic_id or '—' }}</span></td>
+                <td>
+                    {% if c.account_type == 'lab' %}
+                    <span class="badge-lab">歯科技工所</span>
+                    {% else %}
+                    <span class="badge-clinic">歯科医院</span>
+                    {% endif %}
+                </td>
+                <td class="fw-bold" style="color: #7c1820;">{{ c.sender_name or c.display_name }}</td>
+                <td>{{ c.full_name or '—' }}</td>
+                <td><a href="mailto:{{ c.email }}" onclick="event.stopPropagation();">{{ c.email }}</a></td>
+                <td>{{ c.phone or '—' }}</td>
+                <td>
+                    {% if c.prefecture or c.address %}
+                        {{ c.prefecture }}{{ c.address }}
+                        {% if c.building %}<br><span class="text-muted small">{{ c.building }}</span>{% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if c.dentists %}
+                    <ul class="dentist-list">
+                        {% for d in c.dentists %}
+                        <li>{{ d }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info text-center">登録されている歯科医院はありません。</div>
+    {% endif %}
+
+    <div class="text-center mt-3">
+        <a href="{{ url_for('main.clinic_dashboard') }}" class="btn btn-outline-secondary">戻る</a>
+    </div>
+
+</div>
+
+{% endblock %}

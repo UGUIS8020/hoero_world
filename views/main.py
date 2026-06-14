@@ -1027,9 +1027,16 @@ def prescription_list():
     prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
 
     if current_user.is_administrator:
-        # 管理者は全件取得
-        resp = prescriptions_table.scan()
-        items = resp.get("Items", [])
+        # 管理者は全件取得（ページネーション対応）
+        items = []
+        scan_kwargs = {}
+        while True:
+            resp = prescriptions_table.scan(**scan_kwargs)
+            items.extend(resp.get("Items", []))
+            last = resp.get("LastEvaluatedKey")
+            if not last:
+                break
+            scan_kwargs["ExclusiveStartKey"] = last
     else:
         # 一般ユーザーは自分の指示書のみ
         from boto3.dynamodb.conditions import Key
@@ -1057,13 +1064,225 @@ def prescription_view(prescription_id):
     # 管理者でなければ自分の指示書のみ
     if not current_user.is_administrator and p.get("user_id") != current_user.email:
         return "アクセス権限がありません", 403
-    return render_template('main/prescription_view.html', p=p)
+    # 添付画像の署名付きURL生成（key と url をペアで渡す）
+    image_items = []
+    for key in (p.get("image_keys") or []):
+        try:
+            url = s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': key},
+                ExpiresIn=3600
+            )
+            image_items.append({"key": key, "url": url})
+        except Exception:
+            pass
+    # 添付ファイル（ZIP等）の署名付きURL生成
+    file_items = []
+    for key in (p.get("s3_keys") or []):
+        try:
+            url = s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': key},
+                ExpiresIn=3600
+            )
+            import os
+            file_items.append({"key": key, "url": url, "name": os.path.basename(key)})
+        except Exception:
+            pass
+    # 削除権限：管理者 or アップロードした医院
+    can_delete = (
+        current_user.is_administrator
+        or p.get("user_id") == current_user.email
+        or (p.get("clinic_id") and p.get("clinic_id") == getattr(current_user, "clinic_id", None))
+    )
+    return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete)
+
+
+@bp.route('/prescription/delete_file/<prescription_id>', methods=['POST'])
+@login_required
+def delete_prescription_file(prescription_id):
+    from flask import jsonify
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
+    p = resp.get("Item")
+    if not p:
+        return jsonify({"error": "指示書が見つかりません"}), 404
+
+    can_delete = (
+        current_user.is_administrator
+        or p.get("user_id") == current_user.email
+        or (p.get("clinic_id") and p.get("clinic_id") == getattr(current_user, "clinic_id", None))
+    )
+    if not can_delete:
+        return jsonify({"error": "権限がありません"}), 403
+
+    s3_key  = request.form.get("s3_key")
+    file_type = request.form.get("file_type")  # "image" or "file"
+    if not s3_key:
+        return jsonify({"error": "キーが指定されていません"}), 400
+
+    try:
+        s3.delete_object(Bucket=BUCKET_NAME, Key=s3_key)
+    except Exception as e:
+        return jsonify({"error": f"S3削除エラー: {str(e)}"}), 500
+
+    if file_type == "image":
+        new_keys = [k for k in (p.get("image_keys") or []) if k != s3_key]
+        prescriptions_table.update_item(
+            Key={"prescription_id": prescription_id},
+            UpdateExpression="SET image_keys = :keys",
+            ExpressionAttributeValues={":keys": new_keys}
+        )
+    else:
+        new_keys = [k for k in (p.get("s3_keys") or []) if k != s3_key]
+        prescriptions_table.update_item(
+            Key={"prescription_id": prescription_id},
+            UpdateExpression="SET s3_keys = :keys",
+            ExpressionAttributeValues={":keys": new_keys}
+        )
+
+    return jsonify({"success": True})
 
 
 @bp.route('/clinic', methods=['GET'])
 @login_required
 def clinic_dashboard():
-    return render_template('main/clinic_dashboard.html')
+    clinic_name = getattr(current_user, 'sender_name', '') or getattr(current_user, 'display_name', '') or '歯科医院メニュー'
+    return render_template('main/clinic_dashboard.html', clinic_name=clinic_name)
+
+
+@bp.route('/clinic/view/<path:user_id>', methods=['GET'])
+@login_required
+def clinic_view(user_id):
+    if not current_user.is_administrator:
+        abort(403)
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    resp = users_table.get_item(Key={"user_id": user_id})
+    clinic = resp.get("Item")
+    if not clinic:
+        abort(404)
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    from boto3.dynamodb.conditions import Key as DKey
+    # clinic_id GSI を優先し、なければ user_id GSI にフォールバック
+    clinic_id_val = clinic.get("clinic_id")
+    try:
+        if clinic_id_val:
+            p_resp = prescriptions_table.query(
+                IndexName="clinic_id-created_at-index",
+                KeyConditionExpression=DKey("clinic_id").eq(clinic_id_val),
+                ScanIndexForward=False,
+            )
+        else:
+            raise Exception("clinic_id なし")
+    except Exception:
+        p_resp = prescriptions_table.query(
+            IndexName="user_id-created_at-index",
+            KeyConditionExpression=DKey("user_id").eq(user_id),
+            ScanIndexForward=False,
+        )
+    prescriptions = p_resp.get("Items", [])
+    return render_template('main/clinic_view.html', clinic=clinic, prescriptions=prescriptions)
+
+
+@bp.route('/clinic/list', methods=['GET'])
+@login_required
+def clinic_list():
+    if not current_user.is_administrator:
+        abort(403)
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    clinics = []
+    scan_kwargs = {"FilterExpression": Attr('administrator').ne(1)}
+    while True:
+        resp = users_table.scan(**scan_kwargs)
+        clinics.extend(resp.get('Items', []))
+        last = resp.get("LastEvaluatedKey")
+        if not last:
+            break
+        scan_kwargs["ExclusiveStartKey"] = last
+    clinics.sort(key=lambda x: x.get('clinic_id') or '')
+    return render_template('main/clinic_list.html', clinics=clinics)
+
+
+@bp.route('/clinic/new', methods=['GET', 'POST'])
+@login_required
+def clinic_new():
+    if not current_user.is_administrator:
+        abort(403)
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+
+    if request.method == 'POST':
+        from werkzeug.security import generate_password_hash
+
+        account_type = request.form.get('account_type', 'clinic')  # 'clinic' or 'lab'
+        email       = request.form.get('email', '').strip()
+        password    = request.form.get('password', '').strip()
+        sender_name = request.form.get('sender_name', '').strip()
+        full_name   = request.form.get('full_name', '').strip()
+        phone       = request.form.get('phone', '').strip()
+        postal_code = request.form.get('postal_code', '').strip()
+        prefecture  = request.form.get('prefecture', '').strip()
+        address     = request.form.get('address', '').strip()
+        building    = request.form.get('building', '').strip()
+        dentists    = [d.strip() for d in request.form.getlist('dentists[]') if d.strip()]
+
+        if not email or not password or not sender_name:
+            flash('名称・メールアドレス・パスワードは必須です。')
+            return redirect(url_for('main.clinic_new'))
+
+        # メール重複チェック
+        existing = users_table.get_item(Key={'user_id': email}).get('Item')
+        if existing:
+            flash('そのメールアドレスはすでに登録されています。')
+            return redirect(url_for('main.clinic_new'))
+
+        # clinic_id 自動採番
+        # 歯科医院: D001, D002 … （DL を除く D のみ）
+        # 歯科技工所: DL001, DL002 …
+        all_items = []
+        scan_kw = {}
+        while True:
+            resp = users_table.scan(**scan_kw)
+            all_items.extend(resp.get('Items', []))
+            last = resp.get('LastEvaluatedKey')
+            if not last:
+                break
+            scan_kw['ExclusiveStartKey'] = last
+
+        if account_type == 'lab':
+            existing_ids = [item.get('clinic_id', '') for item in all_items
+                            if item.get('clinic_id', '').startswith('DL')]
+            max_num = max((int(cid[2:]) for cid in existing_ids if cid[2:].isdigit()), default=0)
+            clinic_id = f"DL{max_num + 1:03d}"
+        else:
+            existing_ids = [item.get('clinic_id', '') for item in all_items
+                            if item.get('clinic_id', '').startswith('D') and not item.get('clinic_id', '').startswith('DL')]
+            max_num = max((int(cid[1:]) for cid in existing_ids if cid[1:].isdigit()), default=0)
+            clinic_id = f"D{max_num + 1:03d}"
+
+        now = datetime.now(pytz_timezone('Asia/Tokyo')).isoformat()
+        users_table.put_item(Item={
+            'user_id':       email,
+            'email':         email,
+            'sender_name':   sender_name,
+            'display_name':  sender_name,
+            'full_name':     full_name,
+            'phone':         phone,
+            'postal_code':   postal_code,
+            'prefecture':    prefecture,
+            'address':       address,
+            'building':      building,
+            'password_hash': generate_password_hash(password),
+            'administrator': 0,
+            'account_type':  account_type,
+            'clinic_id':     clinic_id,
+            'dentists':      dentists,
+            'created_at':    now,
+            'updated_at':    now,
+        })
+        flash(f'{sender_name}（{clinic_id}）を登録しました。')
+        return redirect(url_for('main.clinic_list'))
+
+    return render_template('main/clinic_new.html')
 
 
 @bp.route('/prescription', methods=['GET'])
@@ -1072,11 +1291,13 @@ def prescription():
     dentists = getattr(current_user, "dentists", [])
     sender_name = getattr(current_user, "sender_name", "") or ""
     user_email = getattr(current_user, "email", "") or ""
+    full_name = getattr(current_user, "full_name", "") or ""
     return render_template(
         'main/prescription.html',
         dentists=dentists,
         sender_name=sender_name,
         user_email=user_email,
+        default_user_name=full_name,
     )
 
 
@@ -1115,7 +1336,9 @@ def meziro_upload():
     appointment_hour = request.form.get('appointmentHour', '')
     project_type     = request.form.get('projectType', '')
     crown_type       = request.form.get('crown_type', '')
-    teeth_raw        = request.form.get('teeth', '[]')
+    teeth_raw          = request.form.get('teeth', '[]')
+    teeth_abutment_raw = request.form.get('teeth_abutment', '[]')
+    teeth_missing_raw  = request.form.get('teeth_missing', '[]')
     shade            = request.form.get('shade', '')
     message          = request.form.get('userMessage', '')
 
@@ -1127,6 +1350,22 @@ def meziro_upload():
     except Exception as e:
         log.warning("teeth のJSONパース失敗: raw=%s err=%s", teeth_raw[:200], e)
         teeth = []
+    try:
+        teeth_abutment = json.loads(teeth_abutment_raw)
+        if not isinstance(teeth_abutment, list): teeth_abutment = []
+    except Exception:
+        teeth_abutment = []
+    try:
+        teeth_missing = json.loads(teeth_missing_raw)
+        if not isinstance(teeth_missing, list): teeth_missing = []
+    except Exception:
+        teeth_missing = []
+    teeth_fabrication_raw = request.form.get('teeth_fabrication', '[]')
+    try:
+        teeth_fabrication = json.loads(teeth_fabrication_raw)
+        if not isinstance(teeth_fabrication, list): teeth_fabrication = []
+    except Exception:
+        teeth_fabrication = []
 
     # フォーム要約ログ（個人情報はマスキング）
     masked_email = (user_email[:2] + "***@***") if user_email else ""
@@ -1401,6 +1640,19 @@ email: shibuya8020@gmail.com
         # 指示書をDynamoDBに保存
         try:
             prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+
+            # clinic_id を user_id（メール）から取得
+            clinic_id_for_prescription = None
+            if current_user.is_authenticated:
+                clinic_id_for_prescription = getattr(current_user, 'clinic_id', None)
+            if not clinic_id_for_prescription:
+                try:
+                    users_table = current_app.config["HOERO_USERS_TABLE"]
+                    u = users_table.get_item(Key={'user_id': user_email}).get('Item', {})
+                    clinic_id_for_prescription = u.get('clinic_id')
+                except Exception:
+                    pass
+
             prescription_item = {
                 "prescription_id": id_str,
                 "user_id":         user_email,
@@ -1414,6 +1666,9 @@ email: shibuya8020@gmail.com
                 "project_type":    project_type,
                 "crown_type":      crown_type,
                 "teeth":           teeth,
+                "teeth_abutment":     teeth_abutment,
+                "teeth_missing":      teeth_missing,
+                "teeth_fabrication":  teeth_fabrication,
                 "shade":           shade,
                 "message":         message,
                 "s3_keys":         [url_for('main.meziro_download', key=k.split('/meziro/download/')[-1], _external=False) if '/meziro/download/' in k else k for k in uploaded_urls],
@@ -1422,6 +1677,9 @@ email: shibuya8020@gmail.com
                 "created_at":      received_at_str,
                 "updated_at":      received_at_str,
             }
+            if clinic_id_for_prescription:
+                prescription_item["clinic_id"] = clinic_id_for_prescription
+
             prescriptions_table.put_item(Item=prescription_item)
             log.info("指示書をDynamoDBに保存: prescription_id=%s", id_str)
         except Exception as e:

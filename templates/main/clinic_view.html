@@ -1,0 +1,134 @@
+{% extends "common/base.html" %}
+{% block title %}{{ clinic.sender_name or clinic.display_name }} | 渋谷歯科技工所{% endblock %}
+{% block content %}
+
+<style>
+    .page-header {
+        background-color: rgb(243, 244, 245);
+        text-align: center;
+        padding: 20px;
+        color: #7c1820;
+        margin-bottom: 20px;
+        margin-top: -2rem;
+    }
+    .info-table th {
+        width: 140px;
+        background-color: #f8f9fa;
+        color: #555;
+        font-weight: normal;
+    }
+    .status-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    .status-受付中 { background-color: #fff3cd; color: #856404; }
+    .status-製作中 { background-color: #cce5ff; color: #004085; }
+    .status-完了   { background-color: #d4edda; color: #155724; }
+</style>
+
+<div class="page-header" style="position: relative;">
+    <h2>{{ clinic.sender_name or clinic.display_name }}</h2>
+    <a href="{{ url_for('users.account', user_id=clinic.user_id) }}"
+       class="btn btn-sm btn-outline-secondary"
+       style="position: absolute; top: 50%; right: 1.5rem; transform: translateY(-50%);">
+        アカウント修正
+    </a>
+</div>
+
+<div class="container-fluid px-4">
+
+    <!-- 医院情報 -->
+    <h5 class="mb-2 fw-bold border-bottom pb-1">
+        {% if clinic.account_type == 'lab' %}技工所情報{% else %}医院情報{% endif %}
+    </h5>
+    <table class="table table-bordered info-table mb-4" style="max-width: 700px;">
+        <tr><th>ID</th><td>{{ clinic.clinic_id or '—' }}</td></tr>
+        <tr>
+            <th>種別</th>
+            <td>
+                {% if clinic.account_type == 'lab' %}
+                <span style="color:#155724; background-color:#d4edda; border-radius:4px; padding:2px 8px; font-size:0.85em;">歯科技工所（DL）</span>
+                {% else %}
+                <span style="color:#004085; background-color:#cce5ff; border-radius:4px; padding:2px 8px; font-size:0.85em;">歯科医院</span>
+                {% endif %}
+            </td>
+        </tr>
+        <tr><th>{% if clinic.account_type == 'lab' %}技工所名{% else %}医院名{% endif %}</th><td class="fw-bold">{{ clinic.sender_name or clinic.display_name }}</td></tr>
+        <tr><th>担当者</th><td>{{ clinic.full_name or '—' }}</td></tr>
+        <tr><th>メール</th><td><a href="mailto:{{ clinic.email }}">{{ clinic.email }}</a></td></tr>
+        <tr><th>電話番号</th><td>{{ clinic.phone or '—' }}</td></tr>
+        <tr>
+            <th>所在地</th>
+            <td>
+                {% if clinic.prefecture or clinic.address %}
+                    〒{{ clinic.postal_code or '' }}　{{ clinic.prefecture }}{{ clinic.address }}
+                    {% if clinic.building %}<br>{{ clinic.building }}{% endif %}
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>担当医師</th>
+            <td>
+                {% if clinic.dentists %}
+                    {{ clinic.dentists | join('　／　') }}
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        <tr><th>登録日</th><td>{{ (clinic.created_at or '')[:10] }}</td></tr>
+    </table>
+
+    <!-- 指示書一覧 -->
+    <h5 class="mb-2 fw-bold border-bottom pb-1">指示書履歴　<small class="text-muted fw-normal">{{ prescriptions | length }} 件</small></h5>
+
+    {% if prescriptions %}
+    <table class="table table-hover table-bordered align-middle w-100">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 1%; white-space: nowrap;">受付番号</th>
+                <th style="width: 1%; white-space: nowrap;">送信日時</th>
+                <th style="width: 110px; white-space: nowrap;">担当医</th>
+                <th style="width: 160px;">患者名</th>
+                <th style="width: 160px;">セット希望日</th>
+                <th style="width: 300px; min-width: 300px;">製作物</th>
+                <th>状態</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in prescriptions %}
+            <tr style="cursor: pointer;" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
+                <td style="white-space: nowrap; color: #7c1820; font-weight: bold;">No.{{ p.prescription_id }}</td>
+                <td style="white-space: nowrap;">{{ p.created_at[:10] }}</td>
+                <td>{{ p.user_name }}</td>
+                <td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td>
+                <td style="white-space: nowrap;">{{ p.appointment_date }} {{ p.appointment_hour }}時</td>
+                <td>
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <span>{{ p.project_type }}</span>
+                        {% if p.s3_keys %}
+                            {% if p.s3_keys | length == 1 %}
+                            <a href="{{ p.s3_keys[0] }}" onclick="event.stopPropagation();" class="btn btn-sm btn-outline-primary" style="font-size:0.75em; padding:1px 8px; white-space:nowrap;">DL</a>
+                            {% else %}
+                            <a href="{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}" onclick="event.stopPropagation();" class="btn btn-sm btn-outline-primary" style="font-size:0.75em; padding:1px 8px; white-space:nowrap;">DL ({{ p.s3_keys | length }}件)</a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </td>
+                <td><span class="status-badge status-{{ p.status }}">{{ p.status }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info text-center">まだ指示書はありません。</div>
+    {% endif %}
+
+    <div class="text-center mt-4 mb-4">
+        <a href="{{ url_for('main.clinic_list') }}" class="btn btn-outline-secondary">一覧に戻る</a>
+    </div>
+
+</div>
+
+{% endblock %}

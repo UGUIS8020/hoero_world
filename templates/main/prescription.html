@@ -132,6 +132,11 @@
         border-radius: 4px;
         background-color: #f8f9fa;
         margin-top: 5px;
+        transition: border-color 0.2s, background-color 0.2s;
+    }
+    .image-upload-area.drag-over {
+        border-color: #7c1820;
+        background-color: #fff0f0;
     }
     .image-thumbnails {
         display: flex;
@@ -186,8 +191,10 @@
     a:link, a:visited, a:hover, a:active { color: #8b0000; text-decoration: none; }
 </style>
 
-<div class="page-header">
+<div class="page-header" style="position: relative;">
     <h1>Web歯科技工指示書</h1>
+    <a href="{{ url_for('main.clinic_dashboard') }}" class="btn btn-outline-secondary btn-sm"
+       style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%);">医院トップへ</a>
 </div>
 
 <!-- ログイン医院情報の表示 -->
@@ -199,46 +206,53 @@
 <div class="input-zone" id="input-zone">
     <div class="mt-3 mb-2">
 
-        <!-- 歯科医院名（読み取り専用・メールアドレス併記） -->
-        <div class="mb-2">
-            <label class="form-label">事業者名</label>
-            <input type="text" id="businessName" class="form-control" value="{{ sender_name }}　ID:{{ user_email }}" readonly>
-        </div>
 
         <!-- メールアドレス（非表示・送信用） -->
         <input type="hidden" id="userEmail" value="{{ user_email }}">
 
         <!-- 担当歯科医師（プルダウン or テキスト） -->
         <div class="mb-2">
-            <label for="userName" class="form-label">担当歯科医師 <span class="text-danger">必須</span></label>
+            <label for="userName" class="form-label">担当 <span class="text-danger">必須</span></label>
             {% if dentists %}
             <select id="userName" class="form-control" required>
-                <option value="" disabled selected>担当医を選択してください</option>
+                <option value="" disabled {% if not default_user_name %}selected{% endif %}>担当医を選択してください</option>
                 {% for d in dentists %}
-                <option value="{{ d }}">{{ d }}</option>
+                <option value="{{ d }}" {% if d == default_user_name %}selected{% endif %}>{{ d }}</option>
                 {% endfor %}
             </select>
             {% else %}
-            <input type="text" id="userName" class="form-control" placeholder="担当医・担当者名を入力してください" required>
+            <input type="text" id="userName" class="form-control" placeholder="担当医・担当者名を入力してください" value="{{ default_user_name }}" required>
             {% endif %}
         </div>
 
         <!-- カルテ番号 -->
         <div class="mb-2">
-            <label for="ChartNumber" class="form-label">カルテ番号</label>
-            <input type="text" id="ChartNumber" class="form-control" placeholder="カルテ番号を入力してください">
+            <div class="d-flex align-items-center gap-3 mb-1">
+                <label for="ChartNumber" class="form-label mb-0">カルテ番号 <span class="text-danger">必須</span></label>
+                <label class="form-check-label d-flex align-items-center gap-1" style="font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" id="chartUnknown" class="form-check-input mt-0" onchange="toggleChartUnknown(this)">
+                    不明
+                </label>
+            </div>
+            <input type="text" id="ChartNumber" class="form-control" placeholder="カルテ番号を入力してください" required>
         </div>
 
         <!-- 患者名 -->
         <div class="mb-2">
-            <label for="PatientName" class="form-label">患者名 <span class="text-danger">必須</span></label>
-            <input type="text" id="PatientName" class="form-control" placeholder="患者名を入力してください" required>
+            <label class="form-label">患者名 <span class="text-danger">必須</span></label>
+            <div class="d-flex gap-2">
+                <input type="text" id="PatientLastName" class="form-control" placeholder="姓" required>
+                <input type="text" id="PatientFirstName" class="form-control" placeholder="名" required>
+            </div>
         </div>
 
         <!-- 患者名フリガナ -->
         <div class="mb-2">
-            <label for="PatientNameKana" class="form-label">フリガナ</label>
-            <input type="text" id="PatientNameKana" class="form-control" placeholder="カタカナで入力してください">
+            <label class="form-label">フリガナ</label>
+            <div class="d-flex gap-2">
+                <input type="text" id="PatientLastNameKana" class="form-control" placeholder="セイ">
+                <input type="text" id="PatientFirstNameKana" class="form-control" placeholder="メイ">
+            </div>
         </div>
 
         <!-- セット希望日時 -->
@@ -271,13 +285,19 @@
             <label for="projectType" class="form-label">製作物 <span class="text-danger">必須</span></label>
             <select id="projectType" class="form-control" required>
                 <option value="" disabled selected>製作物の種類を選択してください</option>
-                <option value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
-                <option value="replica-contrast">自家歯牙移植用レプリカ(造影剤有)</option>
-                <option value="Zirconia_Gradation">ジルコニアグラデーションクラウン</option>
-                <option value="milling_CADCAM">ミリング-CAD/CAM冠</option>
-                <option value="milling_PEEK">ミリング-PEEK冠</option>
-                <option value="milling_Zirconia">ミリング-ジルコニア</option>
-                <option value="other">その他</option>
+                <optgroup label="── 歯科医院 ──">
+                    <option value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
+                    <option value="replica-contrast">自家歯牙移植用レプリカ(造影剤有)</option>
+                    <option value="Zirconia_Gradation">ジルコニアグラデーションクラウン</option>
+                    <option value="other">その他</option>
+                </optgroup>
+                <optgroup label="── 歯科技工所 ──">
+                    <option value="milling_CADCAM">ミリング-CAD/CAM冠</option>
+                    <option value="milling_CADCAM_Inlay">ミリング-CAD/CAM Inlay</option>
+                    <option value="milling_CADCAM_Bridge">ミリング-CAD/CAM ブリッジ</option>
+                    <option value="milling_PEEK">ミリング-PEEK冠</option>
+                    <option value="milling_Zirconia">ミリング-ジルコニア</option>
+                </optgroup>
             </select>
         </div>
 
@@ -285,8 +305,24 @@
         <div class="mb-2">
             <label class="form-label">部位 <span class="text-danger">必須</span></label>
 
+            <!-- クラウン種別 -->
+            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="単冠" checked> 単冠</label>
+                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="連冠"> 連冠</label>
+                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="ブリッジ"> ブリッジ</label>
+                <label><input type="radio" name="crown_type" value="その他"> その他</label>
+            </div>
+
+            <!-- 凡例 -->
+            <div style="display: flex; gap: 12px; margin-bottom: 6px; font-size: 12px; align-items: center;">
+                <span>クリックで切替：</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span class="tooth-demo tooth-abutment-demo">支</span> 支台歯</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span class="tooth-demo tooth-missing-demo">✕</span> 欠損部</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span class="tooth-demo tooth-fabrication-demo"><span class="tooth-fab-circle"></span></span> 製作部(レプリカ、ガイド)</span>
+            </div>
+
             <!-- 上顎 -->
-            <div style="display: table; width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <div style="display: table; width: 100%; border-collapse: collapse; margin-top: 4px;">
                 <div style="display: table-row;">
                     {% for n in [8,7,6,5,4,3,2,1,1,2,3,4,5,6,7,8] %}
                     <div style="display: table-cell; text-align: center; background-color: #f8d7da; border: 1px solid #ddd; width: 30px;">{{ n }}</div>
@@ -294,9 +330,8 @@
                 </div>
                 <div style="display: table-row;">
                     {% for v in [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28] %}
-                    <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;">
-                        <input type="checkbox" name="teeth[]" value="{{ v }}" style="transform: scale(1.2);">
-                    </div>
+                    <div class="tooth-cell" data-value="{{ v }}" data-state="0" onclick="cycleToothState(this)"
+                         style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px; width: 30px; cursor: pointer; user-select: none; font-size: 11px; font-weight: bold; vertical-align: middle;"></div>
                     {% endfor %}
                 </div>
             </div>
@@ -305,9 +340,8 @@
             <div style="display: table; width: 100%; border-collapse: collapse; margin-top: 5px;">
                 <div style="display: table-row;">
                     {% for v in [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38] %}
-                    <div style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px;">
-                        <input type="checkbox" name="teeth[]" value="{{ v }}" style="transform: scale(1.2);">
-                    </div>
+                    <div class="tooth-cell" data-value="{{ v }}" data-state="0" onclick="cycleToothState(this)"
+                         style="display: table-cell; text-align: center; border: 1px solid #ddd; height: 30px; width: 30px; cursor: pointer; user-select: none; font-size: 11px; font-weight: bold; vertical-align: middle;"></div>
                     {% endfor %}
                 </div>
                 <div style="display: table-row;">
@@ -317,25 +351,76 @@
                 </div>
             </div>
 
-            <!-- クラウン種別 -->
-            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-top: 8px;">
-                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="単冠" checked> 単冠</label>
-                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="連冠"> 連冠</label>
-                <label style="margin-right: 15px;"><input type="radio" name="crown_type" value="ブリッジ"> ブリッジ</label>
-                <label><input type="radio" name="crown_type" value="その他"> その他</label>
-            </div>
+            <style>
+            .tooth-cell[data-state="1"] { background-color: #cce5ff; color: #004085; }
+            .tooth-cell[data-state="2"] { background-color: #e9ecef; color: #6c757d; }
+            .tooth-cell[data-state="3"] { background-color: #ffe0b2; }
+            .tooth-fab-circle { display: inline-block; width: 16px; height: 16px; border: 3px solid #dc3545; border-radius: 50%; vertical-align: middle; }
+            .tooth-demo { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 11px; font-weight: bold; border: 1px solid #ddd; border-radius: 2px; }
+            .tooth-abutment-demo    { background-color: #cce5ff; color: #004085; }
+            .tooth-missing-demo     { background-color: #e9ecef; color: #6c757d; }
+            .tooth-fabrication-demo { background-color: #ffe0b2; }
+            </style>
+            <script>
+            function cycleToothState(el) {
+                const next = (parseInt(el.dataset.state || 0) + 1) % 4;
+                el.dataset.state = next;
+                const labels = ['', '支', '✕', '<span class="tooth-fab-circle"></span>'];
+                el.innerHTML = labels[next];
+            }
+            </script>
 
             <!-- シェード -->
             <div style="margin-top: 15px;">
-                <label for="shade" style="display: block; margin-bottom: 5px;">シェード</label>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 10px; margin-bottom: 6px; flex-wrap: wrap;">
+                    <label style="margin: 0;">シェード</label>
+                    <label style="margin: 0; font-weight: normal;"><input type="radio" name="shade_system" value="classical" checked onchange="updateShadeOptions()"> VITAクラシカル</label>
+                    <label style="margin: 0; font-weight: normal;"><input type="radio" name="shade_system" value="3dmaster" onchange="updateShadeOptions()"> VITA 3D-MASTER</label>
+                </div>
+
                 <select id="shade" name="shade" class="form-control">
                     <option value="">指定なし(指定不要なケース)</option>
                     <option value="画像有り">画像有り</option>
-                    {% for s in ['A1','A2','A3','A3.5','A4','B1','B2','B3','B4','C1','C2','C3','C4','D2','D3','D4'] %}
+                    {% for s in ['A1','A2','A3','A3.5','A4','B1','B2','B3','B4','C1','C2','C3','C4','D1','D2','D3','D4'] %}
                     <option value="{{ s }}">{{ s }}</option>
                     {% endfor %}
                 </select>
             </div>
+
+            <script>
+            const shadeOptions = {
+                classical: [
+                    ['', '指定なし(指定不要なケース)'],
+                    ['画像有り', '画像有り'],
+                    ...['A1','A2','A3','A3.5','A4','B1','B2','B3','B4','C1','C2','C3','C4','D1','D2','D3','D4'].map(s => [s, s])
+                ],
+                '3dmaster': [
+                    ['', '指定なし(指定不要なケース)'],
+                    ['画像有り', '画像有り'],
+                    ...['0M1','0M2','0M3',
+                        '1M1','1M2',
+                        '2L1.5','2L2.5','2M1','2M2','2M3','2R1.5','2R2.5',
+                        '3L1.5','3L2.5','3M1','3M2','3M3','3R1.5','3R2.5',
+                        '4L1.5','4L2.5','4M1','4M2','4M3','4R1.5','4R2.5',
+                        '5M1','5M2','5M3'
+                    ].map(s => [s, s])
+                ]
+            };
+
+            function updateShadeOptions() {
+                const system = document.querySelector('input[name="shade_system"]:checked').value;
+                const select = document.getElementById('shade');
+                const current = select.value;
+                select.innerHTML = '';
+                shadeOptions[system].forEach(([val, label]) => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = label;
+                    if (val === current) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            }
+            </script>
         </div>
 
     </div>
@@ -352,16 +437,16 @@
 <div class="mb-2" style="max-width: 800px; margin: 10px auto 0 auto;">
     <label class="form-label">画像添付</label>
     <div id="imageUploadArea" class="image-upload-area">
-        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        <input type="file" id="imageInput" accept="image/*" style="display: none;" multiple>
         <button type="button" onclick="document.getElementById('imageInput').click()">+ 画像を追加</button>
-        <p style="margin: 6px 0 0; font-size: 0.85em; color: #666;">クリックして画像を1枚選択（繰り返し追加できます）</p>
+        <p style="margin: 6px 0 0; font-size: 0.85em; color: #666;">クリックまたは画像をここにドラッグ＆ドロップ</p>
     </div>
     <div id="imageThumbnails" class="image-thumbnails"></div>
 </div>
 
 <!-- ドロップゾーン -->
 <div class="drop-zone" id="dropZone">
-    <p>シェード画像、参考データがあれば添付してください。<br>ここにファイル・フォルダをドラッグ＆ドロップするか、クリックして選択してください</p>
+    <p>画像以外のDICOM、STL、参考データなどがあれば添付してください。<br>ここにファイル・フォルダをドラッグ＆ドロップするか、クリックして選択してください</p>
     <p style="font-size: 0.9em; color: #666;">
         最大ファイルサイズ: 2GB<br>
         対応ファイル: すべて
