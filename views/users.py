@@ -80,6 +80,75 @@ def login():
         return redirect(next_url)
 
     return render_template('users/login.html', form=form)
+@bp.route('/preregister', methods=['GET', 'POST'])
+def preregister():
+    if request.method == 'POST':
+        clinic_name  = request.form.get('clinic_name', '').strip()
+        director_name = request.form.get('director_name', '').strip()
+        phone        = request.form.get('phone', '').strip()
+        email        = request.form.get('email', '').strip().lower()
+
+        if not all([clinic_name, director_name, phone, email]):
+            flash('すべての項目を入力してください。', 'danger')
+            return render_template('users/preregister.html')
+
+        # 管理者への通知メール
+        try:
+            from extensions import mail
+            from flask_mail import Message
+            admin_msg = Message(
+                subject=f"【仮登録申請】{clinic_name}",
+                recipients=["shibuya8020@gmail.com"],
+                body=f"""新規アカウントの仮登録申請が届きました。
+
+【医院名】{clinic_name}
+【院長名】{director_name}
+【電話番号】{phone}
+【メールアドレス】{email}
+
+上記の内容でアカウントを作成し、ログイン情報をお送りください。
+
+--------------------------------
+渋谷歯科技工所 自動通知
+"""
+            )
+            mail.send(admin_msg)
+
+            # 申請者への確認メール
+            confirm_msg = Message(
+                subject="【渋谷歯科技工所】アカウント仮登録を受け付けました",
+                recipients=[email],
+                body=f"""{clinic_name} {director_name} 様
+
+アカウントの仮登録申請を受け付けました。
+内容を確認の上、担当者よりログイン情報をお送りします。
+今しばらくお待ちください。
+
+【申請内容】
+医院名　　：{clinic_name}
+院長名　　：{director_name}
+電話番号　：{phone}
+メール　　：{email}
+
+--------------------------------
+渋谷歯科技工所
+〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+TEL: 048-961-8151
+email: shibuya8020@gmail.com
+"""
+            )
+            mail.send(confirm_msg)
+        except Exception as e:
+            current_app.logger.error("仮登録メール送信失敗: %s", e)
+            flash('メール送信に失敗しました。お手数ですが直接お電話ください。', 'danger')
+            return render_template('users/preregister.html')
+
+        flash('仮登録を受け付けました。ログイン情報をメールでお送りします。', 'success')
+        return redirect(url_for('users.login'))
+
+    return render_template('users/preregister.html')
+
+
 @bp.route('/logout')
 @login_required
 def logout():
