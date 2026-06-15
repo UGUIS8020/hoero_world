@@ -450,7 +450,7 @@ async function uploadFiles(files) {
                 // 修正：throw ではなく直接処理
                 console.error("HTTPエラー:", xhr.status, xhr.statusText);
                 showStatus(
-                    "エラーが発生しました: " +
+                    "エラーが発生しました (HTTP " + xhr.status + "): " +
                         (xhr.statusText || "アップロードに失敗しました"),
                     "error"
                 );
