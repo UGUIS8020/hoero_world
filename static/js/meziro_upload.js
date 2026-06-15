@@ -717,6 +717,7 @@ function toggleChartUnknown(checkbox) {
 // ---- 画像添付エリア ----
 function renderImageThumbnails() {
     const container = document.getElementById("imageThumbnails");
+    if (!container) return;
     container.innerHTML = "";
     selectedImages.forEach((file, index) => {
         const item = document.createElement("div");
@@ -742,34 +743,39 @@ function renderImageThumbnails() {
     });
 }
 
-document.getElementById("imageInput").addEventListener("change", function (e) {
-    Array.from(e.target.files).forEach(file => {
-        if (file) selectedImages.push(file);
+const imageInputEl = document.getElementById("imageInput");
+if (imageInputEl) {
+    imageInputEl.addEventListener("change", function (e) {
+        Array.from(e.target.files).forEach(file => {
+            if (file) selectedImages.push(file);
+        });
+        renderImageThumbnails();
+        this.value = "";
     });
-    renderImageThumbnails();
-    this.value = "";
-});
+}
 
 // 画像エリアのドラッグ＆ドロップ
 const imageUploadArea = document.getElementById("imageUploadArea");
 
-imageUploadArea.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    imageUploadArea.classList.add("drag-over");
-});
+if (imageUploadArea) {
+    imageUploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        imageUploadArea.classList.add("drag-over");
+    });
 
-imageUploadArea.addEventListener("dragleave", () => {
-    imageUploadArea.classList.remove("drag-over");
-});
+    imageUploadArea.addEventListener("dragleave", () => {
+        imageUploadArea.classList.remove("drag-over");
+    });
 
-imageUploadArea.addEventListener("drop", (e) => {
-    e.preventDefault();
-    imageUploadArea.classList.remove("drag-over");
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
-    if (files.length === 0) return;
-    files.forEach(file => selectedImages.push(file));
-    renderImageThumbnails();
-});
+    imageUploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        imageUploadArea.classList.remove("drag-over");
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+        if (files.length === 0) return;
+        files.forEach(file => selectedImages.push(file));
+        renderImageThumbnails();
+    });
+}
 
 document.getElementById("uploadButton").addEventListener("click", function () {
     const requiredFields = [
