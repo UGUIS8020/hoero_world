@@ -700,7 +700,20 @@ def prescription_list():
     # 新しい順にソート
     items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
 
-    return render_template('main/prescription_list.html', prescriptions=items)
+    # ページネーション（50件ごと）
+    PER_PAGE = 60
+    page = request.args.get('page', 1, type=int)
+    total = len(items)
+    total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * PER_PAGE
+    items = items[start:start + PER_PAGE]
+
+    return render_template('main/prescription_list.html',
+                           prescriptions=items,
+                           page=page,
+                           total_pages=total_pages,
+                           total=total)
 
 
 @bp.route('/prescription/view/<prescription_id>', methods=['GET'])
@@ -1038,25 +1051,28 @@ def clinic_new():
         from werkzeug.security import generate_password_hash
 
         account_type = request.form.get('account_type', 'clinic')  # 'clinic' or 'lab'
-        email       = request.form.get('email', '').strip()
-        password    = request.form.get('password', '').strip()
-        sender_name = request.form.get('sender_name', '').strip()
-        full_name   = request.form.get('full_name', '').strip()
-        phone       = request.form.get('phone', '').strip()
-        postal_code = request.form.get('postal_code', '').strip()
-        prefecture  = request.form.get('prefecture', '').strip()
-        address     = request.form.get('address', '').strip()
-        building    = request.form.get('building', '').strip()
-        dentists    = [d.strip() for d in request.form.getlist('dentists[]') if d.strip()]
+        email          = request.form.get('email', '').strip()
+        user_id_manual = request.form.get('user_id_manual', '').strip()
+        password       = request.form.get('password', '').strip()
+        sender_name    = request.form.get('sender_name', '').strip()
+        full_name      = request.form.get('full_name', '').strip()
+        phone          = request.form.get('phone', '').strip()
+        postal_code    = request.form.get('postal_code', '').strip()
+        prefecture     = request.form.get('prefecture', '').strip()
+        address        = request.form.get('address', '').strip()
+        building       = request.form.get('building', '').strip()
+        dentists       = [d.strip() for d in request.form.getlist('dentists[]') if d.strip()]
 
-        if not email or not password or not sender_name:
-            flash('名称・メールアドレス・パスワードは必須です。')
+        # メールかユーザーIDのどちらかが必須
+        user_id = email if email else user_id_manual
+        if not user_id or not password or not sender_name:
+            flash('名称・メールアドレス（またはユーザーID）・パスワードは必須です。')
             return redirect(url_for('main.clinic_new'))
 
-        # メール重複チェック
-        existing = users_table.get_item(Key={'user_id': email}).get('Item')
+        # 重複チェック
+        existing = users_table.get_item(Key={'user_id': user_id}).get('Item')
         if existing:
-            flash('そのメールアドレスはすでに登録されています。')
+            flash(f'「{user_id}」はすでに登録されています。')
             return redirect(url_for('main.clinic_new'))
 
         # clinic_id 自動採番
@@ -1084,9 +1100,8 @@ def clinic_new():
             clinic_id = f"D{max_num + 1:03d}"
 
         now = datetime.now(pytz_timezone('Asia/Tokyo')).isoformat()
-        users_table.put_item(Item={
-            'user_id':       email,
-            'email':         email,
+        new_item = {
+            'user_id':       user_id,
             'sender_name':   sender_name,
             'display_name':  sender_name,
             'full_name':     full_name,
@@ -1102,7 +1117,10 @@ def clinic_new():
             'dentists':      dentists,
             'created_at':    now,
             'updated_at':    now,
-        })
+        }
+        if email:
+            new_item['email'] = email
+        users_table.put_item(Item=new_item)
         flash(f'{sender_name}（{clinic_id}）を登録しました。')
         return redirect(url_for('main.clinic_list'))
 
@@ -1123,6 +1141,26 @@ def prescription():
         user_email=user_email,
         default_user_name=full_name,
     )
+
+
+@bp.route('/dentist/add', methods=['POST'])
+@login_required
+def dentist_add():
+    import json as _json
+    name = (request.json or {}).get("name", "").strip() if request.is_json else request.form.get("name", "").strip()
+    if not name:
+        return _json.dumps({"error": "名前が空です"}), 400, {"Content-Type": "application/json"}
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    dentists = list(getattr(current_user, "dentists", []) or [])
+    if name not in dentists:
+        dentists.append(name)
+        users_table.update_item(
+            Key={"user_id": current_user.user_id},
+            UpdateExpression="SET dentists = :d",
+            ExpressionAttributeValues={":d": dentists},
+        )
+        current_user.dentists = dentists
+    return _json.dumps({"dentists": dentists}), 200, {"Content-Type": "application/json"}
 
 
 @bp.route('/meziro_upload_index', methods=['GET'])
@@ -1520,6 +1558,34 @@ email: shibuya8020@gmail.com
 
     log.info("=== /meziro_upload END No.%s files=%d ===", id_str, len(uploaded_urls))
     return jsonify({'message': resp_message, 'files': uploaded_urls})
+
+
+@bp.route('/admin/dscore/import', methods=['POST'])
+@login_required
+def dscore_import():
+    if not current_user.is_administrator:
+        return "権限がありません", 403
+    from utils.dscore_import import import_dscore_emails
+    found, imported, skipped = import_dscore_emails(current_app._get_current_object())
+    if found == 0:
+        flash("D-score: メールが見つかりませんでした（Gmail接続またはメールなし）")
+    else:
+        flash(f"D-score: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
+    return redirect(url_for("main.prescription_list"))
+
+
+@bp.route('/admin/itero/import', methods=['POST'])
+@login_required
+def itero_import():
+    if not current_user.is_administrator:
+        return "権限がありません", 403
+    from utils.itero_import import import_itero_emails
+    found, imported, skipped = import_itero_emails(current_app._get_current_object())
+    if found == 0:
+        flash("iTero: メールが見つかりませんでした（Gmail接続またはメールなし）")
+    else:
+        flash(f"iTero: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
+    return redirect(url_for("main.prescription_list"))
 
 
 @bp.route('/meziro/download/<path:key>')

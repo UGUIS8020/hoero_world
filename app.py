@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
 
 from extensions import login_manager, mail  # db, migrate を削除
-from utils.common_utils import setup_scheduled_cleanup
+from utils.common_utils import setup_scheduled_cleanup, setup_mail_import_scheduler
 
 # 1) .env を最初にロード
 load_dotenv(dotenv_path="/var/www/hoero_world/.env")
@@ -80,6 +80,7 @@ login_manager.localize_callback = lambda *args, **kwargs: 'このページにア
 # 定期処理
 with flask_app.app_context():
     setup_scheduled_cleanup(flask_app)
+setup_mail_import_scheduler(flask_app)
 
 # Blueprint登録
 from views.main import bp as main_bp

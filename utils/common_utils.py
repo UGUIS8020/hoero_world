@@ -403,3 +403,39 @@ def setup_scheduled_cleanup(app):
     atexit.register(lambda: scheduler.shutdown())
 
 
+def setup_mail_import_scheduler(app):
+    """
+    D-score・iTero メールの定期取込スケジューラを設定する。
+    1時間ごとに自動実行。
+    """
+    import os
+    # Flask debug モードのリローダープロセスでは二重起動しない
+    if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+
+    mail_scheduler = BackgroundScheduler()
+
+    @mail_scheduler.scheduled_job("interval", hours=1, id="mail_import")
+    def mail_import_job():
+        logger.info("定期メール取込を開始")
+        try:
+            from utils.dscore_import import import_dscore_emails
+            found, imported, skipped = import_dscore_emails(app)
+            logger.info("D-score: %d件取得 / %d件登録 / %d件スキップ", found, imported, skipped)
+        except Exception as e:
+            logger.error("D-score 定期取込エラー: %s", e)
+
+        try:
+            from utils.itero_import import import_itero_emails
+            found, imported, skipped = import_itero_emails(app)
+            logger.info("iTero: %d件取得 / %d件登録 / %d件スキップ", found, imported, skipped)
+        except Exception as e:
+            logger.error("iTero 定期取込エラー: %s", e)
+
+    mail_scheduler.start()
+    logger.info("メール定期取込スケジューラを開始しました（1時間ごと）")
+
+    import atexit
+    atexit.register(lambda: mail_scheduler.shutdown())
+
+

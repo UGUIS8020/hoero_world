@@ -362,16 +362,13 @@
     </div>
     <div class="mb-2">
         <label for="userName" class="form-label">担当</label>
-        {% if dentists %}
-        <select id="userName" class="form-control" required>
-            <option value="" disabled selected>担当医を選択してください</option>
+        <input type="text" id="userName" class="form-control" list="dentist-list"
+               placeholder="担当医を選択または入力" required autocomplete="off">
+        <datalist id="dentist-list">
             {% for d in dentists %}
-            <option value="{{ d }}">{{ d }}</option>
+            <option value="{{ d }}">
             {% endfor %}
-        </select>
-        {% else %}
-        <input type="text" id="userName" class="form-control" placeholder="担当医・担当者名を入力してください" required>
-        {% endif %}
+        </datalist>
     </div>
 
     <div class="mb-2">
@@ -658,6 +655,32 @@ switchProjectTab('clinic');
     <p>shibuya8020@gmailで検索できると思います</p>
 
     <script src="{{ url_for('static', filename='js/meziro_upload.js') }}"></script>
+<script>
+var isAuthenticated = {{ current_user.is_authenticated | tojson }};
+
+function addDentist(silent) {
+    var name = document.getElementById('userName').value.trim();
+    if (!name || !isAuthenticated) { return; }
+    fetch('/dentist/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token },
+        body: JSON.stringify({ name: name })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.dentists) {
+            var dl = document.getElementById('dentist-list');
+            dl.innerHTML = '';
+            data.dentists.forEach(function(d) {
+                var opt = document.createElement('option');
+                opt.value = d;
+                dl.appendChild(opt);
+            });
+        }
+    })
+    .catch(function(e) { console.error(e); });
+}
+</script>
 
 <!-- <script>
     const input = document.getElementById('multi-file-input');

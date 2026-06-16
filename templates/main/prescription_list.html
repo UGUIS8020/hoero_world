@@ -23,9 +23,11 @@
     .status-処理済み { background-color: #dee2e6; color: #6c757d; }
     .status-badge.clickable { cursor: pointer; }
     .status-badge.clickable:hover { opacity: 0.75; }
-    tr.date-today   { background-color: #fff3cd; }
+    tr.date-today   { background-color: #f5c6cb; }
     tr.date-soon    { background-color: #fde8e8; }
-    tr.processed    { background-color: #e9ecef !important; color: #555; }
+    tr.date-week    { background-color: #d6eaf8; }
+    tr.date-future  { background-color: #d5f5e3; }
+    tr.processed    { background-color: #e2e3e5 !important; color: #555; }
 </style>
 
 <div class="page-header" style="position: relative;">
@@ -33,6 +35,23 @@
     {% if not current_user.is_administrator %}
     <a href="{{ url_for('main.clinic_dashboard') }}" class="btn btn-outline-secondary btn-sm"
        style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%);">医院トップへ</a>
+    {% else %}
+    <div style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); display:flex; gap:8px; margin:0;">
+        <form method="POST" action="{{ url_for('main.dscore_import') }}" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm"
+                    style="background:#1a73e8; color:#fff; border:none; padding:5px 14px; border-radius:4px; font-size:13px;">
+                D-score 取込
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('main.itero_import') }}" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm"
+                    style="background:#6f42c1; color:#fff; border:none; padding:5px 14px; border-radius:4px; font-size:13px;">
+                iTero 取込
+            </button>
+        </form>
+    </div>
     {% endif %}
 </div>
 
@@ -51,6 +70,7 @@
                 <th>患者名</th>
                 <th>セット日</th>
                 <th>製作物</th>
+                <th>受信元</th>
                 <th>状態</th>
             </tr>
         </thead>
@@ -64,8 +84,11 @@
                 {% endif %}
                 <td>{{ p.user_name }}</td>
                 <td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td>
-                <td>{{ p.appointment_date[5:] if p.appointment_date else '' }} {{ p.appointment_hour }}時</td>
+                <td style="white-space: nowrap;">{{ p.appointment_date[5:] if p.appointment_date else '' }} {{ p.appointment_hour }}時</td>
                 <td>{{ p.project_type }}</td>
+                <td style="white-space: nowrap; font-size: 0.85em; color: #666;">
+                    {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% else %}website{% endif %}
+                </td>
                 <td onclick="event.stopPropagation()">
                     {% if p.status in ['受付中', '処理済み'] %}
                     <span class="status-badge status-{{ p.status }} clickable"
@@ -84,6 +107,31 @@
     <div class="alert alert-info text-center">まだ指示書はありません。</div>
     {% endif %}
 
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center mt-3 px-1">
+        <small class="text-muted">全 {{ total }} 件中 {{ (page-1)*60+1 }}〜{{ [page*60, total]|min }} 件表示</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.prescription_list', page=page-1) }}">‹</a>
+                </li>
+                {% for p in range(1, total_pages+1) %}
+                    {% if p == page %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                    {% elif p == 1 or p == total_pages or (p >= page-2 and p <= page+2) %}
+                    <li class="page-item"><a class="page-link" href="{{ url_for('main.prescription_list', page=p) }}">{{ p }}</a></li>
+                    {% elif p == page-3 or p == page+3 %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.prescription_list', page=page+1) }}">›</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
     <div class="text-center mt-3">
         <a href="{{ url_for('main.prescription') }}" class="btn btn-primary">指示書を新規作成</a>
     </div>
@@ -94,8 +142,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     var today = new Date();
     today.setHours(0, 0, 0, 0);
-    var in3days = new Date(today);
-    in3days.setDate(today.getDate() + 3);
+    var in2days = new Date(today);
+    in2days.setDate(today.getDate() + 2);
+    var in7days = new Date(today);
+    in7days.setDate(today.getDate() + 7);
 
     document.querySelectorAll('tr[data-date]').forEach(function(tr) {
         if (tr.dataset.status === '処理済み') {
@@ -108,8 +158,12 @@ document.addEventListener('DOMContentLoaded', function() {
         date.setHours(0, 0, 0, 0);
         if (date.getTime() === today.getTime()) {
             tr.classList.add('date-today');
-        } else if (date > today && date <= in3days) {
+        } else if (date > today && date <= in2days) {
             tr.classList.add('date-soon');
+        } else if (date > in2days && date <= in7days) {
+            tr.classList.add('date-week');
+        } else if (date > in7days) {
+            tr.classList.add('date-future');
         }
     });
 });
