@@ -41,26 +41,11 @@ from flask_mail import Mail, Message
 
 # ローカルモジュール
 from extensions import db, mail
-from models.dynamodb_category import list_blog_categories_all  # ← 変更
 from models.dynamodb_inquiry import InquiryDDB
 from models.main import (
-    BlogCategoryForm,
-    BlogPostForm,
-    BlogSearchForm,
     InquiryForm,
-    UpdateCategoryForm,
 )
 from types import SimpleNamespace
-from utils.blog_dynamo import (
-    create_blog_post_in_dynamo,
-    delete_post_by_id,
-    get_post_by_id,
-    list_recent_posts,
-    update_post_fields,
-    list_posts_by_category,
-    list_all_posts,
-    paginate_posts,
-)
 from utils.common_utils import (
     ZipHandler,
     cleanup_temp_files,
@@ -129,14 +114,6 @@ def extract_youtube_id(url: str | None) -> str:
 
 @bp.route('/')
 def index():
-    form = BlogSearchForm()
-    page = request.args.get('page', 1, type=int)
-
-    # blog（必要なら）
-    all_posts = list_all_posts(limit=1000)
-    blog_posts = paginate_posts(all_posts, page=page, per_page=10)
-    blog_categories = list_blog_categories_all()
-
     # =========================
     # ★トップに出す STL掲示板（最新2件）
     #   サムネ優先順位: YouTube → STL → 画像
@@ -247,102 +224,11 @@ def index():
 
     return render_template(
         'main/index.html',
-        blog_posts=blog_posts,
-        blog_categories=blog_categories,
-        form=form,
         top_stl_posts=top_stl_posts,
         recent_stl_posts=recent_stl_posts,
         autotransplant_headlines=autotransplant_headlines,
     )
 
-@bp.route('/category_maintenance', methods=['GET', 'POST'])
-@login_required
-def category_maintenance():
-    if not current_user.is_administrator:
-        abort(403)
-
-    page = request.args.get('page', 1, type=int)
-    per_page = 10
-
-    # DynamoDB から全カテゴリ取得
-    items = list_blog_categories_all()
-    total = len(items)
-
-    # ページング（単純に Python でスライス）
-    start = (page - 1) * per_page
-    end = start + per_page
-    page_items_raw = items[start:end]
-
-    # テンプレートで今まで通り blog_category.id / blog_category.name / blog_category.category
-    page_items = [
-        SimpleNamespace(
-            id=int(it["category_id"]),
-            name=it.get("name", ""),
-            category=it.get("name", ""),
-        )
-        for it in page_items_raw
-    ]
-
-    blog_categories = SimplePagination(
-        items=page_items,
-        page=page,
-        per_page=per_page,
-        total=total,
-    )
-
-    form = BlogCategoryForm()
-    if form.validate_on_submit():
-        # RDS ではなく Dynamo に保存
-        new_id = create_blog_category_in_dynamo(form.category.data)
-        print(f"Dynamo にカテゴリ追加: id={new_id}, name={form.category.data}")
-        flash('ブログカテゴリが追加されました', 'success')
-        return redirect(url_for('main.category_maintenance'))
-    elif form.errors:
-        form.category.data = ""
-        flash(form.errors['category'][0], 'danger')
-
-    return render_template(
-        'main/category_maintenance.html',
-        blog_categories=blog_categories,
-        form=form
-    )
-
-@bp.route('/<int:blog_category_id>/blog_category', methods=['GET', 'POST'])
-@login_required
-def blog_category(blog_category_id):
-    if not current_user.is_administrator:
-        abort(403)
-
-    item = get_blog_category_in_dynamo(blog_category_id)
-    if not item:
-        abort(404)
-
-    form = UpdateCategoryForm(blog_category_id)
-
-    if form.validate_on_submit():
-        update_blog_category_in_dynamo(blog_category_id, form.category.data)
-        flash('ブログカテゴリが更新されました', 'success')
-        return redirect(url_for('main.category_maintenance'))
-
-    elif request.method == 'GET':
-        form.category.data = item.get("name", "")
-
-    return render_template('main/blog_category.html', form=form)
-
-@bp.route('/<int:blog_category_id>/delete_category', methods=['GET', 'POST'])
-@login_required
-def delete_category(blog_category_id):
-    if not current_user.is_administrator:
-        abort(403)
-
-    # あるかどうかチェック
-    item = get_blog_category_in_dynamo(blog_category_id)
-    if not item:
-        abort(404)
-
-    delete_blog_category_in_dynamo(blog_category_id)
-    flash('ブログカテゴリが削除されました', 'success')
-    return redirect(url_for('main.category_maintenance'))
 
 def get_dynamo_user_id_by_email(email: str) -> str | None:
     """
@@ -359,136 +245,6 @@ def get_dynamo_user_id_by_email(email: str) -> str | None:
     if not items:
         return None
     return items[0]["user_id"]
-
-@bp.route('/create_post', methods=['GET', 'POST'])
-@login_required
-def create_post():
-    form = BlogPostForm()
-    if form.validate_on_submit():
-        try:
-            print("フォーム検証成功")
-            print(f"タイトル: {form.title.data}")
-            print(f"カテゴリー: {form.category.data}")
-            print(f"RDSユーザーID: {current_user.id}")
-            print(f"メール: {current_user.email}")
-
-            dynamo_user_id = get_dynamo_user_id_by_email(current_user.email)
-            print(f"Dynamo user_id: {dynamo_user_id}")
-
-            if not dynamo_user_id:
-                raise RuntimeError("hoero-users に対応するユーザーが見つかりません")
-
-            # 画像アップロード
-            if form.picture.data:
-                pic = add_featured_image(form.picture.data)
-                print(f"画像保存: {pic}")
-            else:
-                pic = ''
-                print("画像なし")
-
-            # 動画アップロード（追加）
-            if form.video.data:
-                video = add_featured_video(form.video.data)
-                print(f"動画保存: {video}")
-            else:
-                video = ''
-                print("動画なし")
-
-            author_name = current_user.display_name
-
-            # 追加：YouTube URL（未入力なら空文字）
-            youtube_url = (form.youtube_url.data or "").strip()
-            print("YouTube URL:", youtube_url)
-
-            # ★ カテゴリが存在しない／未設定でもOKにする
-            if form.category.choices:
-                category_id = form.category.data
-                category_name_map = dict(form.category.choices)
-                category_name = category_name_map.get(category_id, "")
-            else:
-                category_id = None
-                category_name = ""
-
-            post_id = create_blog_post_in_dynamo(
-                user_id=dynamo_user_id,
-                title=form.title.data,
-                text=form.text.data,
-                summary=form.summary.data or "",
-                featured_image=pic,
-                featured_video=video,
-                youtube_url=youtube_url,          # ← 追加
-                author_name=author_name,
-                category_id=category_id,
-                category_name=category_name,
-            )
-            print(f"DynamoDB に投稿作成, post_id={post_id}")
-
-            flash('ブログ投稿が作成されました', 'success')
-            return redirect(url_for('main.blog_post', blog_post_id=post_id))
-
-        except Exception as e:
-            print(f"エラー発生: {e}")
-            flash(f'エラーが発生しました: {str(e)}', 'danger')
-    else:
-        print("フォーム検証失敗")
-        print(f"エラー: {form.errors}")
-
-    return render_template('main/create_post.html', form=form)
-
-
-def _blog_categories_table():
-    return current_app.config["BLOG_CATEGORIES_TABLE"]  # app.config で設定する
-
-def list_blog_categories_all():
-    """DynamoDB からカテゴリを全件取得して ID 昇順でソート"""
-    table = _blog_categories_table()
-    resp = table.scan()
-    items = resp.get("Items", [])
-
-    def _id(x):
-        try:
-            return int(x.get("category_id", 0))
-        except Exception:
-            return 0
-
-    items.sort(key=_id)
-    return items
-
-def create_blog_category_in_dynamo(name: str) -> int:
-    """新しいカテゴリを作成して category_id(int) を返す"""
-    items = list_blog_categories_all()
-    if items:
-        max_id = max(int(i.get("category_id", 0)) for i in items)
-        new_id = max_id + 1
-    else:
-        new_id = 1
-
-    table = _blog_categories_table()
-    table.put_item(
-        Item={
-            "category_id": str(new_id),
-            "name": name,
-        }
-    )
-    return new_id
-
-def get_blog_category_in_dynamo(category_id: int):
-    table = _blog_categories_table()
-    resp = table.get_item(Key={"category_id": str(category_id)})
-    return resp.get("Item")
-
-def update_blog_category_in_dynamo(category_id: int, new_name: str):
-    table = _blog_categories_table()
-    table.update_item(
-        Key={"category_id": str(category_id)},
-        UpdateExpression="SET #nm = :n",
-        ExpressionAttributeNames={"#nm": "name"},
-        ExpressionAttributeValues={":n": new_name},
-    )
-
-def delete_blog_category_in_dynamo(category_id: int):
-    table = _blog_categories_table()
-    table.delete_item(Key={"category_id": str(category_id)})
 
 
 class SimplePagination:
@@ -518,109 +274,6 @@ class SimplePagination:
     @property
     def next_num(self):
         return self.page + 1
-
-@bp.route("/blog_maintenance")
-@login_required
-def blog_maintenance():
-    posts = list_recent_posts(limit=50)   # DynamoDB から取得
-    return render_template("main/blog_maintenance.html", blog_posts=posts)
-
-# ========================================
-# 一般ユーザー向けブログ表示ページ
-# ========================================
-
-@bp.route("/blog")
-def blog_list():
-    """ブログ一覧ページ（一般公開）"""
-    page = request.args.get("page", 1, type=int)
-    per_page = 12
-    category_id = request.args.get("category")
-    
-    # 全投稿を取得
-    all_posts = list_recent_posts(limit=1000)
-    
-    # 公開フラグでフィルタリング
-    all_posts = [p for p in all_posts if p.get("is_published", True)]
-    
-    # カテゴリでフィルタリング
-    if category_id:
-        all_posts = [p for p in all_posts if p.get("category_id") == str(category_id)]
-    
-    # ページネーション処理
-    total = len(all_posts)
-    start = (page - 1) * per_page
-    end = start + per_page
-    posts_raw = all_posts[start:end]
-    
-    # ★ index と同じように SimpleNamespace に変換 + youtube_id を生成
-    blog_posts = []
-    for it in posts_raw:
-        try:
-            pid = int(it.get("post_id"))
-        except Exception:
-            continue
-        
-        # YouTube ID を抽出
-        youtube_url = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
-        yid = it.get("youtube_id", "") or extract_youtube_id(youtube_url)
-        
-        blog_posts.append(
-            SimpleNamespace(
-                post_id=pid,
-                title=it.get("title", ""),
-                summary=it.get("summary", ""),
-                text=it.get("text", ""),
-                date=it.get("date", ""),
-                author_name=it.get("author_name", ""),
-                category_name=it.get("category_name", ""),
-                
-                featured_image=it.get("featured_image", ""),
-                featured_video=it.get("featured_video", ""),
-                featured_thumbnail=it.get("featured_thumbnail", ""),
-                
-                youtube_id=yid,
-                youtube_embed_url=it.get("youtube_embed_url", ""),
-                youtube_url=it.get("youtube_url", ""),
-            )
-        )
-    
-    pagination = SimplePagination(
-        items=blog_posts,
-        page=page,
-        per_page=per_page,
-        total=total
-    )
-    
-    # カテゴリ一覧を取得
-    categories = list_all_blog_categories()
-    
-    return render_template(
-        "main/blog_list.html",
-        blog_posts=blog_posts,
-        pagination=pagination,
-        categories=categories,
-        current_category=category_id
-    )
-
-
-# ========================================
-# ヘルパー関数（必要に応じて追加）
-# ========================================
-
-def list_all_blog_categories():
-    """全カテゴリを取得"""
-    table = _blog_categories_table()
-    resp = table.scan()
-    items = resp.get("Items", [])
-    # category_id でソート
-    return sorted(items, key=lambda x: int(x.get("category_id", 0)))
-
-
-def get_blog_post_in_dynamo(post_id: str):
-    """単一の投稿を取得"""
-    table = _blog_posts_table()  # この関数が既にあると仮定
-    resp = table.get_item(Key={"post_id": post_id})
-    return resp.get("Item")
 
 
 @bp.route('/colors', methods=['GET', 'POST'])
@@ -816,9 +469,6 @@ def colors_image_upload():
 
 @bp.route('/ugu_box')
 def ugu_box():
-    # page = request.args.get('page', 1, type=int)
-    # blog_posts = BlogPost.query.order_by(BlogPost.id.desc()).paginate(page=page, per_page=10)
-
     s3_files = []
     try:
         response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix='ugu_box/')
@@ -1095,7 +745,17 @@ def prescription_view(prescription_id):
         or p.get("user_id") == current_user.email
         or (p.get("clinic_id") and p.get("clinic_id") == getattr(current_user, "clinic_id", None))
     )
-    return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete)
+    # ユーザーテーブルから電話番号を取得
+    user_phone = ""
+    try:
+        users_table = current_app.config["HOERO_USERS_TABLE"]
+        uid = p.get("user_id")
+        if uid:
+            u = users_table.get_item(Key={"user_id": uid}).get("Item", {})
+            user_phone = u.get("phone", "")
+    except Exception:
+        pass
+    return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete, user_phone=user_phone)
 
 
 @bp.route('/prescription/delete_file/<prescription_id>', methods=['POST'])
@@ -1337,6 +997,7 @@ def meziro_upload():
     business_name    = request.form.get('businessName', '')
     user_name        = request.form.get('userName', '')
     user_email       = request.form.get('userEmail', '')
+    user_phone       = request.form.get('userPhone', '')
     patient_name     = request.form.get('patientName', '') or request.form.get('PatientName', '')  # どちらか来る想定なら保険
     patient_name_kana = request.form.get('patientNameKana', '') or request.form.get('PatientNameKana', '')
     chart_number     = request.form.get('chartNumber', '')
@@ -1661,6 +1322,7 @@ email: shibuya8020@gmail.com
             prescription_item = {
                 "prescription_id": id_str,
                 "user_id":         user_email,
+                "user_phone":      user_phone,
                 "business_name":   business_name,
                 "user_name":       user_name,
                 "patient_name":    patient_name,
@@ -1849,311 +1511,7 @@ def to_youtube_embed(url: str | None) -> str:
 
     return ""
 
-# @bp.route('/<int:blog_post_id>/blog_post')
-# def blog_post(blog_post_id):
-#     form = BlogSearchForm()
 
-#     item = get_post_by_id(blog_post_id)
-#     if not item:
-#         abort(404)
-
-#     # --- ★ここで最新の表示名を解決する ---
-#     users_table = current_app.config.get("HOERO_USERS_TABLE")
-#     latest_author_name = item.get("author_name", "")  # fallback（記事に保存されてる名前）
-
-#     uid = str(item.get("user_id", ""))  # email or uuid
-#     if users_table and uid and "@" in uid:  # emailっぽい場合だけ users を引く（uuid混在対策）
-#         try:
-#             resp = users_table.get_item(Key={"user_id": uid})
-#             u = resp.get("Item")
-#             if u and u.get("display_name"):
-#                 latest_author_name = u["display_name"]
-#         except Exception as e:
-#             print(f"[WARN] users_table lookup failed: {uid} / {e}")
-
-#     # YouTube
-#     youtube_url = item.get("youtube_url", "")
-#     youtube_embed_url = to_youtube_embed(youtube_url)
-
-#     post = SimpleNamespace(
-#         id=int(item.get("post_id")),
-#         title=item.get("title", ""),
-#         text=item.get("text", ""),
-#         summary=item.get("summary", ""),
-#         featured_image=item.get("featured_image", ""),
-#         featured_video=item.get("featured_video", ""),
-#         youtube_url=youtube_url,
-#         youtube_embed_url=youtube_embed_url,
-#         date=item.get("date", ""),
-#         author_name=latest_author_name,   # ★ここがポイント
-#         category_name=item.get("category_name", ""),
-#     )
-
-#     # recent_posts（ここは表示名を出してないのでそのままでOK）
-#     recent_items = list_recent_posts(limit=5)
-#     recent_blog_posts = []
-#     for it in recent_items:
-#         try:
-#             pid = int(it.get("post_id"))
-#         except Exception:
-#             continue
-
-#         yurl = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
-#         yid = extract_youtube_id(yurl)
-
-#         recent_blog_posts.append(
-#             SimpleNamespace(
-#                 id=pid,
-#                 title=it.get("title", ""),
-#                 featured_image=it.get("featured_image", ""),
-#                 youtube_id=yid,
-#             )
-#         )
-
-#     return render_template(
-#         'main/blog_post.html',
-#         post=post,
-#         recent_blog_posts=recent_blog_posts,
-#         blog_categories=[],
-#         form=form
-#     )
-
-
-@bp.route('/blog/<int:blog_post_id>')  # ← URLを変更
-def blog_post(blog_post_id):
-    form = BlogSearchForm()
-
-    item = get_post_by_id(blog_post_id)
-    if not item:
-        abort(404)
-
-    # --- 最新の表示名を解決する ---
-    users_table = current_app.config.get("HOERO_USERS_TABLE")
-    latest_author_name = item.get("author_name", "")
-
-    uid = str(item.get("user_id", ""))
-    if users_table and uid and "@" in uid:
-        try:
-            resp = users_table.get_item(Key={"user_id": uid})
-            u = resp.get("Item")
-            if u and u.get("display_name"):
-                latest_author_name = u["display_name"]
-        except Exception as e:
-            print(f"[WARN] users_table lookup failed: {uid} / {e}")
-
-    # YouTube
-    youtube_url = item.get("youtube_url", "")
-    youtube_embed_url = to_youtube_embed(youtube_url)
-
-    post = SimpleNamespace(
-        id=int(item.get("post_id")),
-        title=item.get("title", ""),
-        text=item.get("text", ""),
-        summary=item.get("summary", ""),
-        featured_image=item.get("featured_image", ""),
-        featured_video=item.get("featured_video", ""),
-        youtube_url=youtube_url,
-        youtube_embed_url=youtube_embed_url,
-        date=item.get("date", ""),
-        author_name=latest_author_name,
-        category_name=item.get("category_name", ""),
-    )
-
-    # 最新記事
-    recent_items = list_recent_posts(limit=5)
-    recent_blog_posts = []
-    for it in recent_items:
-        try:
-            pid = int(it.get("post_id"))
-        except Exception:
-            continue
-
-        yurl = it.get("youtube_url", "") or it.get("youtube_embed_url", "")
-        yid = extract_youtube_id(yurl)
-
-        recent_blog_posts.append(
-            SimpleNamespace(
-                id=pid,
-                title=it.get("title", ""),
-                featured_image=it.get("featured_image", ""),
-                youtube_id=yid,
-            )
-        )
-
-    # ★ カテゴリ一覧を追加
-    categories_raw = list_all_blog_categories()
-    blog_categories = [
-        SimpleNamespace(
-            id=int(c["category_id"]),
-            name=c.get("name", ""),
-        )
-        for c in categories_raw
-    ]
-
-    return render_template(
-        'main/blog_post.html',
-        post=post,
-        recent_blog_posts=recent_blog_posts,
-        blog_categories=blog_categories,  # ← 空リストではなく実データ
-        form=form
-    )
-
-
-@bp.route('/<int:blog_post_id>/delete_post', methods=['POST'])
-@login_required
-def delete_post(blog_post_id):
-    # ① Dynamo から該当記事取得（なければ 404）
-    item = get_post_by_id(blog_post_id)    
-    if not item:
-        abort(404)
-
-    # ② 必要なら「自分の投稿か」チェック
-    #   user_id を hoero-users の user_id と合わせておけば、
-    #   ここで current_user.id や current_user.dynamo_user_id と比較できます
-    # if item.get("user_id") != str(current_user.id):
-    #     abort(403)
-
-    # ③ 削除
-    ok = delete_post_by_id(blog_post_id)
-    if not ok:
-        abort(404)
-
-    flash('ブログ投稿が削除されました')
-    return redirect(url_for('main.blog_maintenance'))
-
-@bp.route('/<int:blog_post_id>/update_post', methods=['GET', 'POST'])
-@login_required
-def update_post(blog_post_id):
-    item = get_post_by_id(blog_post_id)
-    if not item:
-        abort(404)
-
-    form = BlogPostForm()
-
-    if form.validate_on_submit():
-        fields = {
-            "title": form.title.data,
-            "summary": form.summary.data,
-            "text": form.text.data,
-            "category_id": str(form.category.data) if form.category.data else "",
-            "youtube_url": (form.youtube_url.data or "").strip(),  # ★追加
-        }
-
-        # 画像更新
-        if form.picture.data:
-            new_filename = add_featured_image(form.picture.data)
-            fields["featured_image"] = new_filename
-
-        # 動画更新（★追加）
-        if form.video.data:
-            new_video_url = add_featured_video(form.video.data)
-            fields["featured_video"] = new_video_url
-
-        update_post_fields(blog_post_id, fields)
-
-        flash('ブログ投稿が更新されました')
-        return redirect(url_for('main.blog_post', blog_post_id=blog_post_id))
-
-    elif request.method == 'GET':
-        form.title.data = item.get("title", "")
-        form.summary.data = item.get("summary", "")
-        form.text.data = item.get("text", "")
-        form.youtube_url.data = item.get("youtube_url", "")  # ★追加
-
-        # category_id は Dynamo だと文字列なので int に直す
-        cid = item.get("category_id", "")
-        try:
-            form.category.data = int(cid) if cid else None
-        except Exception:
-            form.category.data = None
-
-        # 既存画像・動画の表示用
-        if hasattr(form.picture, "object_data"):
-            form.picture.object_data = item.get("featured_image", "")
-        if hasattr(form.video, "object_data"):
-            form.video.object_data = item.get("featured_video", "")
-
-    return render_template('main/create_post.html', form=form)
-
-@bp.route('/search', methods=['GET', 'POST'])
-def search():
-    form = BlogSearchForm()
-    searchtext = ""
-    if form.validate_on_submit():
-        searchtext = form.searchtext.data
-    elif request.method == 'GET':
-        form.searchtext.data = ""
-    
-    # DynamoDB からブログ記事を取得して検索
-    page = request.args.get('page', 1, type=int)
-    all_posts = list_all_posts(limit=1000)
-    
-    # 検索フィルタリング
-    if searchtext:
-        filtered_posts = [
-            p for p in all_posts 
-            if searchtext.lower() in p.get("title", "").lower() 
-            or searchtext.lower() in p.get("text", "").lower()
-            or searchtext.lower() in p.get("summary", "").lower()
-        ]
-    else:
-        filtered_posts = all_posts
-    
-    blog_posts = paginate_posts(filtered_posts, page=page, per_page=10)
-    
-    # 最新記事
-    recent_items = list_recent_posts(limit=5)
-    recent_blog_posts = [
-        SimpleNamespace(
-            post_id=int(it.get("post_id")),
-            title=it.get("title", ""),
-            featured_image=it.get("featured_image", ""),
-        )
-        for it in recent_items
-    ]
-    
-    # カテゴリ
-    blog_categories = list_blog_categories_all()
-    
-    return render_template('main/index.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, form=form, searchtext=searchtext)
-
-@bp.route('/<int:blog_category_id>/category_posts')
-def category_posts(blog_category_id):
-    form = BlogSearchForm()
-    
-    # DynamoDB からカテゴリ情報を取得
-    categories = list_blog_categories_all()
-    blog_category = None
-    for cat in categories:
-        if int(cat.get("category_id", 0)) == blog_category_id:
-            blog_category = SimpleNamespace(
-                id=int(cat["category_id"]),
-                name=cat.get("name", ""),
-            )
-            break
-    if not blog_category:
-        abort(404)
-    
-    # カテゴリ別のブログ記事を取得
-    page = request.args.get('page', 1, type=int)
-    category_items = list_posts_by_category(blog_category_id)
-    blog_posts = paginate_posts(category_items, page=page, per_page=10)
-    
-    # 最新記事
-    recent_items = list_recent_posts(limit=5)
-    recent_blog_posts = [
-        SimpleNamespace(
-            post_id=int(it.get("post_id")),
-            title=it.get("title", ""),
-            featured_image=it.get("featured_image", ""),
-        )
-        for it in recent_items
-    ]
-    
-    # カテゴリ一覧
-    blog_categories = list_blog_categories_all()
-    
-    return render_template('main/index.html', blog_posts=blog_posts, recent_blog_posts=recent_blog_posts, blog_categories=blog_categories, blog_category=blog_category, form=form)
 
 def verify_recaptcha(response_token):
     """reCAPTCHAの検証（v3対応）"""
@@ -2614,7 +1972,6 @@ def sitemap():
         ('/', '1.0', 'weekly'),
         ('/recruit', '0.9', 'monthly'),
         ('/inquiry', '0.8', 'monthly'),
-        ('/blog', '0.8', 'weekly'),
         ('/shade_matching', '0.7', 'monthly'),
         ('/pages/root_replica', '0.7', 'monthly'),
         ('/pages/root_replica_case', '0.7', 'monthly'),
@@ -2631,21 +1988,6 @@ def sitemap():
     <changefreq>{changefreq}</changefreq>
     <priority>{priority}</priority>
   </url>""")
-
-    try:
-        posts = list_recent_posts(limit=200)
-        for post in posts:
-            if not post.get('is_published', True):
-                continue
-            pid = post.get('post_id')
-            if pid:
-                urls.append(f"""  <url>
-    <loc>{base}/blog/{pid}</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-    except Exception:
-        pass
 
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'

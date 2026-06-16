@@ -310,13 +310,14 @@ async function uploadFiles(files) {
     // テキスト系入力を収集
     const businessName = document.getElementById("businessName") ? document.getElementById("businessName").value : "";
     const userName = document.getElementById("userName").value;
+    const userPhone = document.getElementById("userPhone") ? document.getElementById("userPhone").value : "";
     const userEmail = document.getElementById("userEmail").value;
     const patientLastName = (document.getElementById("PatientLastName")?.value || "").trim();
     const patientFirstName = (document.getElementById("PatientFirstName")?.value || "").trim();
-    const patientName = [patientLastName, patientFirstName].filter(Boolean).join("　");
+    const patientName = [patientLastName, patientFirstName].filter(Boolean).join(" ");
     const patientLastNameKana = (document.getElementById("PatientLastNameKana")?.value || "").trim();
     const patientFirstNameKana = (document.getElementById("PatientFirstNameKana")?.value || "").trim();
-    const patientNameKana = [patientLastNameKana, patientFirstNameKana].filter(Boolean).join("　");
+    const patientNameKana = [patientLastNameKana, patientFirstNameKana].filter(Boolean).join(" ");
     const chartNumber = document.getElementById("ChartNumber") ? document.getElementById("ChartNumber").value : "";
     const appointmentDate = document.getElementById("appointmentDate").value;
     const appointmentHour = document.getElementById("appointmentHour").value;
@@ -359,6 +360,7 @@ async function uploadFiles(files) {
     // ▼ FormData に追加
     formData.append("businessName", businessName);
     formData.append("userName", userName);
+    formData.append("userPhone", userPhone);
     formData.append("userEmail", userEmail);
     formData.append("PatientName", patientName);
     formData.append("PatientNameKana", patientNameKana);
