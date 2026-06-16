@@ -225,13 +225,6 @@
 
               {% if current_user.administrator %}
               <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'main.category_maintenance' %}active{% endif %}" href="{{ url_for('main.category_maintenance') }}">カテゴリ</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if request.endpoint == 'users.user_maintenance' %}active{% endif %}" href="{{url_for('users.user_maintenance')}}">ユーザー</a>
-              </li>
-
-              <li class="nav-item">
                 <a class="nav-link {% if request.endpoint and request.endpoint.startswith('oralscan.') %}active{% endif %}" href="{{ url_for('oralscan.admin') }}">
                   <i class="fas fa-robot"></i> Oral Scan自動化
                 </a>

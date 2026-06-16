@@ -4,17 +4,12 @@ from flask import (
 )
 
 from flask_login import login_user, logout_user, login_required, current_user
-from models.dynamodb_category import list_blog_categories_all
 from models.users import RegistrationForm, LoginForm, UpdateUserForm
-from models.main import BlogSearchForm
 from flask import Blueprint
 from extensions import db
 
-from utils.blog_dynamo import list_posts_by_user, list_recent_posts, paginate_posts
 from types import SimpleNamespace
 from models.common import AuthUser
-from decimal import Decimal
-
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timezone
 
@@ -221,132 +216,7 @@ def register():
 
     return render_template('users/register.html', form=form)
 
-@bp.route('/user_maintenance')
-@login_required
-def user_maintenance():
-    if not current_user.is_administrator:
-        abort(403)
 
-    # DynamoDB hoero-users テーブル
-    users_table = current_app.config["HOERO_USERS_TABLE"]
-
-    # ユーザー数は少ない前提なので、いったん全件 scan でOK
-    resp = users_table.scan()
-    items = resp.get("Items", [])
-
-    # DynamoDBのitemをテンプレートで扱いやすい形に整形
-    cleaned = []
-    for it in items:
-        admin_raw = it.get("administrator", 0)
-        if isinstance(admin_raw, Decimal):
-            admin_raw = int(admin_raw)
-
-        # DynamoDB 上では user_id = email を想定
-        uid = it.get("user_id")
-
-        # 投稿数を数える関数を、このユーザー専用に持たせる
-        def count_posts_for_this_user(target_uid):
-            # list_posts_by_user が user_id (ここでは email) を受け取る前提
-            return len(list_posts_by_user(target_uid))
-
-        cleaned.append(
-            SimpleNamespace(
-                # ★ テンプレート互換用に id も持たせる（中身は user_id と同じ）
-                id=uid,
-                user_id=uid,
-                email=it.get("email"),
-                display_name=it.get("display_name"),
-                full_name=it.get("full_name"),
-                phone=it.get("phone"),
-                administrator=bool(admin_raw),
-                # ★ テンプレートの user.count_posts(user.id) に対応させる
-                count_posts=count_posts_for_this_user,
-            )
-        )
-
-    # 簡易ページネーション（RDSのpaginateっぽいオブジェクトを自前で作る）
-    page = request.args.get("page", 1, type=int)
-    per_page = 10
-    total = len(cleaned)
-
-    start = (page - 1) * per_page
-    end = start + per_page
-    page_items = cleaned[start:end]
-
-    has_next = end < total
-    has_prev = start > 0
-
-    users_page = SimpleNamespace(
-        items=page_items,
-        page=page,
-        per_page=per_page,
-        total=total,
-        has_next=has_next,
-        has_prev=has_prev,
-        next_num=page + 1 if has_next else None,
-        prev_num=page - 1 if has_prev else None,
-        pages=(total + per_page - 1) // per_page if per_page else 1,
-    )
-
-    return render_template("users/user_maintenance.html", users=users_page)
-
-
-@bp.route('/<user_id>/user_posts')
-@login_required
-def user_posts(user_id):
-    form = BlogSearchForm()
-
-    users_table = current_app.config["HOERO_USERS_TABLE"]
-    resp = users_table.get_item(Key={"user_id": user_id})
-    item = resp.get("Item")
-    if not item:
-        abort(404)
-
-    user = SimpleNamespace(
-        user_id=item["user_id"],
-        display_name=item.get("display_name", ""),
-        email=item.get("user_id", ""),
-        sender_name=item.get("sender_name", ""),
-    )
-
-    page = request.args.get('page', 1, type=int)
-
-    # ★ ユーザーの記事（user_id=email 前提）
-    user_posts_items = list_posts_by_user(user_id)
-
-    # ★ ここで各記事に「表示用の author_display_name」を付ける
-    #    （テンプレが post.author_name を見ているなら、ここで上書きするのもあり）
-    enriched = []
-    for it in user_posts_items:
-        it = dict(it)  # 念のためコピー
-
-        # 最新のユーザー名を優先（users_tableのdisplay_name）
-        it["author_name"] = item.get("display_name", it.get("author_name", "Unknown User"))
-
-        enriched.append(it)
-
-    blog_posts = paginate_posts(enriched, page=page, per_page=10)
-
-    blog_categories = list_blog_categories_all()
-
-    recent_items = list_recent_posts(limit=5)
-    recent_blog_posts = [
-        SimpleNamespace(
-            post_id=str(it.get("post_id", "")),   # ★ intをやめる
-            title=it.get("title", ""),
-            featured_image=it.get("featured_image", ""),
-        )
-        for it in recent_items
-    ]
-
-    return render_template(
-        'users/index_users.html',
-        blog_posts=blog_posts,
-        recent_blog_posts=recent_blog_posts,
-        blog_categories=blog_categories,
-        user=user,
-        form=form,
-    )    
 
 
 @bp.route('/account', methods=['GET', 'POST'])
@@ -525,7 +395,7 @@ def account(user_id):
 
         users_table.put_item(Item=item)
         flash('ユーザーアカウントが更新されました')
-        return redirect(url_for('users.user_maintenance'))
+        return redirect(url_for('main.clinic_list'))
 
     elif request.method == 'GET':
         form.display_name.data = item.get("display_name")

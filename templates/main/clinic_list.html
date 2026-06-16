@@ -62,10 +62,10 @@
                 <th style="width:90px;">種別</th>
                 <th>名称</th>
                 <th>担当者</th>
-                <th>メールアドレス</th>
                 <th>電話番号</th>
                 <th>所在地</th>
                 <th style="min-width: 140px;">担当医師</th>
+                <th style="width:80px;"></th>
             </tr>
         </thead>
         <tbody>
@@ -81,7 +81,6 @@
                 </td>
                 <td class="fw-bold" style="color: #7c1820;">{{ c.sender_name or c.display_name }}</td>
                 <td>{{ c.full_name or '—' }}</td>
-                <td><a href="mailto:{{ c.email }}" onclick="event.stopPropagation();">{{ c.email }}</a></td>
                 <td>{{ c.phone or '—' }}</td>
                 <td>
                     {% if c.prefecture or c.address %}
@@ -101,6 +100,10 @@
                     {% else %}
                     —
                     {% endif %}
+                </td>
+                <td style="text-align: center; vertical-align: middle;" onclick="event.stopPropagation();">
+                    <a href="{{ url_for('users.account', user_id=c.user_id) }}"
+                       class="btn btn-sm btn-outline-secondary">編集</a>
                 </td>
             </tr>
             {% endfor %}
