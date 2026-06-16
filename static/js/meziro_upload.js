@@ -426,6 +426,8 @@ async function uploadFiles(files) {
             if (xhr.status === 200) {
                 const result = JSON.parse(xhr.responseText);
                 showStatus(result.message || "アップロード成功", "success");
+                // 担当名を自動保存
+                if (typeof addDentist === 'function') addDentist(true);
                 fileList.innerHTML = "";
                 selectedFiles = [];
                 selectedImages = [];

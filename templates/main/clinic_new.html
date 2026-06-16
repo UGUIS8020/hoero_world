@@ -111,13 +111,25 @@
 
         <div class="section-title">ログイン情報</div>
 
-        <div class="mb-3">
+        <div class="mb-2">
+            <label class="form-check-label d-flex align-items-center gap-2" style="cursor:pointer;">
+                <input type="checkbox" id="emailUnknown" class="form-check-input" onchange="toggleEmailMode()">
+                メールアドレス不明（ユーザーIDを手動入力）
+            </label>
+        </div>
+
+        <div class="mb-3" id="emailField">
             <label class="form-label">メールアドレス <span class="text-danger">必須</span></label>
-            <input type="email" name="email" class="form-control" placeholder="例：clinic@example.com" required>
+            <input type="email" name="email" id="emailInput" class="form-control" placeholder="例：clinic@example.com" required autocomplete="new-password">
+        </div>
+        <div class="mb-3" id="userIdField" style="display:none;">
+            <label class="form-label">ユーザーID <span class="text-danger">必須</span></label>
+            <input type="text" name="user_id_manual" id="userIdInput" class="form-control" placeholder="例：nakaya_dental">
+            <small class="text-muted">半角英数字・記号のみ。ログイン時のIDになります。</small>
         </div>
         <div class="mb-3">
             <label class="form-label">パスワード <span class="text-danger">必須</span></label>
-            <input type="password" name="password" class="form-control" placeholder="8文字以上推奨" required>
+            <input type="password" name="password" class="form-control" placeholder="8文字以上推奨" required autocomplete="new-password">
         </div>
 
         <div class="d-flex gap-2 mt-4 mb-5 justify-content-center">
@@ -129,6 +141,25 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    toggleEmailMode();
+    // Chrome autofill prevention: clear email/password fields after autofill kicks in
+    setTimeout(function() {
+        var emailInput = document.getElementById('emailInput');
+        var passInput = document.querySelector('input[name="password"]');
+        if (emailInput) emailInput.value = '';
+        if (passInput) passInput.value = '';
+    }, 200);
+});
+
+function toggleEmailMode() {
+    const unknown = document.getElementById('emailUnknown').checked;
+    document.getElementById('emailField').style.display  = unknown ? 'none' : '';
+    document.getElementById('userIdField').style.display = unknown ? '' : 'none';
+    document.getElementById('emailInput').required  = !unknown;
+    document.getElementById('userIdInput').required = unknown;
+}
+
 function updateAccountType() {
     const isLab = document.querySelector('input[name="account_type"]:checked').value === 'lab';
     document.getElementById('pageTitle').textContent = isLab ? '新規技工所登録' : '新規医院登録';
