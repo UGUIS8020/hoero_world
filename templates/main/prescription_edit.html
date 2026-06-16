@@ -1,0 +1,590 @@
+{% extends "common/base.html" %}
+{% block title %}指示書編集 No.{{ p.prescription_id }} | 渋谷歯科技工所{% endblock %}
+{% block content %}
+
+<style>
+    .page-header {
+        background-color: rgb(243, 244, 245);
+        text-align: center;
+        padding: 20px;
+        color: #7c1820;
+        margin-bottom: 20px;
+        margin-top: -2rem;
+    }
+    .edit-form {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .edit-form table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    .edit-form table th, .edit-form table td {
+        border: 1px solid #ccc;
+        padding: 8px 12px;
+        text-align: left;
+    }
+    .edit-form table th {
+        background-color: #f3f4f5;
+        width: 150px;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    .edit-form input[type="text"],
+    .edit-form input[type="date"],
+    .edit-form input[type="number"],
+    .edit-form select,
+    .edit-form textarea {
+        width: 100%;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 5px 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+    .edit-form textarea { resize: vertical; min-height: 80px; overflow: hidden; }
+    .btn-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 10px;
+    }
+    .section-title {
+        font-weight: bold;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 4px;
+        margin-bottom: 10px;
+        color: #555;
+    }
+    .attach-section {
+        margin-bottom: 20px;
+    }
+    .image-thumb-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    .image-thumb-item {
+        position: relative;
+        display: inline-block;
+    }
+    .image-thumb-item img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        display: block;
+    }
+    .thumb-del {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: rgba(220,53,69,0.85);
+        color: white;
+        border: none;
+        border-radius: 3px;
+        font-size: 11px;
+        padding: 1px 5px;
+        cursor: pointer;
+    }
+    .file-list-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 13px;
+    }
+    .drop-zone {
+        border: 2px dashed #ccc;
+        border-radius: 4px;
+        padding: 16px;
+        text-align: center;
+        background: #f8f9fa;
+        color: #888;
+        cursor: pointer;
+        margin-bottom: 6px;
+    }
+    .drop-zone.dragover { border-color: #7c1820; background: #fff0f0; }
+    .new-thumb-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 6px;
+    }
+    .new-thumb-item {
+        position: relative;
+    }
+    .new-thumb-item img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .new-thumb-del {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: rgba(220,53,69,0.85);
+        color: white;
+        border: none;
+        border-radius: 3px;
+        font-size: 10px;
+        padding: 1px 4px;
+        cursor: pointer;
+    }
+</style>
+
+<div class="page-header">
+    <h2>指示書編集　No.{{ p.prescription_id }}</h2>
+</div>
+
+<div class="edit-form">
+    <form method="POST" action="{{ url_for('main.prescription_edit', prescription_id=p.prescription_id) }}"
+          enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <table>
+            <tr>
+                <th>事業者名</th>
+                <td style="color: #555;">{{ p.business_name or '―' }}</td>
+            </tr>
+            <tr>
+                <th>担当</th>
+                <td><input type="text" name="user_name" value="{{ p.user_name or '' }}"></td>
+            </tr>
+            <tr>
+                <th>カルテ番号</th>
+                <td><input type="text" name="chart_number" value="{{ p.chart_number or '' }}"></td>
+            </tr>
+            <tr>
+                <th>患者名</th>
+                <td><input type="text" name="patient_name" value="{{ p.patient_name or '' }}"></td>
+            </tr>
+            <tr>
+                <th>患者名（カナ）</th>
+                <td><input type="text" name="patient_name_kana" value="{{ p.patient_name_kana or '' }}"></td>
+            </tr>
+            <tr>
+                <th>セット希望日</th>
+                <td><input type="date" name="appointment_date" value="{{ p.appointment_date or '' }}"></td>
+            </tr>
+            <tr>
+                <th>時間</th>
+                <td>
+                    <select name="appointment_hour">
+                        {% for h in range(9, 21) %}
+                        <option value="{{ h }}" {% if p.appointment_hour|string == h|string %}selected{% endif %}>{{ h }}時</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th>製作物</th>
+                <td>
+                    <div style="display:flex; gap:0; margin-bottom:4px;">
+                        <button type="button" id="tabClinic" onclick="switchProjectTab('clinic')"
+                                style="flex:1; padding:5px; border:1px solid #7c1820; border-right:none; border-radius:4px 0 0 4px; background:#7c1820; color:#fff; cursor:pointer; font-size:12px;">歯科医院</button>
+                        <button type="button" id="tabLab" onclick="switchProjectTab('lab')"
+                                style="flex:1; padding:5px; border:1px solid #7c1820; border-radius:0 4px 4px 0; background:#fff; color:#7c1820; cursor:pointer; font-size:12px;">歯科技工所</button>
+                    </div>
+                    <select id="projectType" name="project_type" class="form-control">
+                        <option value="">選択してください</option>
+                        <option data-cat="clinic" value="Zirconia_Gradation">ジルコニアクラウン(A1~A4指定で細かい指定なし)</option>
+                        <option data-cat="clinic" value="Zirconia_Stain">ジルコニアクラウン(ステイン)</option>
+                        <option data-cat="clinic" value="Zirconia_Layering">ジルコニアクラウン(レイヤリング)</option>
+                        <option data-cat="clinic" value="implant_superstructure">インプラント上部構造</option>
+                        <option data-cat="clinic" value="surgical_guide">サージカルガイド</option>
+                        <option data-cat="clinic" value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
+                        <option data-cat="clinic" value="replica-contrast">自家歯牙移植用レプリカ(造影剤有)</option>
+                        <option data-cat="clinic" value="other">その他</option>
+                        <option data-cat="lab" value="milling_CADCAM">ミリング-CAD/CAM冠</option>
+                        <option data-cat="lab" value="milling_CADCAM_Inlay">ミリング-CAD/CAM Inlay</option>
+                        <option data-cat="lab" value="milling_CADCAM_Bridge">ミリング-CAD/CAM ブリッジ</option>
+                        <option data-cat="lab" value="milling_PEEK">ミリング-PEEK冠</option>
+                        <option data-cat="lab" value="milling_Zirconia">ミリング-ジルコニア</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th>種別</th>
+                <td>
+                    <select name="crown_type" class="form-control">
+                        {% for ct in ['単冠','連冠','ブリッジ','その他'] %}
+                        <option value="{{ ct }}" {% if p.crown_type == ct %}selected{% endif %}>{{ ct }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th>シェード</th>
+                <td>
+                    <div style="margin-bottom:4px; font-size:12px;">
+                        <label style="margin-right:12px;"><input type="radio" name="shade_system" value="classical" checked onchange="updateShadeOptions()"> VITAクラシカル</label>
+                        <label><input type="radio" name="shade_system" value="3dmaster" onchange="updateShadeOptions()"> VITA 3D-MASTER</label>
+                    </div>
+                    <select id="shade" name="shade" class="form-control"></select>
+                </td>
+            </tr>
+            <tr>
+                <th>対象部位</th>
+                <td>
+                    <div style="font-size:12px; display:flex; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
+                        <span>クリックで切替：</span>
+                        <span><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;background:#cce5ff;color:#004085;border:1px solid #ddd;font-size:11px;font-weight:bold;">支</span> 支台歯</span>
+                        <span><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;background:#e9ecef;color:#6c757d;border:1px solid #ddd;font-size:11px;">✕</span> 欠損部</span>
+                        <span><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;background:#ffe0b2;border:1px solid #ddd;font-size:11px;"></span> 製作部</span>
+                    </div>
+                    <!-- 上顎 -->
+                    <div style="display:table; width:100%; border-collapse:collapse; margin-bottom:4px;">
+                        <div style="display:table-row;">
+                            {% for n in [8,7,6,5,4,3,2,1,1,2,3,4,5,6,7,8] %}
+                            <div style="display:table-cell;text-align:center;background:#f8d7da;border:1px solid #ddd;width:30px;font-size:11px;">{{ n }}</div>
+                            {% endfor %}
+                        </div>
+                        <div style="display:table-row;">
+                            {% for v in [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28] %}
+                            <div class="tooth-cell" data-value="{{ v }}" data-state="0" onclick="cycleToothState(this)"
+                                 style="display:table-cell;text-align:center;border:1px solid #ddd;height:28px;width:30px;cursor:pointer;user-select:none;font-size:11px;font-weight:bold;vertical-align:middle;"></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <!-- 下顎 -->
+                    <div style="display:table; width:100%; border-collapse:collapse;">
+                        <div style="display:table-row;">
+                            {% for v in [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38] %}
+                            <div class="tooth-cell" data-value="{{ v }}" data-state="0" onclick="cycleToothState(this)"
+                                 style="display:table-cell;text-align:center;border:1px solid #ddd;height:28px;width:30px;cursor:pointer;user-select:none;font-size:11px;font-weight:bold;vertical-align:middle;"></div>
+                            {% endfor %}
+                        </div>
+                        <div style="display:table-row;">
+                            {% for n in [8,7,6,5,4,3,2,1,1,2,3,4,5,6,7,8] %}
+                            <div style="display:table-cell;text-align:center;background:#f8d7da;border:1px solid #ddd;width:30px;font-size:11px;">{{ n }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <input type="hidden" name="teeth_abutment" id="teethAbutmentInput">
+                    <input type="hidden" name="teeth_missing" id="teethMissingInput">
+                    <input type="hidden" name="teeth_fabrication" id="teethFabricationInput">
+                </td>
+            </tr>
+            <tr>
+                <th>備考</th>
+                <td><textarea name="message" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'">{{ p.message or '' }}</textarea></td>
+            </tr>
+            {% if current_user.is_administrator %}
+            <tr>
+                <th>状態</th>
+                <td>
+                    <select name="status">
+                        {% for s in ['受付中', '製作中', '完了'] %}
+                        <option value="{{ s }}" {% if p.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            {% endif %}
+        </table>
+
+        {# ── 既存の画像 ── #}
+        {% if image_items %}
+        <div class="attach-section">
+            <div class="section-title">添付画像</div>
+            <div class="image-thumb-grid">
+                {% for item in image_items %}
+                <div class="image-thumb-item">
+                    <a href="{{ item.url }}" target="_blank">
+                        <img src="{{ item.url }}" alt="">
+                    </a>
+                    <button type="button" class="thumb-del"
+                            data-key="{{ item.key }}" data-type="image"
+                            onclick="deleteAttachment(this)">×</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── 既存のファイル ── #}
+        {% if file_items %}
+        <div class="attach-section">
+            <div class="section-title">添付ファイル</div>
+            {% for fi in file_items %}
+            <div class="file-list-item">
+                <a href="{{ fi.url }}" target="_blank" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ fi.name }}</a>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        data-key="{{ fi.key }}" data-type="file"
+                        onclick="deleteAttachment(this)">削除</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# ── 画像追加 ── #}
+        <div class="attach-section">
+            <div class="section-title">画像を追加</div>
+            <div class="drop-zone" id="imgDropZone" onclick="document.getElementById('imgInput').click()">
+                クリックまたはドラッグ＆ドロップで画像を追加
+            </div>
+            <input type="file" id="imgInput" name="images[]" multiple accept="image/*" style="display:none">
+            <div class="new-thumb-grid" id="imgPreview"></div>
+        </div>
+
+        {# ── ファイル追加 ── #}
+        <div class="attach-section">
+            <div class="section-title">ファイルを追加</div>
+            <div class="drop-zone" id="fileDropZone" onclick="document.getElementById('fileInput').click()">
+                クリックまたはドラッグ＆ドロップでファイルを追加
+            </div>
+            <input type="file" id="fileInput" name="files[]" multiple style="display:none">
+            <div id="filePreview" style="margin-top:6px; font-size:13px;"></div>
+        </div>
+
+        <div class="btn-row">
+            <a href="{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}"
+               class="btn btn-outline-secondary">キャンセル</a>
+            <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+    </form>
+</div>
+
+<script>
+// 既存ファイル削除（prescription_delete_file エンドポイント流用）
+function deleteAttachment(btn) {
+    if (!confirm('削除しますか？')) return;
+    var key = btn.dataset.key;
+    var type = btn.dataset.type;
+    var fd = new FormData();
+    fd.append('csrf_token', '{{ csrf_token() }}');
+    fd.append('s3_key', key);
+    fd.append('file_type', type);
+    fetch('{{ url_for("main.delete_prescription_file", prescription_id=p.prescription_id) }}', {
+        method: 'POST', body: fd
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            btn.closest('.image-thumb-item, .file-list-item').remove();
+        } else {
+            alert('削除に失敗しました: ' + (data.error || ''));
+        }
+    });
+}
+
+// 画像プレビュー
+var newImages = [];
+var imgInput = document.getElementById('imgInput');
+var imgPreview = document.getElementById('imgPreview');
+
+function refreshImgPreview() {
+    imgPreview.innerHTML = '';
+    newImages.forEach(function(file, i) {
+        var item = document.createElement('div');
+        item.className = 'new-thumb-item';
+        var img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'new-thumb-del';
+        del.textContent = '×';
+        del.onclick = function() { newImages.splice(i, 1); refreshImgPreview(); updateImgInput(); };
+        item.appendChild(img);
+        item.appendChild(del);
+        imgPreview.appendChild(item);
+    });
+    updateImgInput();
+}
+
+function updateImgInput() {
+    var dt = new DataTransfer();
+    newImages.forEach(function(f) { dt.items.add(f); });
+    imgInput.files = dt.files;
+}
+
+imgInput.addEventListener('change', function() {
+    Array.from(this.files).forEach(function(f) { newImages.push(f); });
+    refreshImgPreview();
+});
+
+var imgDrop = document.getElementById('imgDropZone');
+imgDrop.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+imgDrop.addEventListener('dragleave', function() { this.classList.remove('dragover'); });
+imgDrop.addEventListener('drop', function(e) {
+    e.preventDefault(); this.classList.remove('dragover');
+    Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).forEach(function(f) { newImages.push(f); });
+    refreshImgPreview();
+});
+
+// ファイルプレビュー
+var newFiles = [];
+var fileInput = document.getElementById('fileInput');
+var filePreview = document.getElementById('filePreview');
+
+function refreshFilePreview() {
+    filePreview.innerHTML = '';
+    newFiles.forEach(function(file, i) {
+        var row = document.createElement('div');
+        row.className = 'file-list-item';
+        row.innerHTML = '<span style="flex:1">📄 ' + file.name + '</span>';
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn btn-sm btn-outline-danger';
+        del.textContent = '削除';
+        del.onclick = function() { newFiles.splice(i, 1); refreshFilePreview(); updateFileInput(); };
+        row.appendChild(del);
+        filePreview.appendChild(row);
+    });
+    updateFileInput();
+}
+
+function updateFileInput() {
+    var dt = new DataTransfer();
+    newFiles.forEach(function(f) { dt.items.add(f); });
+    fileInput.files = dt.files;
+}
+
+fileInput.addEventListener('change', function() {
+    Array.from(this.files).forEach(function(f) { newFiles.push(f); });
+    refreshFilePreview();
+});
+
+var fileDrop = document.getElementById('fileDropZone');
+fileDrop.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+fileDrop.addEventListener('dragleave', function() { this.classList.remove('dragover'); });
+fileDrop.addEventListener('drop', function(e) {
+    e.preventDefault(); this.classList.remove('dragover');
+    Array.from(e.dataTransfer.files).forEach(function(f) { newFiles.push(f); });
+    refreshFilePreview();
+});
+</script>
+
+<style>
+.tooth-cell[data-state="1"] { background:#cce5ff; color:#004085; }
+.tooth-cell[data-state="2"] { background:#e9ecef; color:#6c757d; }
+.tooth-cell[data-state="3"] { background:#ffe0b2; }
+</style>
+<script>
+function cycleToothState(el) {
+    var next = (parseInt(el.dataset.state || 0) + 1) % 4;
+    el.dataset.state = next;
+    var labels = ['', '支', '✕', '<span style="display:inline-block;width:10px;height:10px;border:2px solid #dc3545;border-radius:50%;"></span>'];
+    el.innerHTML = labels[next];
+}
+
+// ── 製作物タブ切替 ──
+var LAB_VALUES = ['milling_CADCAM','milling_CADCAM_Inlay','milling_CADCAM_Bridge','milling_PEEK','milling_Zirconia'];
+function switchProjectTab(cat) {
+    var sel = document.getElementById('projectType');
+    var tabClinic = document.getElementById('tabClinic');
+    var tabLab = document.getElementById('tabLab');
+    var current = sel.value;
+    Array.from(sel.options).forEach(function(opt) {
+        if (!opt.dataset.cat) return;
+        opt.hidden = opt.dataset.cat !== cat;
+        opt.disabled = opt.dataset.cat !== cat;
+    });
+    if (current && sel.querySelector('option[value="'+current+'"]') &&
+        !sel.querySelector('option[value="'+current+'"]').disabled) {
+        sel.value = current;
+    }
+    if (cat === 'clinic') {
+        tabClinic.style.background='#7c1820'; tabClinic.style.color='#fff';
+        tabLab.style.background='#fff'; tabLab.style.color='#7c1820';
+    } else {
+        tabLab.style.background='#7c1820'; tabLab.style.color='#fff';
+        tabClinic.style.background='#fff'; tabClinic.style.color='#7c1820';
+    }
+}
+
+// ── シェード選択肢 ──
+var shadeOptions = {
+    classical: [
+        ['','指定なし(指定不要なケース)'],['画像有り','画像有り'],
+        ...['A1','A2','A3','A3.5','A4','B1','B2','B3','B4','C1','C2','C3','C4','D1','D2','D3','D4'].map(s=>[s,s])
+    ],
+    '3dmaster': [
+        ['','指定なし(指定不要なケース)'],['画像有り','画像有り'],
+        ...['0M1','0M2','0M3','1M1','1M2',
+            '2L1.5','2L2.5','2M1','2M2','2M3','2R1.5','2R2.5',
+            '3L1.5','3L2.5','3M1','3M2','3M3','3R1.5','3R2.5',
+            '4L1.5','4L2.5','4M1','4M2','4M3','4R1.5','4R2.5',
+            '5M1','5M2','5M3'].map(s=>[s,s])
+    ]
+};
+function updateShadeOptions() {
+    var system = document.querySelector('input[name="shade_system"]:checked').value;
+    var sel = document.getElementById('shade');
+    var current = sel.dataset.initial || sel.value;
+    sel.innerHTML = '';
+    shadeOptions[system].forEach(function(pair) {
+        var opt = document.createElement('option');
+        opt.value = pair[0]; opt.textContent = pair[1];
+        if (pair[0] === current) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    sel.dataset.initial = '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 備考テキストエリアを内容に合わせて展開
+    document.querySelectorAll('textarea').forEach(function(ta) {
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+    });
+
+    var savedProject   = '{{ p.project_type or "" }}';
+    var savedShade     = '{{ p.shade or "" }}';
+    // Decimal対策：Jinja2でint変換してから展開
+    var savedAbutment    = [{% for v in (p.teeth_abutment or []) %}{{ v|int }}{% if not loop.last %},{% endif %}{% endfor %}];
+    var savedMissing     = [{% for v in (p.teeth_missing or []) %}{{ v|int }}{% if not loop.last %},{% endif %}{% endfor %}];
+    var savedFabrication = [{% for v in (p.teeth_fabrication or []) %}{{ v|int }}{% if not loop.last %},{% endif %}{% endfor %}];
+    // 旧形式（teethのみ）フォールバック
+    {% if not p.teeth_abutment and not p.teeth_missing and not p.teeth_fabrication %}
+    var savedOldTeeth = [{% for v in (p.teeth or []) %}{{ v|int }}{% if not loop.last %},{% endif %}{% endfor %}];
+    {% else %}
+    var savedOldTeeth = [];
+    {% endif %}
+
+    // 製作物：保存値のタブを選択してから値をセット
+    var initTab = LAB_VALUES.indexOf(savedProject) >= 0 ? 'lab' : 'clinic';
+    switchProjectTab(initTab);
+    if (savedProject) document.getElementById('projectType').value = savedProject;
+
+    // シェード：システム判定 → 選択肢生成 → 値セット
+    var is3d = ['0M','1M','2L','2M','2R','3L','3M','3R','4L','4M','4R','5M'].some(function(p){ return savedShade.startsWith(p); });
+    if (is3d) document.querySelector('input[name="shade_system"][value="3dmaster"]').checked = true;
+    document.getElementById('shade').dataset.initial = savedShade;
+    updateShadeOptions();
+
+    // 歯牙：保存値から各セルの状態を復元（int比較）
+    var toothLabels = ['', '支', '✕', '<span style="display:inline-block;width:10px;height:10px;border:2px solid #dc3545;border-radius:50%;"></span>'];
+    document.querySelectorAll('.tooth-cell').forEach(function(cell) {
+        var v = parseInt(cell.dataset.value, 10);
+        var state = 0;
+        if (savedAbutment.indexOf(v) >= 0)         state = 1;
+        else if (savedMissing.indexOf(v) >= 0)      state = 2;
+        else if (savedFabrication.indexOf(v) >= 0)  state = 3;
+        else if (savedOldTeeth.indexOf(v) >= 0)     state = 3;
+        cell.dataset.state = state;
+        cell.innerHTML = toothLabels[state];
+    });
+
+    // フォーム送信時に歯牙データをhiddenに詰める
+    document.querySelector('form').addEventListener('submit', function() {
+        var abutment = [], missing = [], fabrication = [];
+        document.querySelectorAll('.tooth-cell').forEach(function(cell) {
+            var s = parseInt(cell.dataset.state || 0);
+            if (s === 1) abutment.push(cell.dataset.value);
+            else if (s === 2) missing.push(cell.dataset.value);
+            else if (s === 3) fabrication.push(cell.dataset.value);
+        });
+        document.getElementById('teethAbutmentInput').value    = JSON.stringify(abutment);
+        document.getElementById('teethMissingInput').value     = JSON.stringify(missing);
+        document.getElementById('teethFabricationInput').value = JSON.stringify(fabrication);
+    });
+});
+</script>
+
+{% endblock %}
