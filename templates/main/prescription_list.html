@@ -25,7 +25,7 @@
     .status-badge.clickable:hover { opacity: 0.75; }
     tr.date-today   { background-color: #fff3cd; }
     tr.date-soon    { background-color: #fde8e8; }
-    tr.processed    { background-color: #e9ecef !important; color: #aaa; }
+    tr.processed    { background-color: #e9ecef !important; color: #555; }
 </style>
 
 <div class="page-header" style="position: relative;">
@@ -43,7 +43,7 @@
         <thead class="table-dark">
             <tr>
                 <th style="width: 1%; white-space: nowrap;">受付番号</th>
-                <th style="width: 1%; white-space: nowrap;">送信日時</th>
+                <th style="width: 1%; white-space: nowrap;">受信日時</th>
                 {% if current_user.is_administrator %}
                 <th>事業者名</th>
                 {% endif %}
@@ -64,7 +64,7 @@
                 {% endif %}
                 <td>{{ p.user_name }}</td>
                 <td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td>
-                <td>{{ p.appointment_date }} {{ p.appointment_hour }}時</td>
+                <td>{{ p.appointment_date[5:] if p.appointment_date else '' }} {{ p.appointment_hour }}時</td>
                 <td>{{ p.project_type }}</td>
                 <td onclick="event.stopPropagation()">
                     {% if p.status in ['受付中', '処理済み'] %}
