@@ -890,6 +890,30 @@ def prescription_delete(prescription_id):
     return redirect(url_for("main.prescription_list"))
 
 
+@bp.route('/prescription/set_status/<prescription_id>', methods=['POST'])
+@login_required
+def prescription_set_status(prescription_id):
+    import json as _json
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
+    p = resp.get("Item")
+    if not p:
+        return _json.dumps({"error": "not found"}), 404, {"Content-Type": "application/json"}
+    if not current_user.is_administrator and p.get("user_id") != current_user.email:
+        return _json.dumps({"error": "forbidden"}), 403, {"Content-Type": "application/json"}
+    new_status = (request.json or {}).get("status") if request.is_json else request.form.get("status")
+    allowed = ["受付中", "製作中", "完了", "処理済み"]
+    if new_status not in allowed:
+        return _json.dumps({"error": "invalid status"}), 400, {"Content-Type": "application/json"}
+    prescriptions_table.update_item(
+        Key={"prescription_id": prescription_id},
+        UpdateExpression="SET #s = :s",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":s": new_status},
+    )
+    return _json.dumps({"status": new_status}), 200, {"Content-Type": "application/json"}
+
+
 @bp.route('/prescription/delete_file/<prescription_id>', methods=['POST'])
 @login_required
 def delete_prescription_file(prescription_id):

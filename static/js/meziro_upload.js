@@ -50,6 +50,7 @@ function formatFileSize(bytes) {
 
 function updateButtonState() {
     clearButton.disabled = selectedFiles.length === 0;
+    uploadButton.disabled = false;
 }
 
 function getRelativePath(file) {
@@ -655,6 +656,10 @@ clearButton.addEventListener("click", () => {
 });
 
 // 部位選択用のチェックボックスのスタイル変更
+document.addEventListener("DOMContentLoaded", function () {
+    updateButtonState();
+});
+
 document.addEventListener("DOMContentLoaded", function () {
     const teethCheckboxes = document.querySelectorAll('input[name="teeth[]"]');
     teethCheckboxes.forEach(function (checkbox) {
