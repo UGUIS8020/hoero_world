@@ -414,7 +414,7 @@ def save_resized_upload(file, save_path, max_width=1500):
     if img.width > max_width:
         scale = max_width / img.width
         new_height = int(img.height * scale)
-        img = img.resize((max_width, new_height), Image.LANCZOS)
+        img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
     img.save(save_path)
     print(f"画像保存成功: {save_path}")  # ← これを追加しておくと確認しやすい
 
@@ -756,6 +756,138 @@ def prescription_view(prescription_id):
     except Exception:
         pass
     return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete, user_phone=user_phone)
+
+
+@bp.route('/prescription/edit/<prescription_id>', methods=['GET', 'POST'])
+@login_required
+def prescription_edit(prescription_id):
+    from datetime import datetime as _dt, timezone as _tz
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
+    p = resp.get("Item")
+    if not p:
+        return "指示書が見つかりません", 404
+    if not current_user.is_administrator and p.get("user_id") != current_user.email:
+        return "アクセス権限がありません", 403
+
+    if request.method == 'POST':
+        p["user_name"]         = request.form.get("user_name", p.get("user_name", ""))
+        p["chart_number"]      = request.form.get("chart_number", p.get("chart_number", ""))
+        p["patient_name"]      = request.form.get("patient_name", p.get("patient_name", ""))
+        p["patient_name_kana"] = request.form.get("patient_name_kana", p.get("patient_name_kana", ""))
+        p["appointment_date"]  = request.form.get("appointment_date", p.get("appointment_date", ""))
+        p["appointment_hour"]  = request.form.get("appointment_hour", p.get("appointment_hour", ""))
+        p["project_type"]      = request.form.get("project_type", p.get("project_type", ""))
+        p["crown_type"]        = request.form.get("crown_type", p.get("crown_type", ""))
+        p["shade"]             = request.form.get("shade", p.get("shade", ""))
+        p["message"]           = request.form.get("message", p.get("message", ""))
+        try:
+            p["teeth_abutment"]   = json.loads(request.form.get("teeth_abutment", "[]"))
+            p["teeth_missing"]    = json.loads(request.form.get("teeth_missing", "[]"))
+            p["teeth_fabrication"]= json.loads(request.form.get("teeth_fabrication", "[]"))
+            p["teeth"] = p["teeth_abutment"] + p["teeth_missing"] + p["teeth_fabrication"]
+        except Exception:
+            pass
+        if current_user.is_administrator:
+            p["status"] = request.form.get("status", p.get("status", "受付中"))
+
+        ts = _dt.now(_tz.utc).strftime("%Y%m%d%H%M%S")
+
+        # 画像アップロード（リサイズ・EXIF補正・JPEG圧縮）
+        new_images = request.files.getlist("images[]")
+        image_keys = list(p.get("image_keys") or [])
+        _fmt_map = {'.jpg': 'JPEG', '.jpeg': 'JPEG', '.png': 'PNG', '.gif': 'GIF', '.webp': 'WEBP'}
+        _ct_map  = {'JPEG': 'image/jpeg', 'PNG': 'image/png', 'GIF': 'image/gif', 'WEBP': 'image/webp'}
+        for img_file in new_images:
+            if not img_file or not img_file.filename:
+                continue
+            try:
+                raw = Image.open(io.BytesIO(img_file.read()))
+                pil_img = ImageOps.exif_transpose(raw) or raw
+                if pil_img.width > 2000:
+                    new_h = int(pil_img.height * 2000 / pil_img.width)
+                    pil_img = pil_img.resize((2000, new_h), Image.Resampling.LANCZOS)
+                safe_name = sanitize_filename(img_file.filename)
+                ext  = os.path.splitext(safe_name)[1].lower()
+                fmt  = _fmt_map.get(ext, 'JPEG')
+                if fmt == 'JPEG' and pil_img.mode in ('RGBA', 'P', 'LA'):
+                    pil_img = pil_img.convert('RGB')
+                buf = io.BytesIO()
+                if fmt == 'JPEG':
+                    pil_img.save(buf, format='JPEG', quality=90)
+                else:
+                    pil_img.save(buf, format=fmt)
+                buf.seek(0)
+                key = f"prescriptions/{prescription_id}/images/{ts}_{safe_name}"
+                s3.upload_fileobj(buf, BUCKET_NAME, key,
+                                  ExtraArgs={"ContentType": _ct_map.get(fmt, 'image/jpeg')})
+                image_keys.append(key)
+            except Exception as e:
+                current_app.logger.error("画像アップロードエラー: %s", e)
+        p["image_keys"] = image_keys
+
+        # ファイルアップロード
+        new_files = request.files.getlist("files[]")
+        s3_keys = list(p.get("s3_keys") or [])
+        for f in new_files:
+            if f and f.filename:
+                safe_name = sanitize_filename(f.filename)
+                key = f"prescriptions/{prescription_id}/files/{ts}_{safe_name}"
+                try:
+                    s3.upload_fileobj(f, BUCKET_NAME, key,
+                                      ExtraArgs={"ContentType": "application/octet-stream"})
+                    s3_keys.append(key)
+                except Exception as e:
+                    current_app.logger.error("ファイルアップロードエラー: %s", e)
+        p["s3_keys"] = s3_keys
+
+        prescriptions_table.put_item(Item=p)
+        flash("指示書を更新しました")
+        return redirect(url_for("main.prescription_view", prescription_id=prescription_id))
+
+    # GET: 現在の添付ファイルの署名付きURL生成
+    image_items = []
+    for key in (p.get("image_keys") or []):
+        try:
+            url = s3.generate_presigned_url('get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': key}, ExpiresIn=3600)
+            image_items.append({"key": key, "url": url})
+        except Exception:
+            pass
+
+    file_items = []
+    for key in (p.get("s3_keys") or []):
+        try:
+            url = s3.generate_presigned_url('get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': key}, ExpiresIn=3600)
+            import os as _os2
+            file_items.append({"key": key, "url": url, "name": _os2.path.basename(key)})
+        except Exception:
+            pass
+
+    return render_template('main/prescription_edit.html', p=p,
+                           image_items=image_items, file_items=file_items)
+
+
+@bp.route('/prescription/delete/<prescription_id>', methods=['POST'])
+@login_required
+def prescription_delete(prescription_id):
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
+    p = resp.get("Item")
+    if not p:
+        return "指示書が見つかりません", 404
+    if not current_user.is_administrator and p.get("user_id") != current_user.email:
+        return "アクセス権限がありません", 403
+    all_keys = list(p.get("image_keys") or []) + list(p.get("s3_keys") or [])
+    for key in all_keys:
+        try:
+            s3.delete_object(Bucket=BUCKET_NAME, Key=key)
+        except Exception:
+            pass
+    prescriptions_table.delete_item(Key={"prescription_id": prescription_id})
+    flash("指示書を削除しました")
+    return redirect(url_for("main.prescription_list"))
 
 
 @bp.route('/prescription/delete_file/<prescription_id>', methods=['POST'])

@@ -49,7 +49,6 @@ function formatFileSize(bytes) {
 }
 
 function updateButtonState() {
-    uploadButton.disabled = selectedFiles.length === 0;
     clearButton.disabled = selectedFiles.length === 0;
 }
 
@@ -299,8 +298,6 @@ async function readEntryRecursively(entry) {
 
 // ドラッグ＆ドロップされたアイテムを処理
 async function uploadFiles(files) {
-    const isPrescriptionPage = !!document.getElementById("ChartNumber");
-    if (files.length === 0 && !isPrescriptionPage) return;
 
     const formData = new FormData();
 

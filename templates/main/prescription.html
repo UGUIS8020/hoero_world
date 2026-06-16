@@ -282,27 +282,51 @@
 
         <!-- 製作物 -->
         <div class="mb-2">
-            <label for="projectType" class="form-label">製作物 <span class="text-danger">必須</span></label>
+            <label class="form-label">製作物 <span class="text-danger">必須</span></label>
+            <div style="display: flex; gap: 0; margin-bottom: 4px;">
+                <button type="button" id="tabClinic" onclick="switchProjectTab('clinic')"
+                        style="flex:1; padding:6px; border:1px solid #7c1820; border-right:none; border-radius:4px 0 0 4px; background:#7c1820; color:#fff; cursor:pointer; font-size:13px;">歯科医院</button>
+                <button type="button" id="tabLab" onclick="switchProjectTab('lab')"
+                        style="flex:1; padding:6px; border:1px solid #7c1820; border-radius:0 4px 4px 0; background:#fff; color:#7c1820; cursor:pointer; font-size:13px;">歯科技工所</button>
+            </div>
             <select id="projectType" class="form-control" required>
                 <option value="" disabled selected>製作物の種類を選択してください</option>
-                <optgroup label="── 歯科医院 ──">
-                    <option value="Zirconia_Gradation">ジルコニアクラウン(A1~A4指定で細かい指定なし)</option>
-                    <option value="Zirconia_Stain">ジルコニアクラウン(ステイン)</option>
-                    <option value="Zirconia_Layering">ジルコニアクラウン(レイヤリング)</option>
-                    <option value="surgical_guide">サージカルガイド</option>
-                    <option value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
-                    <option value="replica-contrast">自家歯牙移植用レプリカ(造影剤有)</option>
-                    <option value="other">その他</option>
-                </optgroup>
-                <optgroup label="── 歯科技工所 ──">
-                    <option value="milling_CADCAM">ミリング-CAD/CAM冠</option>
-                    <option value="milling_CADCAM_Inlay">ミリング-CAD/CAM Inlay</option>
-                    <option value="milling_CADCAM_Bridge">ミリング-CAD/CAM ブリッジ</option>
-                    <option value="milling_PEEK">ミリング-PEEK冠</option>
-                    <option value="milling_Zirconia">ミリング-ジルコニア</option>
-                </optgroup>
+                <option data-cat="clinic" value="Zirconia_Gradation">ジルコニアクラウン(A1~A4指定で細かい指定なし)</option>
+                <option data-cat="clinic" value="Zirconia_Stain">ジルコニアクラウン(ステイン)</option>
+                <option data-cat="clinic" value="Zirconia_Layering">ジルコニアクラウン(レイヤリング)</option>
+                <option data-cat="clinic" value="implant_superstructure">インプラント上部構造</option>
+                <option data-cat="clinic" value="surgical_guide">サージカルガイド</option>
+                <option data-cat="clinic" value="replica">自家歯牙移植用レプリカ(造影剤無)</option>
+                <option data-cat="clinic" value="replica-contrast">自家歯牙移植用レプリカ(造影剤有)</option>
+                <option data-cat="clinic" value="other">その他</option>
+                <option data-cat="lab" value="milling_CADCAM">ミリング-CAD/CAM冠</option>
+                <option data-cat="lab" value="milling_CADCAM_Inlay">ミリング-CAD/CAM Inlay</option>
+                <option data-cat="lab" value="milling_CADCAM_Bridge">ミリング-CAD/CAM ブリッジ</option>
+                <option data-cat="lab" value="milling_PEEK">ミリング-PEEK冠</option>
+                <option data-cat="lab" value="milling_Zirconia">ミリング-ジルコニア</option>
             </select>
         </div>
+        <script>
+        function switchProjectTab(cat) {
+            var sel = document.getElementById('projectType');
+            var tabClinic = document.getElementById('tabClinic');
+            var tabLab = document.getElementById('tabLab');
+            sel.value = '';
+            Array.from(sel.options).forEach(function(opt) {
+                if (!opt.dataset.cat) return;
+                opt.hidden = opt.dataset.cat !== cat;
+                opt.disabled = opt.dataset.cat !== cat;
+            });
+            if (cat === 'clinic') {
+                tabClinic.style.background = '#7c1820'; tabClinic.style.color = '#fff';
+                tabLab.style.background = '#fff'; tabLab.style.color = '#7c1820';
+            } else {
+                tabLab.style.background = '#7c1820'; tabLab.style.color = '#fff';
+                tabClinic.style.background = '#fff'; tabClinic.style.color = '#7c1820';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() { switchProjectTab('clinic'); });
+        </script>
 
         <!-- 部位選択 -->
         <div class="mb-2">

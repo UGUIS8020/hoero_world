@@ -232,6 +232,18 @@
     </div>
     <button class="print-btn" onclick="window.print()"
             style="position: absolute; left: 50%; transform: translateX(-50%); margin: 0;">印刷 / PDF保存（A4横・2面）</button>
+    <div style="display: flex; gap: 8px;">
+        {% if can_delete %}
+        <a href="{{ url_for('main.prescription_edit', prescription_id=p.prescription_id) }}"
+           class="back-btn">編集</a>
+        <form method="POST" action="{{ url_for('main.prescription_delete', prescription_id=p.prescription_id) }}"
+              onsubmit="return confirm('この指示書を削除しますか？この操作は取り消せません。');" style="margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit"
+                    style="padding: 6px 20px; background-color: #dc3545; color: white; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">削除</button>
+        </form>
+        {% endif %}
+    </div>
 </div>
 
 {# ─── 画面表示（通常1面） ─── #}
