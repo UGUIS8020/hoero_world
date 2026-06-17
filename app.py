@@ -11,6 +11,7 @@ from utils.common_utils import setup_scheduled_cleanup, setup_mail_import_schedu
 
 # 1) .env を最初にロード
 load_dotenv(dotenv_path="/var/www/hoero_world/.env")
+load_dotenv()  # ローカル開発用フォールバック（EC2パスが存在しない場合）
 
 # 2) Flask アプリ生成
 flask_app = Flask(__name__)

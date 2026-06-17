@@ -1134,7 +1134,7 @@ def clinic_new():
 def prescription():
     dentists = getattr(current_user, "dentists", [])
     sender_name = getattr(current_user, "sender_name", "") or ""
-    user_email = getattr(current_user, "email", "") or ""
+    user_email = getattr(current_user, "email", "") or getattr(current_user, "user_id", "") or ""
     full_name = getattr(current_user, "full_name", "") or ""
     return render_template(
         'main/prescription.html',
@@ -1173,7 +1173,7 @@ def meziro_upload_index():
     if current_user.is_authenticated:
         dentists = getattr(current_user, "dentists", [])
         sender_name = getattr(current_user, "sender_name", "") or ""
-        user_email = getattr(current_user, "email", "") or ""
+        user_email = getattr(current_user, "email", "") or getattr(current_user, "user_id", "") or ""
     return render_template(
         'main/meziro_upload_index.html',
         dentists=dentists,
