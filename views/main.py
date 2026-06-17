@@ -618,58 +618,68 @@ def list_uploaded_files():
 
 @bp.route('/meziro')
 def meziro():
+    PER_PAGE = 30
+    page = request.args.get('page', 1, type=int)
     s3_files = []
+    total = 0
     try:
-        # ページング対応で 'meziro/' 配下を全取得
+        # 全オブジェクトのキーと更新日時だけ取得（タグ・URL は取得しない）
+        all_objs = []
         kwargs = dict(Bucket=BUCKET_NAME, Prefix='meziro/', MaxKeys=1000)
         while True:
             resp = s3.list_objects_v2(**kwargs)
             for obj in resp.get('Contents', []):
-                key = obj['Key']
-                filename = os.path.basename(key)
-                if not filename:  # フォルダ疑似キーはスキップ
+                if not os.path.basename(obj['Key']):
                     continue
-
-                # completed タグ取得（失敗時は False）
-                completed = False
-                try:
-                    tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
-                    tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
-                    completed = (tags.get('completed') == 'true')
-                except Exception as e:
-                    # 権限/一時エラーはログだけ残して未完了扱い
-                    current_app.logger.warning(f"[MEZIRO] get_object_tagging failed key={key}: {e}")
-
-                # 署名付きURL（必要なら）
-                file_url = s3.generate_presigned_url(
-                    'get_object',
-                    Params={'Bucket': BUCKET_NAME, 'Key': key},
-                    ExpiresIn=604800  # 7日
-                )
-
-                s3_files.append({
-                    'key': key,
-                    'filename': filename,
-                    'last_modified_dt': obj['LastModified'],  # まずはdatetimeで保持（後で整形）
-                    'url': file_url,
-                    'completed': completed,
-                })
-
+                all_objs.append(obj)
             if resp.get('IsTruncated'):
-                kwargs['ContinuationToken'] = resp.get('NextContinuationToken')
+                kwargs['ContinuationToken'] = resp['NextContinuationToken']
             else:
                 break
 
-        # 新しい順に並べ替え → 表示用にJST文字列へ整形
-        s3_files.sort(key=lambda x: x['last_modified_dt'], reverse=True)
-        for f in s3_files:
-            f['last_modified'] = f['last_modified_dt'].astimezone(JST).strftime('%Y-%m-%d %H:%M')
-            del f['last_modified_dt']
+        # 新しい順にソート
+        all_objs.sort(key=lambda x: x['LastModified'], reverse=True)
+        total = len(all_objs)
+
+        # 現在ページ分だけ切り出し
+        start = (page - 1) * PER_PAGE
+        page_objs = all_objs[start:start + PER_PAGE]
+
+        # 現在ページ分のみタグ・presigned URL を取得
+        for obj in page_objs:
+            key = obj['Key']
+            filename = os.path.basename(key)
+
+            completed = False
+            try:
+                tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
+                tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
+                completed = (tags.get('completed') == 'true')
+            except Exception as e:
+                current_app.logger.warning(f"[MEZIRO] get_object_tagging failed key={key}: {e}")
+
+            file_url = s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': key},
+                ExpiresIn=604800
+            )
+
+            s3_files.append({
+                'key': key,
+                'filename': filename,
+                'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
+                'url': file_url,
+                'completed': completed,
+            })
 
     except Exception as e:
         flash(f"S3ファイル一覧取得中にエラー: {str(e)}", "error")
 
-    return render_template('main/meziro.html', s3_files=s3_files)
+    total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+    page = max(1, min(page, total_pages))
+
+    return render_template('main/meziro.html', s3_files=s3_files,
+                           page=page, total_pages=total_pages, total=total)
 
 @bp.route('/prescription/list', methods=['GET'])
 @login_required
