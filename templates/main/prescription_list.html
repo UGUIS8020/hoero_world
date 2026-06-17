@@ -21,6 +21,7 @@
     .status-製作中   { background-color: #cce5ff; color: #004085; }
     .status-完了     { background-color: #d4edda; color: #155724; }
     .status-処理済み { background-color: #dee2e6; color: #6c757d; }
+    .status-納品済   { background-color: #dee2e6; color: #6c757d; }
     .status-badge.clickable { cursor: pointer; }
     .status-badge.clickable:hover { opacity: 0.75; }
     tr.date-today   { background-color: #f5c6cb; }
@@ -97,7 +98,7 @@
                     {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% elif p.source == 'shining3d' %}Shining3D{% else %}website{% endif %}
                 </td>
                 <td onclick="event.stopPropagation()">
-                    {% if p.status in ['受付中', '処理済み'] %}
+                    {% if p.status in ['受付中', '納品済'] %}
                     <span class="status-badge status-{{ p.status }} clickable"
                           data-id="{{ p.prescription_id }}"
                           onclick="toggleProcessed(this)"
@@ -155,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
     in7days.setDate(today.getDate() + 7);
 
     document.querySelectorAll('tr[data-date]').forEach(function(tr) {
-        if (tr.dataset.status === '処理済み') {
+        if (tr.dataset.status === '納品済') {
             tr.classList.add('processed');
             return;
         }
@@ -178,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function toggleProcessed(badge) {
     var id = badge.dataset.id;
     var current = badge.textContent.trim();
-    var newStatus = current === '受付中' ? '処理済み' : '受付中';
+    var newStatus = current === '受付中' ? '納品済' : '受付中';
     var csrfToken = typeof csrf_token !== 'undefined' ? csrf_token : '';
 
     fetch('/prescription/set_status/' + id, {
@@ -192,7 +193,7 @@ function toggleProcessed(badge) {
         badge.className = 'status-badge status-' + data.status + ' clickable';
         badge.textContent = data.status;
         tr.dataset.status = data.status;
-        if (data.status === '処理済み') {
+        if (data.status === '納品済') {
             tr.classList.add('processed');
             tr.classList.remove('date-today', 'date-soon');
         } else {
