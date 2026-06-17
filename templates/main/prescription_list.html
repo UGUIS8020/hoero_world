@@ -19,7 +19,7 @@
     }
     .status-受付中   { background-color: #fff3cd; color: #856404; }
     .status-受注済   { background-color: #cce5ff; color: #004085; }
-    .status-納品済み { background-color: #dee2e6; color: #6c757d; }
+    .status-納品済 { background-color: #dee2e6; color: #6c757d; }
     .status-処理済み { background-color: #dee2e6; color: #6c757d; }
     .status-納品済   { background-color: #dee2e6; color: #6c757d; }
     .status-badge.clickable { cursor: pointer; }
@@ -84,7 +84,7 @@
         </thead>
         <tbody>
             {% for p in prescriptions %}
-            {% set disp = '納品済み' if p.status in ['処理済み', '納品済'] else p.status %}
+            {% set disp = '納品済' if p.status in ['処理済み', '納品済'] else p.status %}
             <tr style="cursor: pointer;" data-date="{{ p.appointment_date }}" data-id="{{ p.prescription_id }}" data-status="{{ disp }}" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
                 <td style="white-space: nowrap; color: #7c1820; font-weight: bold;">No.{{ p.prescription_id }}</td>
                 <td style="white-space: nowrap;">{{ p.created_at[:10] }}</td>
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
     in7days.setDate(today.getDate() + 7);
 
     document.querySelectorAll('tr[data-date]').forEach(function(tr) {
-        if (tr.dataset.status === '納品済み') {
+        if (tr.dataset.status === '納品済') {
             tr.classList.add('processed');
             return;
         }
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-var STATUS_CYCLE = ['受付中', '受注済', '納品済み'];
+var STATUS_CYCLE = ['受付中', '受注済', '納品済'];
 
 function cycleStatus(badge) {
     var id = badge.dataset.id;
@@ -193,7 +193,7 @@ function cycleStatus(badge) {
         badge.className = 'status-badge status-' + data.status + ' clickable';
         badge.textContent = data.status;
         tr.dataset.status = data.status;
-        if (data.status === '納品済み') {
+        if (data.status === '納品済') {
             tr.classList.add('processed');
             tr.classList.remove('date-today', 'date-soon', 'date-week', 'date-future');
         } else {
