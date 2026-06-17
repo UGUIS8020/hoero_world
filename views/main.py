@@ -930,7 +930,7 @@ def prescription_set_status(prescription_id):
     if not current_user.is_administrator and p.get("user_id") != current_user.email:
         return _json.dumps({"error": "forbidden"}), 403, {"Content-Type": "application/json"}
     new_status = (request.json or {}).get("status") if request.is_json else request.form.get("status")
-    allowed = ["受付中", "製作中", "完了", "納品済"]
+    allowed = ["受付中", "受注済", "納品済み"]
     if new_status not in allowed:
         return _json.dumps({"error": "invalid status"}), 400, {"Content-Type": "application/json"}
     prescriptions_table.update_item(
