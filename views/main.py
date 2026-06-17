@@ -743,6 +743,9 @@ def prescription_view(prescription_id):
     file_items = []
     for key in (p.get("s3_keys") or []):
         try:
+            # 旧データで URL パスが保存されている場合は S3 キーに正規化
+            if '/meziro/download/' in key:
+                key = key.split('/meziro/download/')[-1]
             url = s3.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': BUCKET_NAME, 'Key': key},
@@ -1539,7 +1542,7 @@ email: shibuya8020@gmail.com
                 "teeth_fabrication":  teeth_fabrication,
                 "shade":           shade,
                 "message":         message,
-                "s3_keys":         [url_for('main.meziro_download', key=k.split('/meziro/download/')[-1], _external=False) if '/meziro/download/' in k else k for k in uploaded_urls],
+                "s3_keys":         [k.split('/meziro/download/')[-1] if '/meziro/download/' in k else k for k in uploaded_urls],
                 "image_keys":      image_keys,
                 "status":          "受付中",
                 "created_at":      received_at_str,
