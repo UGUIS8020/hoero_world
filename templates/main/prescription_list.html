@@ -153,25 +153,34 @@ document.addEventListener('DOMContentLoaded', function() {
     in7days.setDate(today.getDate() + 7);
 
     document.querySelectorAll('tr[data-date]').forEach(function(tr) {
-        if (tr.dataset.status === '納品済') {
-            tr.classList.add('processed');
-            return;
-        }
-        var d = tr.dataset.date;
-        if (!d) return;
-        var date = new Date(d);
-        date.setHours(0, 0, 0, 0);
-        if (date.getTime() === today.getTime()) {
-            tr.classList.add('date-today');
-        } else if (date > today && date <= in2days) {
-            tr.classList.add('date-soon');
-        } else if (date > in2days && date <= in7days) {
-            tr.classList.add('date-week');
-        } else if (date > in7days) {
-            tr.classList.add('date-future');
-        }
+        applyRowColor(tr, tr.dataset.status, tr.dataset.date);
     });
 });
+
+function applyRowColor(tr, status, dateStr) {
+    tr.classList.remove('date-today', 'date-soon', 'date-week', 'date-future', 'processed');
+    if (status === '納品済') {
+        tr.classList.add('processed');
+        return;
+    }
+    if (status !== '受注済') return;  // 受付中 → 白背景のまま
+    if (!dateStr) return;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var in2days = new Date(today); in2days.setDate(today.getDate() + 2);
+    var in7days = new Date(today); in7days.setDate(today.getDate() + 7);
+    var date = new Date(dateStr);
+    date.setHours(0, 0, 0, 0);
+    if (date.getTime() === today.getTime()) {
+        tr.classList.add('date-today');
+    } else if (date > today && date <= in2days) {
+        tr.classList.add('date-soon');
+    } else if (date > in2days && date <= in7days) {
+        tr.classList.add('date-week');
+    } else if (date > in7days) {
+        tr.classList.add('date-future');
+    }
+}
 
 var STATUS_CYCLE = ['受付中', '受注済', '納品済'];
 
@@ -193,12 +202,7 @@ function cycleStatus(badge) {
         badge.className = 'status-badge status-' + data.status + ' clickable';
         badge.textContent = data.status;
         tr.dataset.status = data.status;
-        if (data.status === '納品済') {
-            tr.classList.add('processed');
-            tr.classList.remove('date-today', 'date-soon', 'date-week', 'date-future');
-        } else {
-            tr.classList.remove('processed');
-        }
+        applyRowColor(tr, data.status, tr.dataset.date);
     })
     .catch(function(e) { console.error(e); });
 }

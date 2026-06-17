@@ -305,6 +305,13 @@
 window.addEventListener('beforeprint', function () {
     document.getElementById('screen-view').style.display = 'none';
     document.getElementById('print-two-up').style.display = 'flex';
+    {% if p.status == '受付中' %}
+    fetch('/prescription/set_status/{{ p.prescription_id }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+        body: JSON.stringify({ status: '受注済' })
+    });
+    {% endif %}
 });
 window.addEventListener('afterprint', function () {
     document.getElementById('screen-view').style.display = 'block';
