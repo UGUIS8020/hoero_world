@@ -758,7 +758,7 @@ def prescription_view(prescription_id):
         or p.get("user_id") == current_user.email
         or (p.get("clinic_id") and p.get("clinic_id") == getattr(current_user, "clinic_id", None))
     )
-    # ユーザーテーブルから電話番号を取得
+    # ユーザーテーブルから電話番号・医院名を取得（business_nameが空の場合に補完）
     user_phone = ""
     try:
         users_table = current_app.config["HOERO_USERS_TABLE"]
@@ -766,6 +766,8 @@ def prescription_view(prescription_id):
         if uid:
             u = users_table.get_item(Key={"user_id": uid}).get("Item", {})
             user_phone = u.get("phone", "")
+            if not p.get("business_name"):
+                p["business_name"] = u.get("sender_name", "")
     except Exception:
         pass
     return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete, user_phone=user_phone)
@@ -1501,15 +1503,20 @@ email: shibuya8020@gmail.com
         try:
             prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
 
-            # clinic_id を user_id（メール）から取得
+            # clinic_id・business_name を user_id（メール）から取得
             clinic_id_for_prescription = None
             if current_user.is_authenticated:
                 clinic_id_for_prescription = getattr(current_user, 'clinic_id', None)
-            if not clinic_id_for_prescription:
+                if not business_name:
+                    business_name = getattr(current_user, 'sender_name', '') or ''
+            if not clinic_id_for_prescription or not business_name:
                 try:
                     users_table = current_app.config["HOERO_USERS_TABLE"]
                     u = users_table.get_item(Key={'user_id': user_email}).get('Item', {})
-                    clinic_id_for_prescription = u.get('clinic_id')
+                    if not clinic_id_for_prescription:
+                        clinic_id_for_prescription = u.get('clinic_id')
+                    if not business_name:
+                        business_name = u.get('sender_name', '')
                 except Exception:
                     pass
 

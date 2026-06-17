@@ -163,11 +163,29 @@
             </tr>
             <tr>
                 <th>患者名</th>
-                <td><input type="text" name="patient_name" value="{{ p.patient_name or '' }}"></td>
+                <td>
+                    {% set name_parts = (p.patient_name or '').split(' ') %}
+                    <div class="d-flex gap-2">
+                        <input type="text" id="edit_last_name" class="form-control" placeholder="姓"
+                               value="{{ name_parts[0] if name_parts else '' }}">
+                        <input type="text" id="edit_first_name" class="form-control" placeholder="名"
+                               value="{{ name_parts[1] if name_parts|length > 1 else '' }}">
+                    </div>
+                    <input type="hidden" name="patient_name" id="edit_patient_name">
+                </td>
             </tr>
             <tr>
                 <th>患者名（カナ）</th>
-                <td><input type="text" name="patient_name_kana" value="{{ p.patient_name_kana or '' }}"></td>
+                <td>
+                    {% set kana_parts = (p.patient_name_kana or '').split(' ') %}
+                    <div class="d-flex gap-2">
+                        <input type="text" id="edit_last_name_kana" class="form-control" placeholder="セイ"
+                               value="{{ kana_parts[0] if kana_parts else '' }}">
+                        <input type="text" id="edit_first_name_kana" class="form-control" placeholder="メイ"
+                               value="{{ kana_parts[1] if kana_parts|length > 1 else '' }}">
+                    </div>
+                    <input type="hidden" name="patient_name_kana" id="edit_patient_name_kana">
+                </td>
             </tr>
             <tr>
                 <th>セット希望日</th>
@@ -353,6 +371,17 @@
 </div>
 
 <script>
+// 患者名・カナ：姓＋名を結合して hidden フィールドにセット
+document.querySelector('form').addEventListener('submit', function() {
+    var last  = document.getElementById('edit_last_name').value.trim();
+    var first = document.getElementById('edit_first_name').value.trim();
+    document.getElementById('edit_patient_name').value = [last, first].filter(Boolean).join(' ');
+
+    var lastKana  = document.getElementById('edit_last_name_kana').value.trim();
+    var firstKana = document.getElementById('edit_first_name_kana').value.trim();
+    document.getElementById('edit_patient_name_kana').value = [lastKana, firstKana].filter(Boolean).join(' ');
+});
+
 // 既存ファイル削除（prescription_delete_file エンドポイント流用）
 function deleteAttachment(btn) {
     if (!confirm('削除しますか？')) return;

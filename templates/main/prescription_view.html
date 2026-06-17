@@ -225,7 +225,7 @@
 {# ─── ボタン行（画面のみ） ─── #}
 <div class="btn-row" style="position: relative;">
     <div style="display: flex; gap: 8px;">
-        <a class="back-btn" onclick="history.back(); return false;" href="#">← 戻る</a>
+        <a class="back-btn" href="{{ url_for('main.prescription_list') }}">← 指示書一覧</a>
         {% if not current_user.is_administrator %}
         <a class="back-btn" href="{{ url_for('main.clinic_dashboard') }}">医院トップへ</a>
         {% endif %}
