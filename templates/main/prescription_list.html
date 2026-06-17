@@ -84,7 +84,8 @@
         </thead>
         <tbody>
             {% for p in prescriptions %}
-            <tr style="cursor: pointer;" data-date="{{ p.appointment_date }}" data-id="{{ p.prescription_id }}" data-status="{{ p.status }}" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
+            {% set disp = '納品済' if p.status == '処理済み' else p.status %}
+            <tr style="cursor: pointer;" data-date="{{ p.appointment_date }}" data-id="{{ p.prescription_id }}" data-status="{{ disp }}" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
                 <td style="white-space: nowrap; color: #7c1820; font-weight: bold;">No.{{ p.prescription_id }}</td>
                 <td style="white-space: nowrap;">{{ p.created_at[:10] }}</td>
                 {% if current_user.is_administrator %}
@@ -98,13 +99,13 @@
                     {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% elif p.source == 'shining3d' %}Shining3D{% else %}website{% endif %}
                 </td>
                 <td onclick="event.stopPropagation()">
-                    {% if p.status in ['受付中', '納品済'] %}
-                    <span class="status-badge status-{{ p.status }} clickable"
+                    {% if disp in ['受付中', '納品済'] %}
+                    <span class="status-badge status-{{ disp }} clickable"
                           data-id="{{ p.prescription_id }}"
                           onclick="toggleProcessed(this)"
-                          title="クリックで切替">{{ p.status }}</span>
+                          title="クリックで切替">{{ disp }}</span>
                     {% else %}
-                    <span class="status-badge status-{{ p.status }}">{{ p.status }}</span>
+                    <span class="status-badge status-{{ disp }}">{{ disp }}</span>
                     {% endif %}
                 </td>
             </tr>
