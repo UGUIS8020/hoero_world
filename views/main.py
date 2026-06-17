@@ -618,58 +618,68 @@ def list_uploaded_files():
 
 @bp.route('/meziro')
 def meziro():
+    PER_PAGE = 30
+    page = request.args.get('page', 1, type=int)
     s3_files = []
+    total = 0
     try:
-        # ページング対応で 'meziro/' 配下を全取得
+        # 全オブジェクトのキーと更新日時だけ取得（タグ・URL は取得しない）
+        all_objs = []
         kwargs = dict(Bucket=BUCKET_NAME, Prefix='meziro/', MaxKeys=1000)
         while True:
             resp = s3.list_objects_v2(**kwargs)
             for obj in resp.get('Contents', []):
-                key = obj['Key']
-                filename = os.path.basename(key)
-                if not filename:  # フォルダ疑似キーはスキップ
+                if not os.path.basename(obj['Key']):
                     continue
-
-                # completed タグ取得（失敗時は False）
-                completed = False
-                try:
-                    tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
-                    tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
-                    completed = (tags.get('completed') == 'true')
-                except Exception as e:
-                    # 権限/一時エラーはログだけ残して未完了扱い
-                    current_app.logger.warning(f"[MEZIRO] get_object_tagging failed key={key}: {e}")
-
-                # 署名付きURL（必要なら）
-                file_url = s3.generate_presigned_url(
-                    'get_object',
-                    Params={'Bucket': BUCKET_NAME, 'Key': key},
-                    ExpiresIn=604800  # 7日
-                )
-
-                s3_files.append({
-                    'key': key,
-                    'filename': filename,
-                    'last_modified_dt': obj['LastModified'],  # まずはdatetimeで保持（後で整形）
-                    'url': file_url,
-                    'completed': completed,
-                })
-
+                all_objs.append(obj)
             if resp.get('IsTruncated'):
-                kwargs['ContinuationToken'] = resp.get('NextContinuationToken')
+                kwargs['ContinuationToken'] = resp['NextContinuationToken']
             else:
                 break
 
-        # 新しい順に並べ替え → 表示用にJST文字列へ整形
-        s3_files.sort(key=lambda x: x['last_modified_dt'], reverse=True)
-        for f in s3_files:
-            f['last_modified'] = f['last_modified_dt'].astimezone(JST).strftime('%Y-%m-%d %H:%M')
-            del f['last_modified_dt']
+        # 新しい順にソート
+        all_objs.sort(key=lambda x: x['LastModified'], reverse=True)
+        total = len(all_objs)
+
+        # 現在ページ分だけ切り出し
+        start = (page - 1) * PER_PAGE
+        page_objs = all_objs[start:start + PER_PAGE]
+
+        # 現在ページ分のみタグ・presigned URL を取得
+        for obj in page_objs:
+            key = obj['Key']
+            filename = os.path.basename(key)
+
+            completed = False
+            try:
+                tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
+                tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
+                completed = (tags.get('completed') == 'true')
+            except Exception as e:
+                current_app.logger.warning(f"[MEZIRO] get_object_tagging failed key={key}: {e}")
+
+            file_url = s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': BUCKET_NAME, 'Key': key},
+                ExpiresIn=604800
+            )
+
+            s3_files.append({
+                'key': key,
+                'filename': filename,
+                'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
+                'url': file_url,
+                'completed': completed,
+            })
 
     except Exception as e:
         flash(f"S3ファイル一覧取得中にエラー: {str(e)}", "error")
 
-    return render_template('main/meziro.html', s3_files=s3_files)
+    total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+    page = max(1, min(page, total_pages))
+
+    return render_template('main/meziro.html', s3_files=s3_files,
+                           page=page, total_pages=total_pages, total=total)
 
 @bp.route('/prescription/list', methods=['GET'])
 @login_required
@@ -743,6 +753,9 @@ def prescription_view(prescription_id):
     file_items = []
     for key in (p.get("s3_keys") or []):
         try:
+            # 旧データで URL パスが保存されている場合は S3 キーに正規化
+            if '/meziro/download/' in key:
+                key = key.split('/meziro/download/')[-1]
             url = s3.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': BUCKET_NAME, 'Key': key},
@@ -917,7 +930,7 @@ def prescription_set_status(prescription_id):
     if not current_user.is_administrator and p.get("user_id") != current_user.email:
         return _json.dumps({"error": "forbidden"}), 403, {"Content-Type": "application/json"}
     new_status = (request.json or {}).get("status") if request.is_json else request.form.get("status")
-    allowed = ["受付中", "製作中", "完了", "処理済み"]
+    allowed = ["受付中", "受注済", "納品済"]
     if new_status not in allowed:
         return _json.dumps({"error": "invalid status"}), 400, {"Content-Type": "application/json"}
     prescriptions_table.update_item(
@@ -1462,7 +1475,7 @@ def meziro_upload():
         try:
             confirmation_msg = Message(
                 subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
-                recipients=[user_email, "shibuya8020@gmail.com"],
+                recipients=[user_email],
                 reply_to="shibuya8020@gmail.com",
                 body=f"""{user_name} 様
 
@@ -1539,7 +1552,7 @@ email: shibuya8020@gmail.com
                 "teeth_fabrication":  teeth_fabrication,
                 "shade":           shade,
                 "message":         message,
-                "s3_keys":         [url_for('main.meziro_download', key=k.split('/meziro/download/')[-1], _external=False) if '/meziro/download/' in k else k for k in uploaded_urls],
+                "s3_keys":         [k.split('/meziro/download/')[-1] if '/meziro/download/' in k else k for k in uploaded_urls],
                 "image_keys":      image_keys,
                 "status":          "受付中",
                 "created_at":      received_at_str,
@@ -1592,6 +1605,20 @@ def itero_import():
         flash("iTero: メールが見つかりませんでした（Gmail接続またはメールなし）")
     else:
         flash(f"iTero: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
+    return redirect(url_for("main.prescription_list"))
+
+
+@bp.route('/admin/shining3d/import', methods=['POST'])
+@login_required
+def shining3d_import():
+    if not current_user.is_administrator:
+        return "権限がありません", 403
+    from utils.shining3d_import import import_shining3d_emails
+    found, imported, skipped = import_shining3d_emails(current_app._get_current_object())
+    if found == 0:
+        flash("Shining3D: メールが見つかりませんでした（Gmail接続またはメールなし）")
+    else:
+        flash(f"Shining3D: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
     return redirect(url_for("main.prescription_list"))
 
 

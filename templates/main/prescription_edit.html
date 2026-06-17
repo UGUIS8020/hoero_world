@@ -299,7 +299,7 @@
                 <th>状態</th>
                 <td>
                     <select name="status">
-                        {% for s in ['受付中', '製作中', '完了'] %}
+                        {% for s in ['受付中', '受注済', '納品済'] %}
                         <option value="{{ s }}" {% if p.status == s %}selected{% endif %}>{{ s }}</option>
                         {% endfor %}
                     </select>

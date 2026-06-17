@@ -20,13 +20,6 @@ log = logging.getLogger(__name__)
 ITERO_FROM = "notifications-myiTero@aligntech.com"
 ITERO_LOOKBACK_DAYS = 30  # 安定後は7に変更可
 
-# iTero 英語医院名 → 日本語 sender_name マッピング
-# 新しい医院が増えたらここに追加する
-ITERO_CLINIC_NAME_MAP = {
-    "Ichikawa Dental Clinic":           "いちかわ歯科",
-    "Sakuragicho Hiro Dental Clinic":   "桜木町ヒロ歯科クリニック",
-}
-
 
 def _decode_subject(raw):
     try:
@@ -88,8 +81,7 @@ def parse_itero_email(msg):
         if m:
             order_id = m.group(1)
 
-    # 英語医院名を日本語に変換
-    clinic_jp = ITERO_CLINIC_NAME_MAP.get(clinic_en, "")
+    clinic_jp = ""  # import_itero_emails 内でDBマッピングを使用して解決する
 
     log.debug("iTero parse: order=%s clinic_en=[%s] clinic_jp=[%s]",
               order_id, clinic_en, clinic_jp)
@@ -148,7 +140,6 @@ def import_itero_emails(app):
     戻り値: (取得件数, 登録件数, スキップ件数)
     """
     from utils.common_utils import get_next_sequence_number
-    from boto3.dynamodb.conditions import Attr
 
     messages = fetch_itero_emails()
     found = len(messages)
@@ -162,16 +153,24 @@ def import_itero_emails(app):
         skipped = 0
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
-        # sender_name → user_id キャッシュ構築
-        sender_to_user = {}
+        # ユーザーテーブルから iTero 医院名マッピングを動的構築
+        # itero_clinic_name (英語) → {user_id, sender_name(日本語)} のキャッシュ
+        itero_name_to_user = {}
         try:
-            resp = users_table.scan(ProjectionExpression="user_id, sender_name")
+            resp = users_table.scan(
+                ProjectionExpression="user_id, sender_name, itero_clinic_name"
+            )
             for u in resp.get("Items", []):
-                sname = u.get("sender_name", "").strip()
-                if sname:
-                    sender_to_user[sname] = u["user_id"]
+                itero_en = u.get("itero_clinic_name", "").strip()
+                if itero_en:
+                    itero_name_to_user[itero_en] = {
+                        "user_id":     u["user_id"],
+                        "sender_name": u.get("sender_name", ""),
+                    }
         except Exception as e:
             log.warning("ユーザーテーブル読み込みエラー: %s", e)
+
+        log.info("iTero 医院マッピング %d 件: %s", len(itero_name_to_user), list(itero_name_to_user.keys()))
 
         for msg in messages:
             data = parse_itero_email(msg)
@@ -179,9 +178,11 @@ def import_itero_emails(app):
                 skipped += 1
                 continue
 
-            # 重複チェック
-            resp = prescriptions_table.scan(
-                FilterExpression=Attr("itero_order_id").eq(data["itero_order_id"]),
+            # 重複チェック（GSI クエリ）
+            resp = prescriptions_table.query(
+                IndexName="itero_order_id-index",
+                KeyConditionExpression="itero_order_id = :v",
+                ExpressionAttributeValues={":v": data["itero_order_id"]},
                 Select="COUNT",
             )
             if resp.get("Count", 0) > 0:
@@ -189,10 +190,12 @@ def import_itero_emails(app):
                 skipped += 1
                 continue
 
-            # 医院名でユーザー紐づけ
-            matched_user_id = sender_to_user.get(data["clinic_jp"], "itero")
-            log.info("iTero 医院=[%s]→[%s] user_id=%s",
-                     data["clinic_en"], data["clinic_jp"], matched_user_id)
+            # 英語医院名 → user_id・日本語医院名 を DB マッピングから解決
+            clinic_en = data["clinic_en"]
+            matched = itero_name_to_user.get(clinic_en, {})
+            matched_user_id = matched.get("user_id", "itero")
+            clinic_jp = matched.get("sender_name", "") or clinic_en
+            log.info("iTero 医院=[%s]→[%s] user_id=%s", clinic_en, clinic_jp, matched_user_id)
 
             session_id, _ = get_next_sequence_number()
             id_str = f"{session_id:05d}"
@@ -200,7 +203,7 @@ def import_itero_emails(app):
             item = {
                 "prescription_id":   id_str,
                 "user_id":           matched_user_id,
-                "business_name":     data["clinic_jp"] or data["clinic_en"],
+                "business_name":     clinic_jp,
                 "user_name":         "",
                 "patient_name":      data["itero_order_id"],
                 "chart_number":      "",

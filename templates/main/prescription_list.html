@@ -18,9 +18,10 @@
         white-space: nowrap;
     }
     .status-受付中   { background-color: #fff3cd; color: #856404; }
-    .status-製作中   { background-color: #cce5ff; color: #004085; }
-    .status-完了     { background-color: #d4edda; color: #155724; }
+    .status-受注済   { background-color: #cce5ff; color: #004085; }
+    .status-納品済 { background-color: #dee2e6; color: #6c757d; }
     .status-処理済み { background-color: #dee2e6; color: #6c757d; }
+    .status-納品済   { background-color: #dee2e6; color: #6c757d; }
     .status-badge.clickable { cursor: pointer; }
     .status-badge.clickable:hover { opacity: 0.75; }
     tr.date-today   { background-color: #f5c6cb; }
@@ -51,6 +52,13 @@
                 iTero 取込
             </button>
         </form>
+        <form method="POST" action="{{ url_for('main.shining3d_import') }}" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm"
+                    style="background:#198754; color:#fff; border:none; padding:5px 14px; border-radius:4px; font-size:13px;">
+                Shining3D 取込
+            </button>
+        </form>
     </div>
     {% endif %}
 </div>
@@ -76,7 +84,8 @@
         </thead>
         <tbody>
             {% for p in prescriptions %}
-            <tr style="cursor: pointer;" data-date="{{ p.appointment_date }}" data-id="{{ p.prescription_id }}" data-status="{{ p.status }}" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
+            {% set disp = '納品済' if p.status in ['処理済み', '納品済'] else p.status %}
+            <tr style="cursor: pointer;" data-date="{{ p.appointment_date }}" data-id="{{ p.prescription_id }}" data-status="{{ disp }}" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
                 <td style="white-space: nowrap; color: #7c1820; font-weight: bold;">No.{{ p.prescription_id }}</td>
                 <td style="white-space: nowrap;">{{ p.created_at[:10] }}</td>
                 {% if current_user.is_administrator %}
@@ -87,17 +96,13 @@
                 <td style="white-space: nowrap;">{{ p.appointment_date[5:] if p.appointment_date else '' }} {{ p.appointment_hour }}時</td>
                 <td>{{ p.project_type }}</td>
                 <td style="white-space: nowrap; font-size: 0.85em; color: #666;">
-                    {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% else %}website{% endif %}
+                    {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% elif p.source == 'shining3d' %}Shining3D{% else %}website{% endif %}
                 </td>
                 <td onclick="event.stopPropagation()">
-                    {% if p.status in ['受付中', '処理済み'] %}
-                    <span class="status-badge status-{{ p.status }} clickable"
+                    <span class="status-badge status-{{ disp }} clickable"
                           data-id="{{ p.prescription_id }}"
-                          onclick="toggleProcessed(this)"
-                          title="クリックで切替">{{ p.status }}</span>
-                    {% else %}
-                    <span class="status-badge status-{{ p.status }}">{{ p.status }}</span>
-                    {% endif %}
+                          onclick="cycleStatus(this)"
+                          title="クリックで切替">{{ disp }}</span>
                 </td>
             </tr>
             {% endfor %}
@@ -148,30 +153,42 @@ document.addEventListener('DOMContentLoaded', function() {
     in7days.setDate(today.getDate() + 7);
 
     document.querySelectorAll('tr[data-date]').forEach(function(tr) {
-        if (tr.dataset.status === '処理済み') {
-            tr.classList.add('processed');
-            return;
-        }
-        var d = tr.dataset.date;
-        if (!d) return;
-        var date = new Date(d);
-        date.setHours(0, 0, 0, 0);
-        if (date.getTime() === today.getTime()) {
-            tr.classList.add('date-today');
-        } else if (date > today && date <= in2days) {
-            tr.classList.add('date-soon');
-        } else if (date > in2days && date <= in7days) {
-            tr.classList.add('date-week');
-        } else if (date > in7days) {
-            tr.classList.add('date-future');
-        }
+        applyRowColor(tr, tr.dataset.status, tr.dataset.date);
     });
 });
 
-function toggleProcessed(badge) {
+function applyRowColor(tr, status, dateStr) {
+    tr.classList.remove('date-today', 'date-soon', 'date-week', 'date-future', 'processed');
+    if (status === '納品済') {
+        tr.classList.add('processed');
+        return;
+    }
+    if (status !== '受注済') return;  // 受付中 → 白背景のまま
+    if (!dateStr) return;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var in2days = new Date(today); in2days.setDate(today.getDate() + 2);
+    var in7days = new Date(today); in7days.setDate(today.getDate() + 7);
+    var date = new Date(dateStr);
+    date.setHours(0, 0, 0, 0);
+    if (date.getTime() === today.getTime()) {
+        tr.classList.add('date-today');
+    } else if (date > today && date <= in2days) {
+        tr.classList.add('date-soon');
+    } else if (date > in2days && date <= in7days) {
+        tr.classList.add('date-week');
+    } else if (date > in7days) {
+        tr.classList.add('date-future');
+    }
+}
+
+var STATUS_CYCLE = ['受付中', '受注済', '納品済'];
+
+function cycleStatus(badge) {
     var id = badge.dataset.id;
     var current = badge.textContent.trim();
-    var newStatus = current === '受付中' ? '処理済み' : '受付中';
+    var idx = STATUS_CYCLE.indexOf(current);
+    var newStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
     var csrfToken = typeof csrf_token !== 'undefined' ? csrf_token : '';
 
     fetch('/prescription/set_status/' + id, {
@@ -185,12 +202,7 @@ function toggleProcessed(badge) {
         badge.className = 'status-badge status-' + data.status + ' clickable';
         badge.textContent = data.status;
         tr.dataset.status = data.status;
-        if (data.status === '処理済み') {
-            tr.classList.add('processed');
-            tr.classList.remove('date-today', 'date-soon');
-        } else {
-            tr.classList.remove('processed');
-        }
+        applyRowColor(tr, data.status, tr.dataset.date);
     })
     .catch(function(e) { console.error(e); });
 }

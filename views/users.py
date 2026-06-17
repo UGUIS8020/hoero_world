@@ -253,6 +253,8 @@ def account_me():
         item["prefecture"]   = form.prefecture.data
         item["address"]      = form.address.data
         item["building"]     = form.building.data
+        if current_user.is_administrator:
+            item["itero_clinic_name"] = form.itero_clinic_name.data or ""
 
         # パスワードが入力されていたらハッシュ更新
         if form.password.data:
@@ -270,15 +272,16 @@ def account_me():
 
     elif request.method == 'GET':
         # 画面初期表示：フォームに現在の値をセット
-        form.display_name.data = item.get("display_name")
-        form.email.data        = item.get("email")
-        form.full_name.data    = item.get("full_name")
-        form.sender_name.data  = item.get("sender_name")
-        form.phone.data        = item.get("phone")
-        form.postal_code.data  = item.get("postal_code")
-        form.prefecture.data   = item.get("prefecture")
-        form.address.data      = item.get("address")
-        form.building.data     = item.get("building")
+        form.display_name.data      = item.get("display_name")
+        form.email.data             = item.get("email")
+        form.full_name.data         = item.get("full_name")
+        form.sender_name.data       = item.get("sender_name")
+        form.itero_clinic_name.data = item.get("itero_clinic_name", "")
+        form.phone.data             = item.get("phone")
+        form.postal_code.data       = item.get("postal_code")
+        form.prefecture.data        = item.get("prefecture")
+        form.address.data           = item.get("address")
+        form.building.data          = item.get("building")
 
     # テンプレートは昔と同じように user.xxx を使っているはずなので、
     # SimpleNamespace でそれっぽいオブジェクトを渡してあげる
@@ -379,16 +382,17 @@ def account(user_id):
     form = UpdateUserForm(user_id=user_id)
 
     if form.validate_on_submit():
-        item["display_name"] = form.display_name.data
+        item["display_name"]      = form.display_name.data
         # email はログインIDのため更新不可（変更は管理者対応）
-        item["full_name"]    = form.full_name.data
-        item["sender_name"]  = form.sender_name.data
-        item["phone"]        = form.phone.data
-        item["postal_code"]  = form.postal_code.data
-        item["prefecture"]   = form.prefecture.data
-        item["address"]      = form.address.data
-        item["building"]     = form.building.data
-        item["updated_at"]   = datetime.now(timezone.utc).isoformat()
+        item["full_name"]         = form.full_name.data
+        item["sender_name"]       = form.sender_name.data
+        item["itero_clinic_name"] = form.itero_clinic_name.data or ""
+        item["phone"]             = form.phone.data
+        item["postal_code"]       = form.postal_code.data
+        item["prefecture"]        = form.prefecture.data
+        item["address"]           = form.address.data
+        item["building"]          = form.building.data
+        item["updated_at"]        = datetime.now(timezone.utc).isoformat()
 
         if form.password.data:
             item["password_hash"] = generate_password_hash(form.password.data)
@@ -398,15 +402,16 @@ def account(user_id):
         return redirect(url_for('main.clinic_list'))
 
     elif request.method == 'GET':
-        form.display_name.data = item.get("display_name")
-        form.email.data        = item.get("email")
-        form.full_name.data    = item.get("full_name")
-        form.sender_name.data  = item.get("sender_name")
-        form.phone.data        = item.get("phone")
-        form.postal_code.data  = item.get("postal_code")
-        form.prefecture.data   = item.get("prefecture")
-        form.address.data      = item.get("address")
-        form.building.data     = item.get("building")
+        form.display_name.data      = item.get("display_name")
+        form.email.data             = item.get("email")
+        form.full_name.data         = item.get("full_name")
+        form.sender_name.data       = item.get("sender_name")
+        form.itero_clinic_name.data = item.get("itero_clinic_name", "")
+        form.phone.data             = item.get("phone")
+        form.postal_code.data       = item.get("postal_code")
+        form.prefecture.data        = item.get("prefecture")
+        form.address.data           = item.get("address")
+        form.building.data          = item.get("building")
 
     user = SimpleNamespace(
         user_id=item.get("user_id"),

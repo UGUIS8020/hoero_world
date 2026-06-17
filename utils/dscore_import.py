@@ -143,7 +143,7 @@ def parse_dscore_email(msg):
     # 歯番（FDI: 11–48）
     teeth = []
     if teeth_str:
-        teeth = [int(n) for n in re.findall(r'\d+', teeth_str) if 11 <= int(n) <= 48]
+        teeth = [str(n) for n in re.findall(r'\d+', teeth_str) if 11 <= int(n) <= 48]
 
     log.debug("D-score parse: order=%s biz=[%s] delivery_raw=[%s] date=%s hour=%s",
               order_id, business_name, delivery_raw, appointment_date, appointment_hour)

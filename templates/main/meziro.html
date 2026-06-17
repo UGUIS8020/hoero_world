@@ -69,7 +69,7 @@
                                         </td>
 
                                         <td>                                            
-                                            <a href="{{ url_for('main.meziro_download', key=file.key) }}" class="btn btn-sm btn-success">ダウンロード</a>
+                                            <a href="{{ file.url }}" class="btn btn-sm btn-success" download="{{ file.filename }}">ダウンロード</a>
                                             <form method="POST" action="{{ url_for('main.meziro_delete', key=file.key) }}" class="d-inline">
                                                 <!-- CSRFトークンを追加 -->
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -84,6 +84,31 @@
                 </form>
             {% else %}
                 <p class="text-center">ファイルがありません</p>
+            {% endif %}
+
+            {% if total_pages > 1 %}
+            <div class="d-flex justify-content-between align-items-center mt-3 px-1">
+                <small class="text-muted">全 {{ total }} 件中 {{ (page-1)*30+1 }}〜{{ [page*30, total]|min }} 件表示</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('main.meziro', page=page-1) }}">‹</a>
+                        </li>
+                        {% for p in range(1, total_pages+1) %}
+                            {% if p == page %}
+                            <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                            {% elif p == 1 or p == total_pages or (p >= page-2 and p <= page+2) %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('main.meziro', page=p) }}">{{ p }}</a></li>
+                            {% elif p == page-3 or p == page+3 %}
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('main.meziro', page=page+1) }}">›</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
             {% endif %}
         </div>
     </div>
