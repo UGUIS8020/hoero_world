@@ -3,6 +3,9 @@
 {% block content %}
 
 <div class="container pb-5" style="max-width: 600px;">
+  <div class="mb-3">
+    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm">← top画面に戻る</a>
+  </div>
   <h2 class="mb-4 text-center fw-bold">{{ clinic_name }}</h2>
 
   <div class="d-grid gap-3">
