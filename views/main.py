@@ -1462,7 +1462,7 @@ def meziro_upload():
         try:
             confirmation_msg = Message(
                 subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
-                recipients=[user_email, "shibuya8020@gmail.com"],
+                recipients=[user_email],
                 reply_to="shibuya8020@gmail.com",
                 body=f"""{user_name} 様
 
@@ -1592,6 +1592,20 @@ def itero_import():
         flash("iTero: メールが見つかりませんでした（Gmail接続またはメールなし）")
     else:
         flash(f"iTero: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
+    return redirect(url_for("main.prescription_list"))
+
+
+@bp.route('/admin/shining3d/import', methods=['POST'])
+@login_required
+def shining3d_import():
+    if not current_user.is_administrator:
+        return "権限がありません", 403
+    from utils.shining3d_import import import_shining3d_emails
+    found, imported, skipped = import_shining3d_emails(current_app._get_current_object())
+    if found == 0:
+        flash("Shining3D: メールが見つかりませんでした（Gmail接続またはメールなし）")
+    else:
+        flash(f"Shining3D: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
     return redirect(url_for("main.prescription_list"))
 
 

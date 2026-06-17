@@ -58,6 +58,7 @@ class UpdateUserForm(FlaskForm):
     email = StringField('メールアドレス', validators=[DataRequired(), Email()])
     full_name = StringField('氏名')
     sender_name = StringField('送信者名（医院名・技工所名）')
+    itero_clinic_name = StringField('iTero 医院名（英語）')
     phone = StringField('電話番号')
     postal_code = StringField('郵便番号')
     prefecture = StringField('都道府県')

@@ -66,6 +66,12 @@
                                 <div class="mb-3">
                                     {{ render_field(form.sender_name, placeholder="医院名・技工所名", class="form-control form-control-lg") }}
                                 </div>
+                                {% if current_user.is_administrator %}
+                                <div class="mb-3">
+                                    {{ render_field(form.itero_clinic_name, placeholder="例: Ichikawa Dental Clinic", class="form-control form-control-lg") }}
+                                    <div class="text-muted small mt-1">iTero メールに記載される英語の医院名（管理者のみ設定可）</div>
+                                </div>
+                                {% endif %}
                                 <div class="mb-3">
                                     {{ render_field(form.phone, placeholder="電話番号", class="form-control form-control-lg") }}
                                 </div>

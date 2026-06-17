@@ -432,6 +432,13 @@ def setup_mail_import_scheduler(app):
         except Exception as e:
             logger.error("iTero 定期取込エラー: %s", e)
 
+        try:
+            from utils.shining3d_import import import_shining3d_emails
+            found, imported, skipped = import_shining3d_emails(app)
+            logger.info("Shining3D: %d件取得 / %d件登録 / %d件スキップ", found, imported, skipped)
+        except Exception as e:
+            logger.error("Shining3D 定期取込エラー: %s", e)
+
     mail_scheduler.start()
     logger.info("メール定期取込スケジューラを開始しました（1時間ごと）")
 

@@ -51,6 +51,13 @@
                 iTero 取込
             </button>
         </form>
+        <form method="POST" action="{{ url_for('main.shining3d_import') }}" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm"
+                    style="background:#198754; color:#fff; border:none; padding:5px 14px; border-radius:4px; font-size:13px;">
+                Shining3D 取込
+            </button>
+        </form>
     </div>
     {% endif %}
 </div>
@@ -87,7 +94,7 @@
                 <td style="white-space: nowrap;">{{ p.appointment_date[5:] if p.appointment_date else '' }} {{ p.appointment_hour }}時</td>
                 <td>{{ p.project_type }}</td>
                 <td style="white-space: nowrap; font-size: 0.85em; color: #666;">
-                    {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% else %}website{% endif %}
+                    {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% elif p.source == 'shining3d' %}Shining3D{% else %}website{% endif %}
                 </td>
                 <td onclick="event.stopPropagation()">
                     {% if p.status in ['受付中', '処理済み'] %}
