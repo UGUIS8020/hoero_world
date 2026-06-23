@@ -1769,6 +1769,21 @@ def to_youtube_embed(url: str | None) -> str:
 
 
 
+def verify_recaptcha_invisible(response_token):
+    """reCAPTCHA v2 非表示バッジの検証"""
+    secret_key = os.getenv("RECAPTCHA_INVISIBLE_SECRET_KEY")
+    if not secret_key:
+        return True
+    import urllib.request as _urlreq, urllib.parse as _urlparse, json as _json
+    data = _urlparse.urlencode({'secret': secret_key, 'response': response_token,
+                                'remoteip': request.environ.get('REMOTE_ADDR', '')}).encode()
+    try:
+        res = _urlreq.urlopen('https://www.google.com/recaptcha/api/siteverify', data, timeout=5)
+        return _json.loads(res.read()).get('success', False)
+    except Exception:
+        return False
+
+
 def verify_recaptcha(response_token):
     """reCAPTCHAの検証（v3対応）"""
     secret_key = os.getenv("RECAPTCHA_SECRET_KEY")
@@ -1816,11 +1831,12 @@ def inquiry():
             flash('不正な送信が検出されました。', 'danger')
             return redirect(url_for('main.inquiry'))
         
-        # reCAPTCHA検証（無効化中）
-        # recaptcha_response = request.form.get('g-recaptcha-response')
-        # if not recaptcha_response or not verify_recaptcha(recaptcha_response):
-        #     flash('reCAPTCHA認証が必要です。', 'danger')
-        #     return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id)
+        # reCAPTCHA v2 非表示バッジ検証
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        if not recaptcha_response or not verify_recaptcha_invisible(recaptcha_response):
+            flash('reCAPTCHA認証に失敗しました。もう一度お試しください。', 'danger')
+            return render_template('main/inquiry.html', form=form, inquiry_id=inquiry_id,
+                                   recaptcha_site_key=os.getenv("RECAPTCHA_INVISIBLE_SITE_KEY"))
 
         # DynamoDB保存
         inquiry = InquiryDDB.create(
@@ -1907,7 +1923,7 @@ email:shibuya8020@gmail.com
     "main/inquiry.html",
     form=form,
     inquiry_id=inquiry_id,
-    recaptcha_site_key=os.getenv("RECAPTCHA_SITE_KEY")
+    recaptcha_site_key=os.getenv("RECAPTCHA_INVISIBLE_SITE_KEY")
 )
 
 @bp.route('/inquiry_maintenance')
