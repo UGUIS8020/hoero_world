@@ -2,11 +2,10 @@
 {% extends "common/base.html" %}
 {% block title %}お問い合わせ{% endblock %}
 
-{% block head %}
+{% block extra_meta %}
 <script>
     var isSubmitting = false;
 
-    // reCAPTCHA v2 非表示バッジのコールバック（認証成功後に呼ばれる）
     function onRecaptchaSuccess(token) {
         document.getElementById('g-recaptcha-response').value = token;
         document.getElementById('inquiry-form').submit();
