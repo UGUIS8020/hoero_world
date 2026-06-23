@@ -1,3 +1,5 @@
+import os
+
 from flask import (
     render_template, url_for, redirect, session,
     flash, request, abort, current_app  # ← current_app を追加
@@ -77,7 +79,28 @@ def login():
     return render_template('users/login.html', form=form)
 @bp.route('/preregister', methods=['GET', 'POST'])
 def preregister():
+    recaptcha_site_key = os.environ.get('RECAPTCHA_SITE_KEY', '')
     if request.method == 'POST':
+        # reCAPTCHA 検証
+        recaptcha_response = request.form.get('g-recaptcha-response', '')
+        secret_key = os.environ.get('RECAPTCHA_SECRET_KEY', '')
+        if secret_key:
+            import urllib.request, urllib.parse
+            verify_data = urllib.parse.urlencode({
+                'secret': secret_key,
+                'response': recaptcha_response
+            }).encode()
+            try:
+                req = urllib.request.urlopen('https://www.google.com/recaptcha/api/siteverify', verify_data, timeout=5)
+                import json as _json
+                result = _json.loads(req.read())
+                if not result.get('success'):
+                    flash('ロボット認証に失敗しました。もう一度お試しください。', 'danger')
+                    return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
+            except Exception:
+                flash('認証確認中にエラーが発生しました。しばらくしてからお試しください。', 'danger')
+                return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
+
         clinic_name      = request.form.get('clinic_name', '').strip()
         director_name    = request.form.get('director_name', '').strip()
         phone            = request.form.get('phone', '').strip()
@@ -88,22 +111,22 @@ def preregister():
         # 入力チェック
         if not all([clinic_name, director_name, phone, email, password]):
             flash('すべての項目を入力してください。', 'danger')
-            return render_template('users/preregister.html')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
 
         if password != password_confirm:
             flash('パスワードが一致しません。', 'danger')
-            return render_template('users/preregister.html')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
 
         if len(password) < 8:
             flash('パスワードは8文字以上で入力してください。', 'danger')
-            return render_template('users/preregister.html')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
 
         # メールアドレス重複チェック
         users_table = current_app.config["HOERO_USERS_TABLE"]
         existing = users_table.get_item(Key={"user_id": email}).get("Item")
         if existing:
             flash('このメールアドレスはすでに登録されています。', 'danger')
-            return render_template('users/preregister.html')
+            return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
 
         # アカウント作成
         from werkzeug.security import generate_password_hash
@@ -170,7 +193,7 @@ email: shibuya8020@gmail.com
         flash('アカウント登録が完了しました。ログインしてご利用ください。', 'success')
         return redirect(url_for('users.login'))
 
-    return render_template('users/preregister.html')
+    return render_template('users/preregister.html', recaptcha_site_key=recaptcha_site_key)
 
 
 @bp.route('/logout')

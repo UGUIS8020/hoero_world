@@ -95,6 +95,6 @@ class UpdateUserForm(FlaskForm):
             FilterExpression=Attr("display_name").eq(name),
             ProjectionExpression="user_id"
         )
-        # 自分自身は OK にしたい場合は、resp の中身と self.id を見てフィルタする形にしてもよいです
-        if resp.get("Items"):
+        others = [item for item in resp.get("Items", []) if item.get("user_id") != self.id]
+        if others:
             raise ValidationError('入力されたユーザー名は既に使われています。')
