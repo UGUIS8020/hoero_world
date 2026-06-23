@@ -1,157 +1,164 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>指示書 No.{{ p.prescription_id }}</title>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            font-size: 14px;
-            color: #333;
-            margin: 0;
-            padding: 20px 40px;
-        }
-        .header {
-            text-align: center;
-            border-bottom: 2px solid #7c1820;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            font-size: 22px;
-            color: #7c1820;
-            margin: 0 0 4px 0;
-        }
-        .header p {
-            margin: 0;
-            font-size: 13px;
-            color: #666;
-        }
-        .section {
-            margin-bottom: 16px;
-        }
-        table {
+{% extends "common/base.html" %}
+
+{% block title %}指示書 No.{{ p.prescription_id }} | 渋谷歯科技工所{% endblock %}
+
+{% block extra_meta %}
+<style>
+    .header {
+        text-align: center;
+        border-bottom: 2px solid #7c1820;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .header h1 {
+        font-size: 22px;
+        color: #7c1820;
+        margin: 0 0 4px 0;
+    }
+    .header p {
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+    }
+    .section {
+        margin-bottom: 16px;
+    }
+    .prescription-view-wrap table,
+    .prescription-copy table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+    }
+    .prescription-view-wrap table th,
+    .prescription-view-wrap table td,
+    .prescription-copy table th,
+    .prescription-copy table td {
+        border: 1px solid #ccc;
+        padding: 6px 10px;
+        text-align: left;
+    }
+    .prescription-view-wrap table th,
+    .prescription-copy table th {
+        background-color: #f3f4f5;
+        width: 30%;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    .teeth-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .tooth {
+        display: inline-block;
+        padding: 3px 8px;
+        border: 1px solid #7c1820;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #7c1820;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 3px 12px;
+        border-radius: 12px;
+        font-weight: bold;
+        font-size: 13px;
+    }
+    .status-受付中 { background-color: #fff3cd; color: #856404; }
+    .status-製作中 { background-color: #cce5ff; color: #004085; }
+    .status-完了   { background-color: #d4edda; color: #155724; }
+    .footer-note {
+        margin-top: 30px;
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+        font-size: 12px;
+        color: #888;
+        text-align: center;
+    }
+    .print-btn {
+        display: block;
+        margin: 0 auto 20px auto;
+        padding: 8px 24px;
+        background-color: #7c1820;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    .back-btn {
+        display: inline-block;
+        margin: 0 auto 20px 0;
+        padding: 6px 20px;
+        background-color: #f8f9fa;
+        color: #333;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 13px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+    .btn-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .zip-dl-btn {
+        display: inline-block;
+        padding: 6px 16px;
+        background-color: #17a2b8;
+        color: white !important;
+        border-radius: 4px;
+        font-size: 13px;
+        text-decoration: none;
+    }
+    .zip-dl-btn:hover { background-color: #138496; }
+
+    /* 印刷2面レイアウト（画面では非表示） */
+    #print-two-up { display: none; }
+
+    @media print {
+        @page { size: A4 landscape; margin: 4mm; }
+        /* すべて非表示にしてから印刷用レイアウトだけ表示 */
+        body * { visibility: hidden; }
+        body, html { margin: 0 !important; padding: 0 !important; }
+        #print-two-up {
+            visibility: visible;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 16px;
+            margin: 0;
+            padding: 0;
+            display: flex !important;
+            flex-direction: row;
+            gap: 6mm;
         }
-        table th, table td {
-            border: 1px solid #ccc;
-            padding: 6px 10px;
-            text-align: left;
+        #print-two-up * { visibility: visible; }
+        .prescription-copy {
+            flex: 1;
+            font-size: 15px;
+            border: 0.5px solid #bbb;
+            padding: 4mm 5mm;
+            overflow: hidden;
+            box-sizing: border-box;
         }
-        table th {
-            background-color: #f3f4f5;
-            width: 30%;
-            font-weight: bold;
-        }
-        .teeth-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-        }
-        .tooth {
-            display: inline-block;
-            padding: 3px 8px;
-            border: 1px solid #7c1820;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #7c1820;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 3px 12px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        .status-受付中 { background-color: #fff3cd; color: #856404; }
-        .status-製作中 { background-color: #cce5ff; color: #004085; }
-        .status-完了   { background-color: #d4edda; color: #155724; }
-        .footer {
-            margin-top: 30px;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-        }
-        .print-btn {
-            display: block;
-            margin: 0 auto 20px auto;
-            padding: 8px 24px;
-            background-color: #7c1820;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .back-btn {
-            display: inline-block;
-            margin: 0 auto 20px 0;
-            padding: 6px 20px;
-            background-color: #f8f9fa;
-            color: #333;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 13px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .btn-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .zip-dl-btn {
-            display: inline-block;
-            padding: 6px 16px;
-            background-color: #17a2b8;
-            color: white !important;
-            border-radius: 4px;
-            font-size: 13px;
-            text-decoration: none;
-        }
-        .zip-dl-btn:hover { background-color: #138496; }
+        .prescription-copy .header h1 { font-size: 23px; }
+        .prescription-copy .header p  { font-size: 13px; }
+        .prescription-copy .header    { padding-bottom: 6px; margin-bottom: 10px; }
+        .prescription-copy table th,
+        .prescription-copy table td   { padding: 5px 8px; }
+        .prescription-copy table      { margin-bottom: 8px; }
+        .prescription-copy .tooth     { font-size: 13px; padding: 2px 6px; }
+        .prescription-copy .status-badge { font-size: 13px; padding: 2px 8px; }
+        .prescription-copy img        { max-width: 80px !important; max-height: 80px !important; }
+        .prescription-copy .footer-note { margin-top: 10px; font-size: 10px; }
+    }
+</style>
+{% endblock %}
 
-        /* 印刷2面レイアウト（画面では非表示） */
-        #print-two-up { display: none; }
-
-        @media print {
-            @page { size: A4 landscape; margin: 4mm; }
-            .btn-row, .print-btn, .back-btn, .zip-dl-btn,
-            .delete-file-btn, #screen-view { display: none !important; }
-
-            #print-two-up {
-                display: flex !important;
-                flex-direction: row;
-                gap: 6mm;
-                width: 100%;
-            }
-            .prescription-copy {
-                flex: 1;
-                font-size: 15px;
-                border: 0.5px solid #bbb;
-                padding: 4mm 5mm;
-                overflow: hidden;
-                box-sizing: border-box;
-            }
-            .prescription-copy .header h1 { font-size: 23px; }
-            .prescription-copy .header p  { font-size: 13px; }
-            .prescription-copy .header    { padding-bottom: 6px; margin-bottom: 10px; }
-            .prescription-copy table th,
-            .prescription-copy table td   { padding: 5px 8px; }
-            .prescription-copy table      { margin-bottom: 8px; }
-            .prescription-copy .tooth     { font-size: 13px; padding: 2px 6px; }
-            .prescription-copy .status-badge { font-size: 13px; padding: 2px 8px; }
-            .prescription-copy img        { max-width: 80px !important; max-height: 80px !important; }
-            .prescription-copy .footer    { margin-top: 10px; font-size: 10px; }
-        }
-    </style>
-</head>
-<body>
+{% block content %}
 
 {# ─── マクロ: 指示書の中身 ─── #}
 {% macro prescription_body() %}
@@ -218,81 +225,85 @@
 </div>
 {% endif %}
 
-<div class="footer">渋谷歯科技工所 / shibuya8020.com</div>
+<div class="footer-note">渋谷歯科技工所 / shibuya8020.com</div>
 {% endmacro %}
 
 
-{# ─── ボタン行（画面のみ） ─── #}
-<div class="btn-row" style="position: relative;">
-    <div style="display: flex; gap: 8px;">
-        <a class="back-btn" href="{{ url_for('main.prescription_list') }}">← 指示書一覧</a>
-        {% if not current_user.is_administrator %}
-        <a class="back-btn" href="{{ url_for('main.clinic_dashboard') }}">医院トップへ</a>
-        {% endif %}
-    </div>
-    <button class="print-btn" onclick="window.print()"
-            style="position: absolute; left: 50%; transform: translateX(-50%); margin: 0;">印刷 / PDF保存（A4横・2面）</button>
-    <div style="display: flex; gap: 8px;">
-        {% if can_delete %}
-        <a href="{{ url_for('main.prescription_edit', prescription_id=p.prescription_id) }}"
-           class="back-btn">編集</a>
-        <form method="POST" action="{{ url_for('main.prescription_delete', prescription_id=p.prescription_id) }}"
-              onsubmit="return confirm('この指示書を削除しますか？この操作は取り消せません。');" style="margin: 0;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit"
-                    style="padding: 6px 20px; background-color: #dc3545; color: white; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">削除</button>
-        </form>
-        {% endif %}
-    </div>
-</div>
+<div class="container py-3 prescription-view-wrap">
 
-{# ─── 画面表示（通常1面） ─── #}
-<div id="screen-view">
-    {{ prescription_body() }}
-
-    {% if file_items %}
-    <div class="section" style="margin-bottom: 20px;">
-        <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">アップロード済みファイル</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-            {% for fi in file_items %}
-            <div style="display: flex; align-items: center; gap: 6px;">
-                {% if current_user.is_administrator %}
-                <a href="{{ fi.url }}" class="zip-dl-btn">⬇ {{ fi.name }}</a>
-                {% else %}
-                <span style="color: #555; font-size: 13px; padding: 4px 10px; border: 1px solid #ccc; border-radius: 4px;">{{ fi.name }}</span>
-                {% endif %}
-                {% if can_delete %}
-                <button class="delete-file-btn" data-key="{{ fi.key }}" data-type="file"
-                        style="padding: 4px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">
-                    削除
-                </button>
-                {% endif %}
-            </div>
-            {% endfor %}
+    {# ─── ボタン行（画面のみ） ─── #}
+    <div class="btn-row" style="position: relative;">
+        <div style="display: flex; gap: 8px;">
+            <a class="back-btn" href="{{ url_for('main.prescription_list') }}">← 指示書一覧</a>
+            {% if not current_user.is_administrator %}
+            <a class="back-btn" href="{{ url_for('main.clinic_dashboard') }}">医院トップへ</a>
+            {% endif %}
+        </div>
+        <button class="print-btn" onclick="window.print()"
+                style="position: absolute; left: 50%; transform: translateX(-50%); margin: 0;">印刷 / PDF保存（A4横・2面）</button>
+        <div style="display: flex; gap: 8px;">
+            {% if can_delete %}
+            <a href="{{ url_for('main.prescription_edit', prescription_id=p.prescription_id) }}"
+               class="back-btn">編集</a>
+            <form method="POST" action="{{ url_for('main.prescription_delete', prescription_id=p.prescription_id) }}"
+                  onsubmit="return confirm('この指示書を削除しますか？この操作は取り消せません。');" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                        style="padding: 6px 20px; background-color: #dc3545; color: white; border: none; border-radius: 4px; font-size: 13px; cursor: pointer;">削除</button>
+            </form>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
 
-    {% if image_items %}
-    <div class="section" style="margin-bottom: 20px;">
-        <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">添付画像</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-            {% for item in image_items %}
-            <div style="position: relative; display: inline-block;">
-                <a href="{{ item.url }}" target="_blank">
-                    <img src="{{ item.url }}" style="max-width: 200px; max-height: 200px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; display: block;">
-                </a>
-                {% if can_delete %}
-                <button class="delete-file-btn" data-key="{{ item.key }}" data-type="image"
-                        style="position: absolute; top: 4px; right: 4px; padding: 2px 8px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;">
-                    削除
-                </button>
-                {% endif %}
+    {# ─── 画面表示（通常1面） ─── #}
+    <div id="screen-view">
+        {{ prescription_body() }}
+
+        {% if file_items %}
+        <div class="section" style="margin-bottom: 20px;">
+            <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">アップロード済みファイル</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                {% for fi in file_items %}
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    {% if current_user.is_administrator %}
+                    <a href="{{ fi.url }}" class="zip-dl-btn">⬇ {{ fi.name }}</a>
+                    {% else %}
+                    <span style="color: #555; font-size: 13px; padding: 4px 10px; border: 1px solid #ccc; border-radius: 4px;">{{ fi.name }}</span>
+                    {% endif %}
+                    {% if can_delete %}
+                    <button class="delete-file-btn" data-key="{{ fi.key }}" data-type="file"
+                            style="padding: 4px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                        削除
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
+        {% endif %}
+
+        {% if image_items %}
+        <div class="section" style="margin-bottom: 20px;">
+            <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 4px;">添付画像</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                {% for item in image_items %}
+                <div style="position: relative; display: inline-block;">
+                    <a href="{{ item.url }}" target="_blank">
+                        <img src="{{ item.url }}" style="max-width: 200px; max-height: 200px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; display: block;">
+                    </a>
+                    {% if can_delete %}
+                    <button class="delete-file-btn" data-key="{{ item.key }}" data-type="image"
+                            style="position: absolute; top: 4px; right: 4px; padding: 2px 8px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;">
+                        削除
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
+
 </div>
 
 {# ─── 印刷用2面レイアウト（画面では非表示） ─── #}
@@ -301,6 +312,9 @@
     <div class="prescription-copy">{{ prescription_body() }}</div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
 <script>
 window.addEventListener('beforeprint', function () {
     document.getElementById('screen-view').style.display = 'none';
@@ -345,6 +359,4 @@ document.querySelectorAll('.delete-file-btn').forEach(function(btn) {
     });
 });
 </script>
-
-</body>
-</html>
+{% endblock %}
