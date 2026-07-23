@@ -58,6 +58,18 @@ class ZipHandler:
         os.makedirs(self.UPLOAD_FOLDER, exist_ok=True)
         os.makedirs(self.TEMP_ZIP_FOLDER, exist_ok=True)   
 
+    @staticmethod
+    def _safe_dicom_filename(original_name, index):
+        """DICOMファイル名を安全なASCII名に変換（数字部分を保持）"""
+        # OS禁止文字のみ除去（日本語は除去しない → 後でASCII化）
+        base = re.sub(r'[\\/:*?"<>|\x00-\x1f]', '_', original_name)
+        # 数字連番を抽出して使用（例: IM-0001-0023.dcm → 0001_0023.dcm）
+        nums = re.findall(r'\d+', base)
+        ext = os.path.splitext(original_name)[1].lower() or '.dcm'
+        if nums:
+            return '_'.join(nums) + ext
+        return f'dicom_{index:05d}{ext}'
+
     def process_files(self, files, has_folder_structure=False):
         """ファイルを処理（常にZIPファイルを作成）"""
         if not files:
@@ -70,33 +82,49 @@ class ZipHandler:
         try:
             print(f"Creating ZIP file {'(folder structure)' if has_folder_structure else '(all files)'}")
             zip_path = os.path.join(self.TEMP_ZIP_FOLDER, f'compressed_{timestamp}.zip')
-            
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for file in files:
-                    print(f"Processing file: {file.filename}")
-                    filename = sanitize_filename(file.filename)
 
-                    
-                    
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED, allowZip64=True) as zipf:
+                for idx, file in enumerate(files):
+                    print(f"Processing file: {file.filename}")
+                    original_name = file.filename or f'file_{idx:05d}'
+                    ext = os.path.splitext(original_name)[1].lower()
+                    is_dicom = ext in ('.dcm', '.ima', '') or original_name.upper().startswith('IM-')
+
+                    if is_dicom:
+                        # DICOMはsanitize不要・数字連番でリネーム
+                        safe_name = self._safe_dicom_filename(original_name, idx)
+                    else:
+                        safe_name = sanitize_filename(original_name) or f'file_{idx:05d}{ext}'
+
                     # フォルダ構造がある場合はパスを保持
                     if has_folder_structure and hasattr(file, 'webkitRelativePath') and file.webkitRelativePath:
-                        arc_name = file.webkitRelativePath
+                        rel = file.webkitRelativePath
+                        # パス内のフォルダ部分を保持し、ファイル名だけ安全化
+                        parts = rel.replace('\\', '/').split('/')
+                        parts[-1] = safe_name
+                        arc_name = '/'.join(parts)
                     elif has_folder_structure and hasattr(file, 'relativePath') and file.relativePath:
-                        arc_name = file.relativePath
+                        rel = file.relativePath
+                        parts = rel.replace('\\', '/').split('/')
+                        parts[-1] = safe_name
+                        arc_name = '/'.join(parts)
                     else:
-                        # 構造がない場合は単にファイル名を使用
-                        arc_name = filename
-                        
-                    temp_path = os.path.join(temp_dir, filename)
+                        arc_name = safe_name
+
+                    temp_path = os.path.join(temp_dir, f'{idx:05d}_{safe_name}')
                     file.save(temp_path)
-                    zipf.write(temp_path, arcname=arc_name)
-            
-            # 一時ディレクトリを削除
+                    # ZIPエントリにUTF-8フラグを立てる
+                    info = zipfile.ZipInfo(arc_name)
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    info.flag_bits |= 0x800  # UTF-8フラグ
+                    with open(temp_path, 'rb') as f:
+                        zipf.writestr(info, f.read())
+
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
-            
+
             return zip_path, None
-                
+
         except Exception as e:
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
