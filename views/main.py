@@ -939,6 +939,54 @@ def prescription_set_status(prescription_id):
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":s": new_status},
     )
+
+    # 納品済になったら医院へ完了通知メールを送信
+    if new_status == "納品済":
+        clinic_email    = p.get("user_id", "")
+        clinic_name     = p.get("user_name", "")
+        business_name   = p.get("business_name", "")
+        patient_name    = p.get("patient_name", "")
+        patient_kana    = p.get("patient_name_kana", "")
+        appt_date       = p.get("appointment_date", "")
+        appt_hour       = p.get("appointment_hour", "")
+        project_type    = p.get("project_type", "")
+        crown_type      = p.get("crown_type", "")
+        shade           = p.get("shade", "")
+        if clinic_email:
+            try:
+                delivery_msg = Message(
+                    subject=f"【納品のご連絡】No.{prescription_id} 作業完了いたしました",
+                    recipients=[clinic_email],
+                    reply_to="shibuya8020@gmail.com",
+                    body=f"""{business_name} {clinic_name} 様
+
+いつもお世話になっております。
+渋谷歯科技工所です。
+
+以下の技工物製作完了いたしました。本日発送、または納品準備が整いましたのでご連絡申し上げます。
+お手元に届くまでお待ちください。
+
+【受付番号】No.{prescription_id}
+【患者名】{patient_name}　{patient_kana}
+【セット希望日時】{appt_date} {appt_hour}時
+【製作物】{project_type}
+【種別】{crown_type}
+【シェード】{shade}
+
+ご不明な点がございましたら、お気軽にご連絡ください。
+
+--------------------------------
+渋谷歯科技工所
+〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203
+TEL: 048-961-8151
+email: shibuya8020@gmail.com
+"""
+                )
+                mail.send(delivery_msg)
+                current_app.logger.info("納品完了メール送信成功: to=%s prescription=%s", clinic_email, prescription_id)
+            except Exception as e:
+                current_app.logger.error("納品完了メール送信失敗: %s", e, exc_info=True)
+
     return _json.dumps({"status": new_status}), 200, {"Content-Type": "application/json"}
 
 
