@@ -623,22 +623,81 @@ def meziro():
     s3_files = []
     total = 0
     try:
-        # 全オブジェクトのキーと更新日時だけ取得（タグ・URL は取得しない）
-        all_objs = []
+        # 全オブジェクトを取得し、通常ファイルと画像グループに分類
+        regular_objs = []
+        image_groups = {}   # {prescription_id: obj}  代表オブジェクト(最新)
         kwargs = dict(Bucket=BUCKET_NAME, Prefix='meziro/', MaxKeys=1000)
         while True:
             resp = s3.list_objects_v2(**kwargs)
             for obj in resp.get('Contents', []):
-                if not os.path.basename(obj['Key']):
+                key = obj['Key']
+                if not os.path.basename(key):
                     continue
-                all_objs.append(obj)
+                if '/images/' in key:
+                    # meziro/{id}/images/xxx → prescription_id = {id}
+                    parts = key.split('/')
+                    pid = parts[1] if len(parts) >= 3 else None
+                    if pid:
+                        # 最新日時のオブジェクトを代表として保持
+                        if pid not in image_groups or obj['LastModified'] > image_groups[pid]['LastModified']:
+                            image_groups[pid] = obj
+                else:
+                    regular_objs.append(obj)
             if resp.get('IsTruncated'):
                 kwargs['ContinuationToken'] = resp['NextContinuationToken']
             else:
                 break
 
-        # 新しい順にソート
-        all_objs.sort(key=lambda x: x['LastModified'], reverse=True)
+        # 通常ファイルに含まれるIDを収集
+        regular_ids = set()
+        for obj in regular_objs:
+            parts = obj['Key'].split('/')
+            # meziro/01203_files.zip → "01203"  / meziro/01204/001_file → "01204"
+            if len(parts) >= 2:
+                regular_ids.add(parts[1].split('_')[0])
+
+        # 通常ファイルがないIDのみ画像グループ代表エントリを追加
+        s3_ids = set(regular_ids)
+        for pid, obj in image_groups.items():
+            if pid not in regular_ids:
+                synthetic = dict(obj)
+                synthetic['_synthetic_key'] = f'meziro/{pid}/images/'
+                synthetic['_type'] = 'images_only'
+                synthetic['_pid'] = pid
+                regular_objs.append(synthetic)
+            s3_ids.add(pid)
+
+        # DynamoDBにあってS3に存在しない指示書（ファイルも画像もなし）を補完
+        prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+        db_resp = prescriptions_table.scan(ProjectionExpression="prescription_id, created_at")
+        from datetime import datetime as _dt2, timezone as _tz2
+        for item in db_resp.get('Items', []):
+            pid = item.get('prescription_id', '')
+            if not pid or pid in s3_ids:
+                continue
+            try:
+                dt = _dt2.strptime(item['created_at'][:16], '%Y-%m-%d %H:%M').replace(tzinfo=_tz2.utc)
+            except Exception:
+                dt = _dt2(2000, 1, 1, tzinfo=_tz2.utc)
+            synthetic = {
+                'Key': f'meziro/{pid}/',
+                'LastModified': dt,
+                '_synthetic_key': f'meziro/{pid}/',
+                '_type': 'prescription_only',
+                '_pid': pid,
+            }
+            regular_objs.append(synthetic)
+
+        all_objs = regular_objs
+
+        def _sort_key(obj):
+            pid = obj.get('_pid') or obj['Key'].split('/')[1].split('_')[0]
+            try:
+                return int(pid)
+            except ValueError:
+                return 0
+
+        all_objs.sort(key=_sort_key, reverse=True)
         total = len(all_objs)
 
         # 現在ページ分だけ切り出し
@@ -648,6 +707,36 @@ def meziro():
         # 現在ページ分のみタグ・presigned URL を取得
         for obj in page_objs:
             key = obj['Key']
+            stype = obj.get('_type', '')
+
+            if stype == 'images_only':
+                pid = obj['_pid']
+                s3_files.append({
+                    'key': obj['_synthetic_key'],
+                    'filename': f'{pid}（添付画像のみ）',
+                    'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
+                    'url': None,
+                    'completed': False,
+                    'images_only': True,
+                    'prescription_only': False,
+                    'prescription_id': pid,
+                })
+                continue
+
+            if stype == 'prescription_only':
+                pid = obj['_pid']
+                s3_files.append({
+                    'key': obj['_synthetic_key'],
+                    'filename': f'{pid}（指示書のみ）',
+                    'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
+                    'url': None,
+                    'completed': False,
+                    'images_only': False,
+                    'prescription_only': True,
+                    'prescription_id': pid,
+                })
+                continue
+
             filename = os.path.basename(key)
 
             completed = False
@@ -670,6 +759,9 @@ def meziro():
                 'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
                 'url': file_url,
                 'completed': completed,
+                'images_only': False,
+                'prescription_only': False,
+                'prescription_id': None,
             })
 
     except Exception as e:
@@ -1698,6 +1790,67 @@ def meziro_download(key):
         return redirect(url_for('main.meziro'))
 
 
+@bp.route('/meziro/download_images/<prescription_id>')
+@login_required
+def meziro_download_images(prescription_id):
+    """画像のみの指示書をZIP（画像＋指示書情報）としてダウンロード"""
+    import io as _io
+
+    # DynamoDBから指示書情報を取得
+    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
+    p = resp.get("Item", {})
+
+    # 指示書情報テキストを生成
+    info_text = (
+        f"【受付番号】No.{prescription_id}\n"
+        f"【受信日時】{p.get('created_at', '')}\n\n"
+        f"【事業者名】{p.get('business_name', '')}\n"
+        f"【送信者名】{p.get('user_name', '')}\n"
+        f"【メールアドレス】{p.get('user_id', '')}\n"
+        f"【電話番号】{p.get('user_phone', '')}\n"
+        f"【カルテ番号】{p.get('chart_number', '')}\n"
+        f"【患者名】{p.get('patient_name', '')}　{p.get('patient_name_kana', '')}\n"
+        f"【セット希望日時】{p.get('appointment_date', '')} {p.get('appointment_hour', '')}時\n"
+        f"【製作物】{p.get('project_type', '')}\n"
+        f"【種別】{p.get('crown_type', '')}\n"
+        f"【シェード】{p.get('shade', '')}\n"
+        f"【対象部位】{', '.join(p.get('teeth_fabrication', []) or p.get('teeth', []))}\n"
+        f"【備考】\n{p.get('message', '')}\n\n"
+        "渋谷歯科技工所\n"
+        "〒343-0845 埼玉県越谷市南越谷4-9-6 新越谷プラザビル203\n"
+        "TEL: 048-961-8151\n"
+    )
+
+    # S3から画像一覧を取得
+    image_prefix = f"meziro/{prescription_id}/images/"
+    img_resp = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix=image_prefix)
+    image_objs = [obj for obj in img_resp.get('Contents', []) if os.path.basename(obj['Key'])]
+
+    # メモリ上でZIPを作成
+    zip_buffer = _io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # 指示書情報テキスト
+        zf.writestr(f"{prescription_id}_info.txt", info_text.encode('utf-8'))
+        # 画像ファイル
+        for obj in image_objs:
+            img_key = obj['Key']
+            img_filename = os.path.basename(img_key)
+            try:
+                img_data = s3.get_object(Bucket=BUCKET_NAME, Key=img_key)['Body'].read()
+                zf.writestr(img_filename, img_data)
+            except Exception as e:
+                current_app.logger.error("画像取得失敗: key=%s err=%s", img_key, e)
+
+    zip_buffer.seek(0)
+    return send_file(
+        zip_buffer,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name=f"{prescription_id}_files.zip"
+    )
+
+
 # ファイル削除用ルート
 @bp.route('/meziro/delete', methods=['POST'])
 def meziro_delete():
@@ -1705,36 +1858,27 @@ def meziro_delete():
         # URLパラメータからキーを取得（単一ファイル削除用）
         key_param = request.args.get('key')
         
+        def delete_key(key):
+            """単一キーまたはプレフィックス（末尾/）配下を全削除"""
+            if key.endswith('/'):
+                objs = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix=key).get('Contents', [])
+                for obj in objs:
+                    s3.delete_object(Bucket=BUCKET_NAME, Key=obj['Key'])
+                return len(objs)
+            else:
+                s3.delete_object(Bucket=BUCKET_NAME, Key=key)
+                return 1
+
         if key_param:
-            # 単一ファイル削除
             decoded_key = unquote(key_param)
-            
-            # S3からファイル削除
-            s3.delete_object(
-                Bucket=BUCKET_NAME,
-                Key=decoded_key
-            )
-            flash(f"ファイルを削除しました", "success")
+            delete_key(decoded_key)
+            flash("ファイルを削除しました", "success")
         else:
-            # 複数ファイル選択削除
             selected_files = request.form.getlist('selected_files')
-            
             if not selected_files:
                 flash("削除するファイルが選択されていません", "warning")
                 return redirect(url_for('main.meziro'))
-            
-            deleted_count = 0
-            for key in selected_files:
-                # URLデコード
-                decoded_key = unquote(key)
-                
-                # S3からファイル削除
-                s3.delete_object(
-                    Bucket=BUCKET_NAME,
-                    Key=decoded_key
-                )
-                deleted_count += 1
-            
+            deleted_count = sum(delete_key(unquote(k)) for k in selected_files)
             flash(f"{deleted_count}件のファイルを削除しました", "success")
     except Exception as e:
         flash(f"削除中にエラーが発生しました: {str(e)}", "danger")
