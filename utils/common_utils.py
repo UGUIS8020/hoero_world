@@ -467,6 +467,13 @@ def setup_mail_import_scheduler(app):
         except Exception as e:
             logger.error("Shining3D 定期取込エラー: %s", e)
 
+        try:
+            from utils.threedshape_import import import_threedshape_emails
+            found, imported, skipped = import_threedshape_emails(app)
+            logger.info("3ds: %d件取得 / %d件登録 / %d件スキップ", found, imported, skipped)
+        except Exception as e:
+            logger.error("3ds 定期取込エラー: %s", e)
+
     mail_scheduler.start()
     logger.info("メール定期取込スケジューラを開始しました（1時間ごと）")
 

@@ -112,6 +112,16 @@ def extract_youtube_id(url: str | None) -> str:
     return ""
 
 
+def _require_active_account():
+    """limitedアカウントはアカウントページへリダイレクト"""
+    from flask_login import current_user
+    if current_user.is_authenticated and not current_user.is_administrator:
+        if getattr(current_user, 'account_status', 'active') == 'limited':
+            from flask import redirect, url_for
+            return redirect(url_for('users.account_me'))
+    return None
+
+
 @bp.route('/')
 def index():
     # =========================
@@ -617,7 +627,12 @@ def list_uploaded_files():
     return jsonify(files)
 
 @bp.route('/meziro')
+@login_required
 def meziro():
+    blocked = _require_active_account()
+    if blocked:
+        return blocked
+
     PER_PAGE = 30
     page = request.args.get('page', 1, type=int)
     s3_files = []
@@ -684,12 +699,16 @@ def meziro():
 @bp.route('/prescription/list', methods=['GET'])
 @login_required
 def prescription_list():
+    blocked = _require_active_account()
+    if blocked:
+        return blocked
+
     prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
 
     if current_user.is_administrator:
-        # 管理者は全件取得（ページネーション対応）
+        # 管理者は全件取得（3dsは医院詳細ページで確認するため除外）
         items = []
-        scan_kwargs = {}
+        scan_kwargs = {"FilterExpression": Attr("source").ne("3ds") | Attr("source").not_exists()}
         while True:
             resp = prescriptions_table.scan(**scan_kwargs)
             items.extend(resp.get("Items", []))
@@ -1194,6 +1213,10 @@ def clinic_new():
 @bp.route('/prescription', methods=['GET'])
 @login_required
 def prescription():
+    blocked = _require_active_account()
+    if blocked:
+        return blocked
+
     dentists = getattr(current_user, "dentists", [])
     sender_name = getattr(current_user, "sender_name", "") or ""
     user_email = getattr(current_user, "email", "") or getattr(current_user, "user_id", "") or ""
@@ -1668,6 +1691,23 @@ def shining3d_import():
         flash("Shining3D: メールが見つかりませんでした（Gmail接続またはメールなし）")
     else:
         flash(f"Shining3D: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
+    return redirect(url_for("main.prescription_list"))
+
+
+@bp.route('/admin/threedshape/import', methods=['POST'])
+@login_required
+def threedshape_import():
+    if not current_user.is_administrator:
+        return "権限がありません", 403
+    from utils.threedshape_import import import_threedshape_emails
+    found, imported, skipped = import_threedshape_emails(current_app._get_current_object())
+    if found == 0:
+        flash("3ds: メールが見つかりませんでした（Gmail接続またはメールなし）")
+    else:
+        flash(f"3ds: {found} 件取得、{imported} 件登録、{skipped} 件スキップしました")
+    redirect_to = request.form.get("redirect_to")
+    if redirect_to:
+        return redirect(redirect_to)
     return redirect(url_for("main.prescription_list"))
 
 
