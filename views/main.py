@@ -1583,26 +1583,27 @@ def meziro_upload():
             full_message += f"\n\n⚠️ システム警告：{warning_message}\n"
             log.warning("採番時警告: %s", warning_message)
 
-        # 管理者へ
-        try:
-            msg = Message(
-                subject=f"【仕事が来たよ】No.{id_str}",
-                recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")],
-                reply_to="shibuya8020@gmail.com",
-                body=full_message
-            )
-            mail.send(msg)
-            log.info("メール送信成功（管理者）")
-        except Exception as e:
-            log.error("メール送信失敗（管理者）: %s", e, exc_info=True)
+        if not is_lab_order:
+            # 管理者へ
+            try:
+                msg = Message(
+                    subject=f"【仕事が来たよ】No.{id_str}",
+                    recipients=[os.getenv("MAIL_NOTIFICATION_RECIPIENT")],
+                    reply_to="shibuya8020@gmail.com",
+                    body=full_message
+                )
+                mail.send(msg)
+                log.info("メール送信成功（管理者）")
+            except Exception as e:
+                log.error("メール送信失敗（管理者）: %s", e, exc_info=True)
 
-        # 送信者へ
-        try:
-            confirmation_msg = Message(
-                subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
-                recipients=[user_email],
-                reply_to="shibuya8020@gmail.com",
-                body=f"""{user_name} 様
+            # 送信者へ
+            try:
+                confirmation_msg = Message(
+                    subject=f"【受付完了】No.{id_str} 技工指示の受付を承りました",
+                    recipients=[user_email],
+                    reply_to="shibuya8020@gmail.com",
+                    body=f"""{user_name} 様
 
 この度は技工指示を送信いただき、誠にありがとうございます。
 以下の内容で受付を完了いたしました。
@@ -1631,11 +1632,13 @@ def meziro_upload():
 TEL: 048-961-8151
 email: shibuya8020@gmail.com
 """
-            )
-            mail.send(confirmation_msg)
-            log.info("送信者への確認メール送信成功")
-        except Exception as e:
-            log.error("送信者への確認メール送信失敗: %s", e, exc_info=True)
+                )
+                mail.send(confirmation_msg)
+                log.info("送信者への確認メール送信成功")
+            except Exception as e:
+                log.error("送信者への確認メール送信失敗: %s", e, exc_info=True)
+        else:
+            log.info("ラボ注文のためメール通知スキップ: %s", id_str)
 
         # 指示書をDynamoDBに保存
         try:
