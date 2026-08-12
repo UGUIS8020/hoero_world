@@ -258,6 +258,14 @@
         </div>
         {% endif %}
 
+        {% if current_user.account_type == 'lab' %}
+        <!-- 患者氏名（技工所用：1フィールド） -->
+        <div class="mb-2">
+            <label for="patientNameSingle" class="form-label">患者氏名</label>
+            <input type="text" id="patientNameSingle" class="form-control" placeholder="患者氏名を入力してください">
+        </div>
+        {% endif %}
+
         <!-- セット希望日時 -->
         <div class="mb-2">
             <div class="text-center mb-2">
@@ -308,6 +316,26 @@
                 <option data-cat="lab" value="milling_PEEK">ミリング-PEEK冠</option>
                 <option data-cat="lab" value="milling_Zirconia">ミリング-ジルコニア</option>
             </select>
+            <!-- 個数 / インプラントホール数 -->
+            <div class="d-flex align-items-center gap-3 mt-2 flex-wrap">
+                <div class="d-flex align-items-center gap-2">
+                    <label for="quantity" class="form-label mb-0" style="white-space:nowrap;">個数(クラウン、インレー数)</label>
+                    <select id="quantity" class="form-control" style="width:100px;">
+                        {% for i in range(1, 15) %}
+                        <option value="{{ i }}">{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="implantHoles" class="form-label mb-0" style="white-space:nowrap;">インプラントホール数</label>
+                    <select id="implantHoles" class="form-control" style="width:100px;">
+                        <option value="">—</option>
+                        {% for i in range(1, 11) %}
+                        <option value="{{ i }}">{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
         </div>
         <script>
         function switchProjectTab(cat) {
@@ -466,6 +494,7 @@
 </div>
 
 <!-- 画像添付 -->
+{% if current_user.account_type != 'lab' %}
 <div class="mb-2" style="max-width: 800px; margin: 10px auto 0 auto;">
     <label class="form-label">画像添付</label>
     <div id="imageUploadArea" class="image-upload-area">
@@ -475,6 +504,7 @@
     </div>
     <div id="imageThumbnails" class="image-thumbnails"></div>
 </div>
+{% endif %}
 
 <!-- ドロップゾーン -->
 <div class="drop-zone" id="dropZone">

@@ -84,11 +84,13 @@
                 {% if current_user.is_administrator %}
                 <th>事業者名</th>
                 {% endif %}
-                <th>担当医</th>
                 <th>患者名</th>
                 <th>セット日</th>
                 <th>製作物</th>
-                <th>受信元</th>
+                <th style="white-space:nowrap;">個数</th>
+                <th style="white-space:nowrap;">インプラントホール数</th>
+                <th>備考</th>
+                {% if current_user.is_administrator %}<th>受信元</th>{% endif %}
                 <th>状態</th>
             </tr>
         </thead>
@@ -104,13 +106,17 @@
                 {% if current_user.is_administrator %}
                 <td>{{ p.business_name }}</td>
                 {% endif %}
-                <td>{{ p.user_name }}</td>
                 <td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td>
                 <td style="white-space: nowrap;">{{ p.appointment_date[5:] if p.appointment_date else '' }}{% if p.appointment_hour and not is_lab %} {{ p.appointment_hour }}時{% endif %}</td>
                 <td>{{ p.project_type }}</td>
+                <td style="text-align:center;">{{ p.quantity or '' }}</td>
+                <td style="text-align:center;">{{ p.implant_holes or '' }}</td>
+                <td style="font-size:0.85em; color:#555;">{{ (p.message or '')[:30] }}{% if (p.message or '')|length > 30 %}…{% endif %}</td>
+                {% if current_user.is_administrator %}
                 <td style="white-space: nowrap; font-size: 0.85em; color: #666;">
                     {% if is_lab %}ReArch{% elif p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% elif p.source == 'shining3d' %}Shining3D{% elif p.source == '3ds' %}3ds{% else %}website{% endif %}
                 </td>
+                {% endif %}
                 <td onclick="event.stopPropagation()">
                     <span class="status-badge status-{{ disp }} clickable"
                           data-id="{{ p.prescription_id }}"
