@@ -713,11 +713,11 @@ def prescription_list():
     prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
 
     if current_user.is_administrator:
-        # 管理者は全件取得（3ds・labは医院詳細ページで確認するため除外）
+        # 管理者は全件取得（3ds・lab・ReArch-は医院詳細ページで確認するため除外）
         items = []
         scan_kwargs = {"FilterExpression":
-            Attr("source").not_exists() |
-            (Attr("source").ne("3ds") & Attr("source").ne("lab"))
+            (Attr("source").not_exists() | (Attr("source").ne("3ds") & Attr("source").ne("lab")))
+            & ~Attr("prescription_id").begins_with("ReArch-")
         }
         while True:
             resp = prescriptions_table.scan(**scan_kwargs)
@@ -1698,6 +1698,8 @@ email: shibuya8020@gmail.com
             }
             if clinic_id_for_prescription:
                 prescription_item["clinic_id"] = clinic_id_for_prescription
+            if is_lab_order:
+                prescription_item["source"] = "lab"
 
             save_table = (
                 current_app.config["LAB_PRESCRIPTIONS_TABLE"]

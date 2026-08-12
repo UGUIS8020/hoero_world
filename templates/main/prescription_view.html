@@ -234,7 +234,13 @@
     {# ─── ボタン行（画面のみ） ─── #}
     <div class="btn-row" style="position: relative;">
         <div style="display: flex; gap: 8px;">
+            {% if current_user.is_administrator and p.prescription_id.startswith('ReArch-') %}
+            <a class="back-btn" href="{{ url_for('main.clinic_view', user_id='rearch.design@outlook.com') }}">← 指示書一覧</a>
+            {% elif not current_user.is_administrator and current_user.account_type == 'lab' %}
+            <a class="back-btn" href="{{ url_for('main.clinic_view', user_id=current_user.user_id) }}">← 指示書一覧</a>
+            {% else %}
             <a class="back-btn" href="{{ url_for('main.prescription_list') }}">← 指示書一覧</a>
+            {% endif %}
             {% if not current_user.is_administrator %}
             <a class="back-btn" href="{{ url_for('main.clinic_dashboard') }}">医院トップへ</a>
             {% endif %}
@@ -301,6 +307,16 @@
                 {% endfor %}
             </div>
         </div>
+        {% endif %}
+    </div>
+
+    <div class="text-center mt-4 mb-3">
+        {% if current_user.is_administrator and p.prescription_id.startswith('ReArch-') %}
+        <a class="back-btn" href="{{ url_for('main.clinic_view', user_id='rearch.design@outlook.com') }}">← 指示書一覧</a>
+        {% elif not current_user.is_administrator and current_user.account_type == 'lab' %}
+        <a class="back-btn" href="{{ url_for('main.clinic_view', user_id=current_user.user_id) }}">← 指示書一覧</a>
+        {% else %}
+        <a class="back-btn" href="{{ url_for('main.prescription_list') }}">← 指示書一覧</a>
         {% endif %}
     </div>
 
