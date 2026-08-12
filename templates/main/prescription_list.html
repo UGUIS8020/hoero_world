@@ -22,6 +22,8 @@
     .status-納品済 { background-color: #dee2e6; color: #6c757d; }
     .status-処理済み { background-color: #dee2e6; color: #6c757d; }
     .status-納品済   { background-color: #dee2e6; color: #6c757d; }
+    .status-製作中   { background-color: #cce5ff; color: #004085; }
+    .status-完了     { background-color: #d4edda; color: #155724; }
     .status-badge.clickable { cursor: pointer; }
     .status-badge.clickable:hover { opacity: 0.75; }
     tr.date-today   { background-color: #f5c6cb; }
@@ -29,6 +31,7 @@
     tr.date-week    { background-color: #d6eaf8; }
     tr.date-future  { background-color: #d5f5e3; }
     tr.processed    { background-color: #e2e3e5 !important; color: #555; }
+    tr.lab-row      { background-color: #fdf6ee !important; }
 </style>
 
 <div class="page-header" style="position: relative;">
@@ -91,8 +94,11 @@
         </thead>
         <tbody>
             {% for p in prescriptions %}
-            {% set disp = '納品済' if p.status in ['処理済み', '納品済'] else p.status %}
-            <tr style="cursor: pointer;" data-date="{{ p.appointment_date }}" data-id="{{ p.prescription_id }}" data-status="{{ disp }}" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
+            {% set is_lab = p.prescription_id.startswith('ReArch-') %}
+            {% set disp = p.status if is_lab else ('納品済' if p.status in ['処理済み', '納品済'] else p.status) %}
+            <tr style="cursor: pointer;" data-date="{{ p.appointment_date }}" data-id="{{ p.prescription_id }}" data-status="{{ disp }}"
+                class="{{ 'lab-row' if is_lab else '' }}"
+                onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
                 <td style="white-space: nowrap; color: #7c1820; font-weight: bold;">No.{{ p.prescription_id }}</td>
                 <td style="white-space: nowrap;">{{ p.created_at[:10] }}</td>
                 {% if current_user.is_administrator %}
@@ -100,14 +106,15 @@
                 {% endif %}
                 <td>{{ p.user_name }}</td>
                 <td>{{ p.patient_name }}{% if p.patient_name_kana %}　{{ p.patient_name_kana }}{% endif %}</td>
-                <td style="white-space: nowrap;">{{ p.appointment_date[5:] if p.appointment_date else '' }} {{ p.appointment_hour }}時</td>
+                <td style="white-space: nowrap;">{{ p.appointment_date[5:] if p.appointment_date else '' }}{% if p.appointment_hour and not is_lab %} {{ p.appointment_hour }}時{% endif %}</td>
                 <td>{{ p.project_type }}</td>
                 <td style="white-space: nowrap; font-size: 0.85em; color: #666;">
-                    {% if p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% elif p.source == 'shining3d' %}Shining3D{% elif p.source == '3ds' %}3ds{% else %}website{% endif %}
+                    {% if is_lab %}ReArch{% elif p.source == 'dscore' %}DS Core{% elif p.source == 'itero' %}iTero{% elif p.source == 'shining3d' %}Shining3D{% elif p.source == '3ds' %}3ds{% else %}website{% endif %}
                 </td>
                 <td onclick="event.stopPropagation()">
                     <span class="status-badge status-{{ disp }} clickable"
                           data-id="{{ p.prescription_id }}"
+                          data-is-lab="{{ 'true' if is_lab else 'false' }}"
                           onclick="cycleStatus(this)"
                           title="クリックで切替">{{ disp }}</span>
                 </td>
@@ -189,12 +196,16 @@ function applyRowColor(tr, status, dateStr) {
     }
 }
 
-var STATUS_CYCLE = ['受付中', '受注済', '納品済'];
+var CLINIC_STATUS_CYCLE = ['受付中', '受注済', '納品済'];
+var LAB_STATUS_CYCLE    = ['受付中', '製作中', '完了'];
 
 function cycleStatus(badge) {
     var id = badge.dataset.id;
+    var isLab = badge.dataset.isLab === 'true';
+    var STATUS_CYCLE = isLab ? LAB_STATUS_CYCLE : CLINIC_STATUS_CYCLE;
     var current = badge.textContent.trim();
     var idx = STATUS_CYCLE.indexOf(current);
+    if (idx === -1) idx = 0;
     var newStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
     var csrfToken = typeof csrf_token !== 'undefined' ? csrf_token : '';
 

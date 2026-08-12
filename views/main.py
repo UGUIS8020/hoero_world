@@ -713,7 +713,7 @@ def prescription_list():
     prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
 
     if current_user.is_administrator:
-        # 管理者は全件取得（3ds・lab・ReArch-は医院詳細ページで確認するため除外）
+        # 通常テーブル: 3ds・lab・ReArch-は除外
         items = []
         scan_kwargs = {"FilterExpression":
             (Attr("source").not_exists() | (Attr("source").ne("3ds") & Attr("source").ne("lab")))
@@ -726,6 +726,16 @@ def prescription_list():
             if not last:
                 break
             scan_kwargs["ExclusiveStartKey"] = last
+        # ラボテーブル（ReArch Design）を追加
+        lab_table = current_app.config["LAB_PRESCRIPTIONS_TABLE"]
+        lab_kwargs = {}
+        while True:
+            resp = lab_table.scan(**lab_kwargs)
+            items.extend(resp.get("Items", []))
+            last = resp.get("LastEvaluatedKey")
+            if not last:
+                break
+            lab_kwargs["ExclusiveStartKey"] = last
     else:
         from boto3.dynamodb.conditions import Key
         # labアカウントは専用テーブルを参照
