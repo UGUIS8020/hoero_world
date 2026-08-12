@@ -70,6 +70,7 @@ flask_app.config["STL_POSTS_TABLE"] = dynamodb.Table(os.getenv("STL_POSTS_TABLE_
 flask_app.config["STL_COMMENTS_TABLE"] = dynamodb.Table(os.getenv("STL_COMMENTS_TABLE_NAME", "hoero-stl-comments"))
 flask_app.config["STL_LIKES_TABLE"] = dynamodb.Table(os.getenv("STL_LIKES_TABLE_NAME", "hoero-stl-likes"))
 flask_app.config["PRESCRIPTIONS_TABLE"] = dynamodb.Table(os.getenv("PRESCRIPTIONS_TABLE_NAME", "hoero-prescriptions"))
+flask_app.config["LAB_PRESCRIPTIONS_TABLE"] = dynamodb.Table(os.getenv("LAB_PRESCRIPTIONS_TABLE_NAME", "hoero-lab-prescriptions"))
 
 # 拡張初期化
 login_manager.init_app(flask_app)

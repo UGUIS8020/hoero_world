@@ -307,7 +307,7 @@ async function uploadFiles(files) {
 
     // テキスト系入力を収集
     const businessName = document.getElementById("businessName") ? document.getElementById("businessName").value : "";
-    const userName = document.getElementById("userName").value;
+    const userName = document.getElementById("userName")?.value || "";
     const userPhone = document.getElementById("userPhone") ? document.getElementById("userPhone").value : "";
     const userEmail = document.getElementById("userEmail").value;
     const patientLastName = (document.getElementById("PatientLastName")?.value || "").trim();
@@ -317,8 +317,8 @@ async function uploadFiles(files) {
     const patientFirstNameKana = (document.getElementById("PatientFirstNameKana")?.value || "").trim();
     const patientNameKana = [patientLastNameKana, patientFirstNameKana].filter(Boolean).join(" ");
     const chartNumber = document.getElementById("ChartNumber") ? document.getElementById("ChartNumber").value : "";
-    const appointmentDate = document.getElementById("appointmentDate").value;
-    const appointmentHour = document.getElementById("appointmentHour").value;
+    const appointmentDate = document.getElementById("appointmentDate")?.value || "";
+    const appointmentHour = document.getElementById("appointmentHour")?.value || "";
     const projectType = document.getElementById("projectType").value;
     const shade = document.getElementById("shade").value;
     const userMessage = document.getElementById("userMessage").value;
@@ -341,16 +341,12 @@ async function uploadFiles(files) {
     });
     const selectedTeeth = [...teethAbutment, ...teethMissing, ...teethFabrication];
 
-    // ▼ 必須フィールドのバリデーション
-    if (
-        !userName ||
-        !userEmail ||
-        !patientLastName ||
-        !patientFirstName ||
-        !appointmentDate ||
-        !appointmentHour ||
-        !projectType
-    ) {
+    // ▼ 必須フィールドのバリデーション（要素が存在する場合のみチェック）
+    const _hasUserName   = !document.getElementById("userName")          || !!userName;
+    const _hasPatient    = !document.getElementById("PatientLastName")   || (!!patientLastName && !!patientFirstName);
+    const _hasDate       = !document.getElementById("appointmentDate")   || !!appointmentDate;
+    const _hasHour       = !document.getElementById("appointmentHour")   || !!appointmentHour;
+    if (!_hasUserName || !userEmail || !_hasPatient || !_hasDate || !_hasHour || !projectType) {
         showStatus("すべての必須項目を入力してください。", "error");
         return;
     }
@@ -679,6 +675,7 @@ document.addEventListener("DOMContentLoaded", function () {
 document.addEventListener("DOMContentLoaded", function () {
     // 日付フィールドを選択
     const appointmentDateField = document.getElementById("appointmentDate");
+    if (!appointmentDateField) return;  // 歯科技工所アカウントでは非表示
 
     // 日付フィールドがクリックされたときにカレンダーを開く
     appointmentDateField.addEventListener("click", function () {

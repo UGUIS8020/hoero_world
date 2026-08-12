@@ -211,6 +211,7 @@
         <input type="hidden" id="userEmail" value="{{ user_email }}">
         <input type="hidden" id="businessName" value="{{ sender_name }}">
 
+        {% if current_user.account_type != 'lab' %}
         <!-- 担当歯科医師（プルダウン or テキスト） -->
         <div class="mb-2">
             <label for="userName" class="form-label">担当 <span class="text-danger">必須</span></label>
@@ -280,6 +281,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- 製作物 -->
         <div class="mb-2">
@@ -326,7 +328,9 @@
                 tabClinic.style.background = '#fff'; tabClinic.style.color = '#7c1820';
             }
         }
-        document.addEventListener('DOMContentLoaded', function() { switchProjectTab('clinic'); });
+        document.addEventListener('DOMContentLoaded', function() {
+            switchProjectTab('{{ "lab" if current_user.account_type == "lab" else "clinic" }}');
+        });
         </script>
 
         <!-- 部位選択 -->
