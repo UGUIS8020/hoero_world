@@ -1125,8 +1125,18 @@ def clinic_view(user_id):
         except Exception:
             pass
 
-    prescriptions = sorted(merged.values(), key=lambda x: x.get("created_at", ""), reverse=True)
-    return render_template('main/clinic_view.html', clinic=clinic, prescriptions=prescriptions)
+    all_prescriptions = sorted(merged.values(), key=lambda x: x.get("created_at", ""), reverse=True)
+
+    PER_PAGE = 30
+    page = request.args.get('page', 1, type=int)
+    total = len(all_prescriptions)
+    total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
+    page = max(1, min(page, total_pages))
+    prescriptions = all_prescriptions[(page - 1) * PER_PAGE : page * PER_PAGE]
+
+    return render_template('main/clinic_view.html', clinic=clinic,
+                           prescriptions=prescriptions,
+                           page=page, total_pages=total_pages, total=total)
 
 
 @bp.route('/clinic/list', methods=['GET'])
