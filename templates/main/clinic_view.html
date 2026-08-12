@@ -26,6 +26,8 @@
     .status-受付中 { background-color: #fff3cd; color: #856404; }
     .status-製作中 { background-color: #cce5ff; color: #004085; }
     .status-完了   { background-color: #d4edda; color: #155724; }
+    .status-badge.clickable { cursor: pointer; }
+    .status-badge.clickable:hover { opacity: 0.75; }
 </style>
 
 <div class="page-header" style="position: relative;">
@@ -142,7 +144,16 @@
                         {% endif %}
                     </div>
                 </td>
-                <td><span class="status-badge status-{{ p.status }}">{{ p.status }}</span></td>
+                <td onclick="event.stopPropagation()">
+                    {% if clinic.account_type == 'lab' %}
+                    <span class="status-badge status-{{ p.status }} clickable"
+                          data-id="{{ p.prescription_id }}"
+                          onclick="cycleStatus(this)"
+                          title="クリックで切替">{{ p.status }}</span>
+                    {% else %}
+                    <span class="status-badge status-{{ p.status }}">{{ p.status }}</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -182,4 +193,32 @@
 
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var LAB_STATUS_CYCLE = ['受付中', '製作中', '完了'];
+
+function cycleStatus(badge) {
+    var id = badge.dataset.id;
+    var current = badge.textContent.trim();
+    var idx = LAB_STATUS_CYCLE.indexOf(current);
+    var newStatus = LAB_STATUS_CYCLE[(idx + 1) % LAB_STATUS_CYCLE.length];
+
+    fetch('/prescription/set_status/' + id, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        badge.className = 'status-badge status-' + data.status + ' clickable';
+        badge.textContent = data.status;
+    })
+    .catch(function(e) { console.error(e); });
+}
+</script>
 {% endblock %}
