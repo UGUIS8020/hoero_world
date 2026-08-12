@@ -256,21 +256,22 @@
                 <input type="text" id="PatientFirstNameKana" class="form-control" placeholder="メイ">
             </div>
         </div>
+        {% endif %}
 
         <!-- セット希望日時 -->
         <div class="mb-2">
             <div class="text-center mb-2">
-                <label class="form-label">セット希望日時 <span class="text-danger">必須</span></label>
+                <label class="form-label">セット希望日時{% if current_user.account_type != 'lab' %} <span class="text-danger">必須</span>{% endif %}</label>
             </div>
             <div class="row justify-content-center">
                 <div class="col-auto">
                     <label for="appointmentDate" class="form-label">日付:</label>
-                    <input type="date" id="appointmentDate" class="form-control" style="width: 200px;" required>
+                    <input type="date" id="appointmentDate" class="form-control" style="width: 200px;"{% if current_user.account_type != 'lab' %} required{% endif %}>
                 </div>
                 <div class="col-auto">
                     <label class="form-label">時間:</label>
                     <div class="d-flex">
-                        <select id="appointmentHour" class="form-control" style="width: 200px;" required>
+                        <select id="appointmentHour" class="form-control" style="width: 200px;"{% if current_user.account_type != 'lab' %} required{% endif %}>
                             <option value="" disabled selected>選択してください</option>
                             {% for h in range(9, 21) %}
                             <option value="{{ h }}">{{ h }}</option>
@@ -281,7 +282,6 @@
                 </div>
             </div>
         </div>
-        {% endif %}
 
         <!-- 製作物 -->
         <div class="mb-2">
