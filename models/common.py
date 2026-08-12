@@ -33,6 +33,7 @@ class AuthUser(UserMixin):
         password_hash=None,
         dentists=None,
         account_status='active',
+        account_type='clinic',
     ):
         self.user_id = user_id          # = hoero-users.user_id (= email)
         self.email = email
@@ -48,6 +49,7 @@ class AuthUser(UserMixin):
         self.password_hash = password_hash
         self.dentists = dentists if dentists is not None else []
         self.account_status = account_status  # 'active' or 'limited'
+        self.account_type = account_type      # 'clinic' or 'lab'
 
     @property
     def id(self):
@@ -97,6 +99,7 @@ def load_user(user_id: str):
         password_hash=item.get("password_hash"),
         dentists=item.get("dentists", []),
         account_status=item.get("account_status", "active"),
+        account_type=item.get("account_type", "clinic"),
     )
 
 

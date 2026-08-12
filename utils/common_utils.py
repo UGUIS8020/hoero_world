@@ -48,6 +48,24 @@ def get_next_sequence_number():
         warning_msg = f"[WARNING] DynamoDB失敗。代替IDとして {fallback_id} を使用します: {e}"
         print(warning_msg)
         return fallback_id, warning_msg  # ← 2つ返す
+
+
+def get_next_lab_sequence_number(counter_name, prefix, width=4):
+    """歯科技工所専用のカウンター。例: ReArch-0001"""
+    try:
+        response = counter_table.update_item(
+            Key={'counter_name': counter_name},
+            UpdateExpression='SET #val = if_not_exists(#val, :start) + :incr',
+            ExpressionAttributeNames={'#val': 'counter_value'},
+            ExpressionAttributeValues={':incr': 1, ':start': 0},
+            ReturnValues='UPDATED_NEW'
+        )
+        num = int(response['Attributes']['counter_value'])
+        return f"{prefix}-{num:0{width}d}"
+    except ClientError as e:
+        import time as _time
+        num = int(_time.time()) % 10000
+        return f"{prefix}-{num:0{width}d}"
         
 class ZipHandler:
     def __init__(self, upload_folder='uploads', temp_zip_folder='temp_zips'):

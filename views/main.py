@@ -50,6 +50,7 @@ from utils.common_utils import (
     ZipHandler,
     cleanup_temp_files,
     get_next_sequence_number,
+    get_next_lab_sequence_number,
     process_image,
     sanitize_filename,
 )
@@ -75,6 +76,12 @@ s3 = boto3.client(
 PREFIX = 'meziro/'
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 
+
+def _get_prescription_table(prescription_id):
+    """prescription_id のプレフィックスでテーブルを振り分ける"""
+    if str(prescription_id).startswith("ReArch-"):
+        return current_app.config["LAB_PRESCRIPTIONS_TABLE"]
+    return current_app.config["PRESCRIPTIONS_TABLE"]
 
 
 # ZIPハンドラーのインスタンス作成
@@ -706,9 +713,12 @@ def prescription_list():
     prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
 
     if current_user.is_administrator:
-        # 管理者は全件取得（3dsは医院詳細ページで確認するため除外）
+        # 管理者は全件取得（3ds・labは医院詳細ページで確認するため除外）
         items = []
-        scan_kwargs = {"FilterExpression": Attr("source").ne("3ds") | Attr("source").not_exists()}
+        scan_kwargs = {"FilterExpression":
+            Attr("source").not_exists() |
+            (Attr("source").ne("3ds") & Attr("source").ne("lab"))
+        }
         while True:
             resp = prescriptions_table.scan(**scan_kwargs)
             items.extend(resp.get("Items", []))
@@ -717,12 +727,17 @@ def prescription_list():
                 break
             scan_kwargs["ExclusiveStartKey"] = last
     else:
-        # 一般ユーザーは自分の指示書のみ
         from boto3.dynamodb.conditions import Key
-        resp = prescriptions_table.query(
+        # labアカウントは専用テーブルを参照
+        query_table = (
+            current_app.config["LAB_PRESCRIPTIONS_TABLE"]
+            if getattr(current_user, 'account_type', 'clinic') == 'lab'
+            else prescriptions_table
+        )
+        resp = query_table.query(
             IndexName="user_id-created_at-index",
             KeyConditionExpression=Key("user_id").eq(current_user.email),
-            ScanIndexForward=False,  # 新しい順
+            ScanIndexForward=False,
         )
         items = resp.get("Items", [])
 
@@ -748,7 +763,7 @@ def prescription_list():
 @bp.route('/prescription/view/<prescription_id>', methods=['GET'])
 @login_required
 def prescription_view(prescription_id):
-    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    prescriptions_table = _get_prescription_table(prescription_id)
     resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
     p = resp.get("Item")
     if not p:
@@ -809,7 +824,7 @@ def prescription_view(prescription_id):
 @login_required
 def prescription_edit(prescription_id):
     from datetime import datetime as _dt, timezone as _tz
-    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    prescriptions_table = _get_prescription_table(prescription_id)
     resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
     p = resp.get("Item")
     if not p:
@@ -919,7 +934,7 @@ def prescription_edit(prescription_id):
 @bp.route('/prescription/delete/<prescription_id>', methods=['POST'])
 @login_required
 def prescription_delete(prescription_id):
-    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    prescriptions_table = _get_prescription_table(prescription_id)
     resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
     p = resp.get("Item")
     if not p:
@@ -941,7 +956,7 @@ def prescription_delete(prescription_id):
 @login_required
 def prescription_set_status(prescription_id):
     import json as _json
-    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    prescriptions_table = _get_prescription_table(prescription_id)
     resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
     p = resp.get("Item")
     if not p:
@@ -1014,7 +1029,7 @@ def prescription_set_status(prescription_id):
 @login_required
 def delete_prescription_file(prescription_id):
     from flask import jsonify
-    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
+    prescriptions_table = _get_prescription_table(prescription_id)
     resp = prescriptions_table.get_item(Key={"prescription_id": prescription_id})
     p = resp.get("Item")
     if not p:
@@ -1073,33 +1088,43 @@ def clinic_view(user_id):
     clinic = resp.get("Item")
     if not clinic:
         abort(404)
-    prescriptions_table = current_app.config["PRESCRIPTIONS_TABLE"]
     from boto3.dynamodb.conditions import Key as DKey
     merged = {}
     clinic_id_val = clinic.get("clinic_id")
-    # clinic_id GSI クエリ（ログイン送信分）
-    if clinic_id_val:
+
+    # クエリ対象テーブルを決定（labアカウントはlab専用テーブル、その他はメインテーブル）
+    is_lab_clinic = clinic.get("account_type") == "lab"
+    tables_to_query = []
+    if is_lab_clinic:
+        tables_to_query.append(current_app.config["LAB_PRESCRIPTIONS_TABLE"])
+    else:
+        tables_to_query.append(current_app.config["PRESCRIPTIONS_TABLE"])
+
+    for tbl in tables_to_query:
+        # clinic_id GSI クエリ
+        if clinic_id_val:
+            try:
+                p_resp = tbl.query(
+                    IndexName="clinic_id-created_at-index",
+                    KeyConditionExpression=DKey("clinic_id").eq(clinic_id_val),
+                    ScanIndexForward=False,
+                )
+                for item in p_resp.get("Items", []):
+                    merged[item["prescription_id"]] = item
+            except Exception:
+                pass
+        # user_id GSI クエリ
         try:
-            p_resp = prescriptions_table.query(
-                IndexName="clinic_id-created_at-index",
-                KeyConditionExpression=DKey("clinic_id").eq(clinic_id_val),
+            p_resp2 = tbl.query(
+                IndexName="user_id-created_at-index",
+                KeyConditionExpression=DKey("user_id").eq(user_id),
                 ScanIndexForward=False,
             )
-            for item in p_resp.get("Items", []):
+            for item in p_resp2.get("Items", []):
                 merged[item["prescription_id"]] = item
         except Exception:
             pass
-    # user_id GSI クエリ（未ログイン送信分を含む）
-    try:
-        p_resp2 = prescriptions_table.query(
-            IndexName="user_id-created_at-index",
-            KeyConditionExpression=DKey("user_id").eq(user_id),
-            ScanIndexForward=False,
-        )
-        for item in p_resp2.get("Items", []):
-            merged[item["prescription_id"]] = item
-    except Exception:
-        pass
+
     prescriptions = sorted(merged.values(), key=lambda x: x.get("created_at", ""), reverse=True)
     return render_template('main/clinic_view.html', clinic=clinic, prescriptions=prescriptions)
 
@@ -1328,7 +1353,8 @@ def meziro_upload():
     # 必須チェック（warning で記録）
     if not message:
         message = ""
-    if not user_name:
+    _is_lab = current_user.is_authenticated and getattr(current_user, 'account_type', 'clinic') == 'lab'
+    if not user_name and not _is_lab:
         log.warning("必須エラー: user_name が空")
         return jsonify({'error': '送信者名が入力されていません'}), 400
     if not user_email:
@@ -1353,9 +1379,17 @@ def meziro_upload():
     has_folder = request.form.get('has_folder_structure', 'false').lower() == 'true'
     log.info("フォルダ構造フラグ: %s", has_folder)
 
-    # 受付番号の採番
-    session_id, warning_message = get_next_sequence_number()
-    id_str = f"{session_id:05d}"  
+    # 受付番号の採番（歯科技工所は専用カウンター）
+    is_lab_order = (
+        current_user.is_authenticated
+        and getattr(current_user, 'account_type', 'clinic') == 'lab'
+    )
+    if is_lab_order:
+        id_str = get_next_lab_sequence_number('lab_rearch', 'ReArch')
+        warning_message = None
+    else:
+        session_id, warning_message = get_next_sequence_number()
+        id_str = f"{session_id:05d}"
     log.info("発行受付番号: No.%s", id_str)
 
     # S3 バケット/リージョン
@@ -1369,6 +1403,25 @@ def meziro_upload():
             log.info("ファイルなし送信（指示書のみ）")
             numbered_ids.append(id_str)
 
+        elif is_lab_order:
+            # ラボ注文: ZIPスキップ・直接アップロード
+            folder_prefix = f"lab/{id_str}/"
+            log.info("ラボ直接アップロード: prefix=%s, 件数=%d", folder_prefix, len(files))
+            for index, f_obj in enumerate(files, start=1):
+                if not f_obj or not f_obj.filename:
+                    continue
+                safe_filename = sanitize_filename(f_obj.filename)
+                s3_key = f"{folder_prefix}{index:03d}_{safe_filename}"
+                s3_key = get_unique_filename(bucket_name, s3_key)
+                s3.upload_fileobj(
+                    f_obj, bucket_name, s3_key,
+                    ExtraArgs={'ContentType': 'application/octet-stream'}
+                )
+                download_url = url_for('main.meziro_download', key=s3_key, _external=True)
+                uploaded_urls.append(download_url)
+                numbered_ids.append(f"{id_str}_{index:03d}")
+                log.info("ラボS3アップロードOK: key=%s", s3_key)
+
         else:
             # ファイル加工（ZIP or 展開）
             result, temp_dir = zip_handler_instance.process_files(files, has_folder)
@@ -1376,7 +1429,7 @@ def meziro_upload():
 
             if isinstance(result, list):
                 # フォルダ構造のまま個別アップロード
-                folder_prefix = f"meziro/{id_str}/"
+                folder_prefix = f"lab/{id_str}/" if is_lab_order else f"meziro/{id_str}/"
                 log.info("個別アップロード開始: prefix=%s, 件数=%d", folder_prefix, len(result))
 
                 for index, file_path in enumerate(result, start=1):
@@ -1447,7 +1500,7 @@ def meziro_upload():
                     os.remove(form_file_path)
 
                 numbered_filename = f"{id_str}_files.zip"
-                s3_key = f"meziro/{numbered_filename}"
+                s3_key = f"lab/{numbered_filename}" if is_lab_order else f"meziro/{numbered_filename}"
                 s3_key = get_unique_filename(bucket_name, s3_key)
 
                 with open(zip_file_path, 'rb') as f:
@@ -1633,7 +1686,12 @@ email: shibuya8020@gmail.com
             if clinic_id_for_prescription:
                 prescription_item["clinic_id"] = clinic_id_for_prescription
 
-            prescriptions_table.put_item(Item=prescription_item)
+            save_table = (
+                current_app.config["LAB_PRESCRIPTIONS_TABLE"]
+                if is_lab_order
+                else current_app.config["PRESCRIPTIONS_TABLE"]
+            )
+            save_table.put_item(Item=prescription_item)
             log.info("指示書をDynamoDBに保存: prescription_id=%s", id_str)
         except Exception as e:
             log.error("指示書のDynamoDB保存失敗: %s", e, exc_info=True)
