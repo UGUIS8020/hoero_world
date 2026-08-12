@@ -1330,6 +1330,8 @@ def meziro_upload():
     appointment_date = request.form.get('appointmentDate', '')
     appointment_hour = request.form.get('appointmentHour', '')
     project_type     = request.form.get('projectType', '')
+    quantity         = request.form.get('quantity', '1')
+    implant_holes    = request.form.get('implantHoles', '')
     crown_type       = request.form.get('crown_type', '')
     teeth_raw          = request.form.get('teeth', '[]')
     teeth_abutment_raw = request.form.get('teeth_abutment', '[]')
@@ -1693,6 +1695,8 @@ email: shibuya8020@gmail.com
                 "appointment_date": appointment_date,
                 "appointment_hour": str(appointment_hour),
                 "project_type":    project_type,
+                "quantity":        quantity,
+                **({"implant_holes": implant_holes} if implant_holes else {}),
                 "crown_type":      crown_type,
                 "teeth":           teeth,
                 "teeth_abutment":     teeth_abutment,

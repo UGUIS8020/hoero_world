@@ -312,7 +312,8 @@ async function uploadFiles(files) {
     const userEmail = document.getElementById("userEmail").value;
     const patientLastName = (document.getElementById("PatientLastName")?.value || "").trim();
     const patientFirstName = (document.getElementById("PatientFirstName")?.value || "").trim();
-    const patientName = [patientLastName, patientFirstName].filter(Boolean).join(" ");
+    const patientNameSingle = (document.getElementById("patientNameSingle")?.value || "").trim();
+    const patientName = patientNameSingle || [patientLastName, patientFirstName].filter(Boolean).join(" ");
     const patientLastNameKana = (document.getElementById("PatientLastNameKana")?.value || "").trim();
     const patientFirstNameKana = (document.getElementById("PatientFirstNameKana")?.value || "").trim();
     const patientNameKana = [patientLastNameKana, patientFirstNameKana].filter(Boolean).join(" ");
@@ -320,6 +321,8 @@ async function uploadFiles(files) {
     const appointmentDate = document.getElementById("appointmentDate")?.value || "";
     const appointmentHour = document.getElementById("appointmentHour")?.value || "";
     const projectType = document.getElementById("projectType").value;
+    const quantity = document.getElementById("quantity")?.value || "1";
+    const implantHoles = document.getElementById("implantHoles")?.value || "";
     const shade = document.getElementById("shade").value;
     const userMessage = document.getElementById("userMessage").value;
 
@@ -343,7 +346,9 @@ async function uploadFiles(files) {
 
     // ▼ 必須フィールドのバリデーション（要素が存在する場合のみチェック）
     const _hasUserName   = !document.getElementById("userName")          || !!userName;
-    const _hasPatient    = !document.getElementById("PatientLastName")   || (!!patientLastName && !!patientFirstName);
+    const _hasPatient    = !!patientNameSingle
+                        || !document.getElementById("PatientLastName")
+                        || (!!patientLastName && !!patientFirstName);
     const _hasDate       = !document.getElementById("appointmentDate")   || !!appointmentDate;
     const _hasHour       = !document.getElementById("appointmentHour")   || !!appointmentHour;
     if (!_hasUserName || !userEmail || !_hasPatient || !_hasDate || !_hasHour || !projectType) {
@@ -362,6 +367,8 @@ async function uploadFiles(files) {
     formData.append("appointmentDate", appointmentDate);
     formData.append("appointmentHour", appointmentHour);
     formData.append("projectType", projectType);
+    formData.append("quantity", quantity);
+    formData.append("implantHoles", implantHoles);
     formData.append("shade", shade);
     formData.append("userMessage", userMessage);
     formData.append("crown_type", crownType);
