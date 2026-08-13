@@ -1439,7 +1439,7 @@ def meziro_upload():
                 if not f_obj or not f_obj.filename:
                     continue
                 safe_filename = sanitize_filename(f_obj.filename)
-                s3_key = f"{folder_prefix}{index:03d}_{safe_filename}"
+                s3_key = f"{folder_prefix}{id_str}_{index:03d}_{safe_filename}"
                 s3_key = get_unique_filename(bucket_name, s3_key)
                 s3.upload_fileobj(
                     f_obj, bucket_name, s3_key,
@@ -1463,7 +1463,7 @@ def meziro_upload():
                 for index, file_path in enumerate(result, start=1):
                     original_filename = os.path.basename(file_path)
                     safe_filename     = sanitize_filename(original_filename)
-                    s3_key            = f"{folder_prefix}{index:03d}_{safe_filename}"
+                    s3_key            = f"{folder_prefix}{id_str}_{index:03d}_{safe_filename}"
                     s3_key            = get_unique_filename(bucket_name, s3_key)
 
                     file_size = 0

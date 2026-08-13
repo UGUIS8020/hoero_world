@@ -300,7 +300,7 @@
                 <button type="button" id="tabLab" onclick="switchProjectTab('lab')"
                         style="flex:1; padding:6px; border:1px solid #7c1820; border-radius:0 4px 4px 0; background:#fff; color:#7c1820; cursor:pointer; font-size:13px;">歯科技工所</button>
             </div>
-            <select id="projectType" class="form-control" required>
+            <select id="projectType" class="form-control" required style="margin-top: 10px;">
                 <option value="" disabled selected>製作物の種類を選択してください</option>
                 <option data-cat="clinic" value="Zirconia_Gradation">ジルコニアクラウン(A1~A4指定で細かい指定なし)</option>
                 <option data-cat="clinic" value="Zirconia_Stain">ジルコニアクラウン(ステイン)</option>
@@ -315,9 +315,10 @@
                 <option data-cat="lab" value="milling_CADCAM_Bridge">ミリング-CAD/CAM ブリッジ</option>
                 <option data-cat="lab" value="milling_PEEK">ミリング-PEEK冠</option>
                 <option data-cat="lab" value="milling_Zirconia">ミリング-ジルコニア</option>
+                <option data-cat="lab" value="milling_PMMA">ミリング-PMMA</option>
             </select>
             <!-- 個数 / インプラントホール数 -->
-            <div class="d-flex align-items-center gap-3 mt-2 flex-wrap">
+            <div class="d-flex align-items-center gap-3 flex-wrap" style="margin-top: 10px;">
                 <div class="d-flex align-items-center gap-2">
                     <label for="quantity" class="form-label mb-0" style="white-space:nowrap;">個数(クラウン、インレー数)</label>
                     <select id="quantity" class="form-control" style="width:100px;">
