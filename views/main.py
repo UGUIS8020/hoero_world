@@ -850,6 +850,12 @@ def prescription_edit(prescription_id):
         p["appointment_date"]  = request.form.get("appointment_date", p.get("appointment_date", ""))
         p["appointment_hour"]  = request.form.get("appointment_hour", p.get("appointment_hour", ""))
         p["project_type"]      = request.form.get("project_type", p.get("project_type", ""))
+        p["quantity"]          = request.form.get("quantity", p.get("quantity", "1"))
+        new_implant = request.form.get("implant_holes", "")
+        if new_implant:
+            p["implant_holes"] = new_implant
+        elif "implant_holes" in p and not new_implant:
+            p.pop("implant_holes", None)
         p["crown_type"]        = request.form.get("crown_type", p.get("crown_type", ""))
         p["shade"]             = request.form.get("shade", p.get("shade", ""))
         p["message"]           = request.form.get("message", p.get("message", ""))
