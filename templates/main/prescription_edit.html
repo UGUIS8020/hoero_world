@@ -148,11 +148,13 @@
           enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+        {% set is_lab = p.prescription_id.startswith('ReArch-') %}
         <table>
             <tr>
                 <th>事業者名</th>
                 <td style="color: #555;">{{ p.business_name or '―' }}</td>
             </tr>
+            {% if not is_lab %}
             <tr>
                 <th>担当</th>
                 <td><input type="text" name="user_name" value="{{ p.user_name or '' }}"></td>
@@ -161,9 +163,13 @@
                 <th>カルテ番号</th>
                 <td><input type="text" name="chart_number" value="{{ p.chart_number or '' }}"></td>
             </tr>
+            {% endif %}
             <tr>
                 <th>患者名</th>
                 <td>
+                    {% if is_lab %}
+                    <input type="text" name="patient_name" class="form-control" value="{{ p.patient_name or '' }}" placeholder="患者氏名">
+                    {% else %}
                     {% set name_parts = (p.patient_name or '').split(' ') %}
                     <div class="d-flex gap-2">
                         <input type="text" id="edit_last_name" class="form-control" placeholder="姓"
@@ -172,8 +178,10 @@
                                value="{{ name_parts[1] if name_parts|length > 1 else '' }}">
                     </div>
                     <input type="hidden" name="patient_name" id="edit_patient_name">
+                    {% endif %}
                 </td>
             </tr>
+            {% if not is_lab %}
             <tr>
                 <th>患者名（カナ）</th>
                 <td>
@@ -187,6 +195,7 @@
                     <input type="hidden" name="patient_name_kana" id="edit_patient_name_kana">
                 </td>
             </tr>
+            {% endif %}
             <tr>
                 <th>セット希望日</th>
                 <td><input type="date" name="appointment_date" value="{{ p.appointment_date or '' }}"></td>
@@ -225,6 +234,27 @@
                         <option data-cat="lab" value="milling_CADCAM_Bridge">ミリング-CAD/CAM ブリッジ</option>
                         <option data-cat="lab" value="milling_PEEK">ミリング-PEEK冠</option>
                         <option data-cat="lab" value="milling_Zirconia">ミリング-ジルコニア</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th>個数(クラウン、インレー数)</th>
+                <td>
+                    <select name="quantity" class="form-control" style="width:100px;">
+                        {% for i in range(1, 15) %}
+                        <option value="{{ i }}" {% if p.quantity|string == i|string %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th>インプラントホール数</th>
+                <td>
+                    <select name="implant_holes" class="form-control" style="width:100px;">
+                        <option value="">—</option>
+                        {% for i in range(1, 11) %}
+                        <option value="{{ i }}" {% if p.implant_holes|string == i|string %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
                     </select>
                 </td>
             </tr>
