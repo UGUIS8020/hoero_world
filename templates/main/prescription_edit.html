@@ -259,6 +259,40 @@
                     </select>
                 </td>
             </tr>
+            <tr id="blockMaterialRow" style="{{ '' if p.project_type in ['milling_CADCAM','milling_CADCAM_Inlay','milling_CADCAM_Bridge'] else 'display:none;' }}">
+                <th>ブロック材料</th>
+                <td>
+                    {% set mats = ['ブリージョ小臼歯 S','アルテサーノ小臼歯 S','ブリージョ大臼歯 S','ブリージョ大臼歯 MS','持ち込み'] %}
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <select name="block_material" class="form-control" style="width:240px;">
+                            <option value="">— 選択してください —</option>
+                            {% for mat in mats %}
+                            <option value="{{ mat }}" {% if p.block_material == mat %}selected{% endif %}>{{ mat }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="block_quantity" class="form-control" style="width:80px;">
+                            {% for i in range(1, 15) %}
+                            <option value="{{ i }}" {% if p.block_quantity|string == i|string %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                        <span style="font-size:0.85em; color:#888;">個</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <select name="block_material_2" class="form-control" style="width:240px;">
+                            <option value="">— 2種目（任意）—</option>
+                            {% for mat in mats %}
+                            <option value="{{ mat }}" {% if p.block_material_2 == mat %}selected{% endif %}>{{ mat }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="block_quantity_2" class="form-control" style="width:80px;">
+                            {% for i in range(1, 15) %}
+                            <option value="{{ i }}" {% if p.block_quantity_2|string == i|string %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                        <span style="font-size:0.85em; color:#888;">個</span>
+                    </div>
+                </td>
+            </tr>
             <tr>
                 <th>種別</th>
                 <td>
@@ -611,6 +645,13 @@ document.addEventListener('DOMContentLoaded', function() {
     var initTab = LAB_VALUES.indexOf(savedProject) >= 0 ? 'lab' : 'clinic';
     switchProjectTab(initTab);
     if (savedProject) document.getElementById('projectType').value = savedProject;
+
+    // ブロック材料行の表示切替
+    var CADCAM_TYPES = ['milling_CADCAM', 'milling_CADCAM_Inlay', 'milling_CADCAM_Bridge'];
+    function toggleBlockMaterial(val) {
+        document.getElementById('blockMaterialRow').style.display = CADCAM_TYPES.includes(val) ? '' : 'none';
+    }
+    document.getElementById('projectType').addEventListener('change', function() { toggleBlockMaterial(this.value); });
 
     // シェード：システム判定 → 選択肢生成 → 値セット
     var is3d = ['0M','1M','2L','2M','2R','3L','3M','3R','4L','4M','4R','5M'].some(function(p){ return savedShade.startsWith(p); });
