@@ -184,7 +184,17 @@
 </table>
 
 <table>
-    <tr><th>製作物</th><td>{{ p.project_type }}</td></tr>
+    <tr>
+        <th>製作物</th>
+        <td>
+            {{ p.project_type }}
+            {% if unit_price %}
+            <span style="margin-left:16px; font-size:0.85em; color:#555;">
+                {{ p.quantity or 1 }}個 × 単価 {{ '{:,}'.format(unit_price) }}円 = <strong>{{ '{:,}'.format(total_price) }}円</strong>
+            </span>
+            {% endif %}
+        </td>
+    </tr>
     <tr><th>種別</th><td>{{ p.crown_type }}</td></tr>
     <tr><th>シェード</th><td>{{ p.shade }}</td></tr>
     <tr>

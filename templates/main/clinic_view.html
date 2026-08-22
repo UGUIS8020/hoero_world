@@ -110,14 +110,13 @@
                 <th style="white-space:nowrap;">セット日</th>
                 <th>製作物</th>
                 <th style="white-space:nowrap;">個数</th>
-                <th style="white-space:nowrap;">インプラントホール数</th>
+                <th style="white-space:nowrap;">IPH数</th>
                 <th>備考</th>
                 {% else %}
                 <th style="width: 160px;">セット希望日</th>
                 <th style="width: 300px; min-width: 300px;">製作物</th>
                 {% endif %}
                 <th>状態</th>
-                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -145,7 +144,7 @@
                 </td>
                 <td style="text-align:center;">{{ p.quantity or '' }}</td>
                 <td style="text-align:center;">{{ p.implant_holes or '' }}</td>
-                <td style="font-size:0.85em; color:#555;">{{ (p.message or '')[:30] }}{% if (p.message or '') | length > 30 %}…{% endif %}</td>
+                <td style="font-size:0.85em; color:#555;">{{ (p.message or '')[:10] }}{% if (p.message or '') | length > 10 %}…{% endif %}</td>
                 {% else %}
                 <td style="white-space: nowrap;">{{ p.appointment_date }} {{ p.appointment_hour }}時</td>
                 <td>
