@@ -337,8 +337,47 @@
                     </select>
                 </div>
             </div>
+            <!-- ブロック材料 (milling_CADCAM系) -->
+            <div id="blockMaterialSection" style="display:none; margin-top:10px;">
+                {% set block_opts = [
+                    ('ブリージョ小臼歯 S','ブリージョ小臼歯 S（1,440円）'),
+                    ('アルテサーノ小臼歯 S','アルテサーノ小臼歯 S（1,180円）'),
+                    ('ブリージョ大臼歯 S','ブリージョ大臼歯 S（1,740円）'),
+                    ('ブリージョ大臼歯 MS','ブリージョ大臼歯 MS（2,160円）'),
+                    ('持ち込み','持ち込み（0円）')
+                ] %}
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <label class="form-label mb-0" style="white-space:nowrap;">ブロック材料①</label>
+                    <select id="blockMaterial" class="form-control" style="width:230px;">
+                        <option value="">— 選択してください —</option>
+                        {% for val, label in block_opts %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <select id="blockQuantity" class="form-control" style="width:80px;">
+                        {% for i in range(1, 15) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+                    </select>
+                    <span style="font-size:0.85em; color:#888;">個</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0" style="white-space:nowrap;">ブロック材料②</label>
+                    <select id="blockMaterial2" class="form-control" style="width:230px;">
+                        <option value="">— 2種目（任意）—</option>
+                        {% for val, label in block_opts %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <select id="blockQuantity2" class="form-control" style="width:80px;">
+                        {% for i in range(1, 15) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+                    </select>
+                    <span style="font-size:0.85em; color:#888;">個</span>
+                </div>
+            </div>
         </div>
         <script>
+        var CADCAM_TYPES = ['milling_CADCAM', 'milling_CADCAM_Inlay', 'milling_CADCAM_Bridge'];
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('projectType').addEventListener('change', function() {
+                var show = CADCAM_TYPES.includes(this.value);
+                document.getElementById('blockMaterialSection').style.display = show ? '' : 'none';
+            });
+        });
         function switchProjectTab(cat) {
             var sel = document.getElementById('projectType');
             var tabClinic = document.getElementById('tabClinic');

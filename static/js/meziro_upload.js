@@ -323,6 +323,10 @@ async function uploadFiles(files) {
     const projectType = document.getElementById("projectType").value;
     const quantity = document.getElementById("quantity")?.value || "1";
     const implantHoles = document.getElementById("implantHoles")?.value || "";
+    const blockMaterial = document.getElementById("blockMaterial")?.value || "";
+    const blockQuantity = document.getElementById("blockQuantity")?.value || "1";
+    const blockMaterial2 = document.getElementById("blockMaterial2")?.value || "";
+    const blockQuantity2 = document.getElementById("blockQuantity2")?.value || "1";
     const shade = document.getElementById("shade").value;
     const userMessage = document.getElementById("userMessage").value;
 
@@ -369,6 +373,10 @@ async function uploadFiles(files) {
     formData.append("projectType", projectType);
     formData.append("quantity", quantity);
     formData.append("implantHoles", implantHoles);
+    formData.append("blockMaterial", blockMaterial);
+    if (blockMaterial) formData.append("blockQuantity", blockQuantity);
+    formData.append("blockMaterial2", blockMaterial2);
+    if (blockMaterial2) formData.append("blockQuantity2", blockQuantity2);
     formData.append("shade", shade);
     formData.append("userMessage", userMessage);
     formData.append("crown_type", crownType);
