@@ -323,6 +323,7 @@ async function uploadFiles(files) {
     const projectType = document.getElementById("projectType").value;
     const quantity = document.getElementById("quantity")?.value || "1";
     const implantHoles = document.getElementById("implantHoles")?.value || "";
+    const discThickness = document.getElementById("discThickness")?.value || "";
     const blockMaterial = document.getElementById("blockMaterial")?.value || "";
     const blockQuantity = document.getElementById("blockQuantity")?.value || "1";
     const blockMaterial2 = document.getElementById("blockMaterial2")?.value || "";
@@ -373,6 +374,7 @@ async function uploadFiles(files) {
     formData.append("projectType", projectType);
     formData.append("quantity", quantity);
     formData.append("implantHoles", implantHoles);
+    if (discThickness) formData.append("discThickness", discThickness);
     formData.append("blockMaterial", blockMaterial);
     if (blockMaterial) formData.append("blockQuantity", blockQuantity);
     formData.append("blockMaterial2", blockMaterial2);

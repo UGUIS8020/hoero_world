@@ -337,6 +337,17 @@
                     </select>
                 </div>
             </div>
+            <!-- ジスク種別 (milling_Zirconia) -->
+            <div id="discThicknessSection" style="display:none; margin-top:10px;">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0" style="white-space:nowrap;">ジスク種別</label>
+                    <select id="discThickness" class="form-control" style="width:180px;">
+                        <option value="14mm">14mm（0円）</option>
+                        <option value="18mm">18mm（+500円）</option>
+                        <option value="持ち込み">持ち込み（-900円）</option>
+                    </select>
+                </div>
+            </div>
             <!-- ブロック材料 (milling_CADCAM系) -->
             <div id="blockMaterialSection" style="display:none; margin-top:10px;">
                 {% set block_opts = [
@@ -374,8 +385,9 @@
         var CADCAM_TYPES = ['milling_CADCAM', 'milling_CADCAM_Inlay', 'milling_CADCAM_Bridge'];
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('projectType').addEventListener('change', function() {
-                var show = CADCAM_TYPES.includes(this.value);
-                document.getElementById('blockMaterialSection').style.display = show ? '' : 'none';
+                var val = this.value;
+                document.getElementById('blockMaterialSection').style.display = CADCAM_TYPES.includes(val) ? '' : 'none';
+                document.getElementById('discThicknessSection').style.display = val === 'milling_Zirconia' ? '' : 'none';
             });
         });
         function switchProjectTab(cat) {
