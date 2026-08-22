@@ -76,6 +76,11 @@ s3 = boto3.client(
 PREFIX = 'meziro/'
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 
+# 製作物ごとの単価（円）
+PRODUCT_PRICES = {
+    "milling_Zirconia": 1200,
+}
+
 
 def _get_prescription_table(prescription_id):
     """prescription_id のプレフィックスでテーブルを振り分ける"""
@@ -827,7 +832,10 @@ def prescription_view(prescription_id):
                 p["business_name"] = u.get("sender_name", "")
     except Exception:
         pass
-    return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete, user_phone=user_phone)
+    unit_price = PRODUCT_PRICES.get(p.get("project_type"))
+    quantity = int(p.get("quantity") or 1)
+    total_price = unit_price * quantity if unit_price else None
+    return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete, user_phone=user_phone, unit_price=unit_price, total_price=total_price)
 
 
 @bp.route('/prescription/edit/<prescription_id>', methods=['GET', 'POST'])
