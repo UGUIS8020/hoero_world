@@ -82,6 +82,12 @@ PRODUCT_PRICES = {
 }
 # インプラントホール1穴あたりの単価（円）
 IPH_PRICE = 500
+# ジスク種別の追加料金（円）
+DISC_PRICES = {
+    "14mm":   0,
+    "18mm":   500,
+    "持ち込み": -900,
+}
 # ブロック材料ごとの単価（円）
 MATERIAL_PRICES = {
     "ブリージョ小臼歯 S":   1440,
@@ -847,15 +853,18 @@ def prescription_view(prescription_id):
     product_total = unit_price * quantity if unit_price else 0
     iph = int(p.get("implant_holes") or 0)
     iph_total = iph * IPH_PRICE if iph else 0
+    disc_price = DISC_PRICES.get(p.get("disc_thickness"), 0)
+    disc_total = disc_price * quantity if disc_price else 0
     material_price = MATERIAL_PRICES.get(p.get("block_material"))
     block_qty = int(p.get("block_quantity") or 1)
     material_total = material_price * block_qty if material_price else 0
     material_price_2 = MATERIAL_PRICES.get(p.get("block_material_2"))
     block_qty_2 = int(p.get("block_quantity_2") or 1)
     material_total_2 = material_price_2 * block_qty_2 if material_price_2 else 0
-    grand_total = product_total + iph_total + material_total + material_total_2 if (unit_price or material_price or material_price_2) else None
+    grand_total = product_total + disc_total + iph_total + material_total + material_total_2 if (unit_price or material_price or material_price_2) else None
     return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete, user_phone=user_phone,
                            unit_price=unit_price, product_total=product_total,
+                           disc_price=disc_price, disc_total=disc_total,
                            iph_total=iph_total, IPH_PRICE=IPH_PRICE,
                            material_price=material_price, material_total=material_total,
                            material_price_2=material_price_2, material_total_2=material_total_2,
@@ -888,6 +897,11 @@ def prescription_edit(prescription_id):
             p["implant_holes"] = new_implant
         elif "implant_holes" in p and not new_implant:
             p.pop("implant_holes", None)
+        new_disc = request.form.get("disc_thickness", "")
+        if new_disc:
+            p["disc_thickness"] = new_disc
+        else:
+            p.pop("disc_thickness", None)
         new_block_material = request.form.get("block_material", "")
         if new_block_material:
             p["block_material"] = new_block_material
@@ -1384,6 +1398,7 @@ def meziro_upload():
     project_type     = request.form.get('projectType', '')
     quantity         = request.form.get('quantity', '1')
     implant_holes    = request.form.get('implantHoles', '')
+    disc_thickness   = request.form.get('discThickness', '')
     block_material   = request.form.get('blockMaterial', '')
     block_quantity   = request.form.get('blockQuantity', '1')
     block_material_2 = request.form.get('blockMaterial2', '')
@@ -1753,6 +1768,7 @@ email: shibuya8020@gmail.com
                 "project_type":    project_type,
                 "quantity":        quantity,
                 **({"implant_holes": implant_holes} if implant_holes else {}),
+                **({"disc_thickness": disc_thickness} if disc_thickness else {}),
                 **({"block_material": block_material, "block_quantity": block_quantity} if block_material else {}),
                 **({"block_material_2": block_material_2, "block_quantity_2": block_quantity_2} if block_material_2 else {}),
                 "crown_type":      crown_type,
