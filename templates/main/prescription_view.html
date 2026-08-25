@@ -190,17 +190,19 @@
             {{ p.project_type }}
             {% if grand_total is not none %}
             <span style="font-size:0.85em; color:#555; margin-left:16px;">
-                {% if unit_price %}{{ p.quantity or 1 }}個 × 単価 {{ '{:,}'.format(unit_price) }}円 = {{ '{:,}'.format(product_total) }}円{% endif %}
-                {% if disc_total %}&nbsp;&nbsp;ジスク{{ p.disc_thickness }} × {{ '{:,}'.format(disc_price) }}円 = {{ '{:,}'.format(disc_total) }}円{% endif %}
-                {% if iph_total %}&nbsp;&nbsp;IPH数{{ p.implant_holes }} × {{ '{:,}'.format(IPH_PRICE) }}円 = {{ '{:,}'.format(iph_total) }}円{% endif %}
-                {% if material_total %}&nbsp;&nbsp;{{ p.block_material }} {{ p.block_quantity }}個 × {{ '{:,}'.format(material_price) }}円 = {{ '{:,}'.format(material_total) }}円{% endif %}
-                {% if material_total_2 %}&nbsp;&nbsp;{{ p.block_material_2 }} {{ p.block_quantity_2 }}個 × {{ '{:,}'.format(material_price_2) }}円 = {{ '{:,}'.format(material_total_2) }}円{% endif %}
-                &nbsp;&nbsp;<strong>合計 {{ '{:,}'.format(grand_total) }}円</strong>
+                基本料金(1歯) {{ '{:,}'.format(BASE_PRICE) }}円{% if (p.quantity or 1)|int > 1 %} × {{ p.quantity }}個{% endif %}
+                {% if disc_thickness is not none %}
+                 + ジルコニア材料 {{ disc_thickness }} {{ '{:,}'.format(disc_price) }}円{% if (p.quantity or 1)|int > 1 %} × {{ p.quantity }}個{% endif %}
+                {% endif %}
+                {% if iph_total %} + IPH数{{ p.implant_holes }} × {{ '{:,}'.format(IPH_PRICE) }}円 = {{ '{:,}'.format(iph_total) }}円{% endif %}
+                {% if material_price is not none %} + {{ p.block_material }} {{ p.block_quantity }}個 × {{ '{:,}'.format(material_price) }}円 = {{ '{:,}'.format(material_total) }}円{% endif %}
+                {% if material_price_2 is not none %} + {{ p.block_material_2 }} {{ p.block_quantity_2 }}個 × {{ '{:,}'.format(material_price_2) }}円 = {{ '{:,}'.format(material_total_2) }}円{% endif %}
+                 = <strong>{{ '{:,}'.format(grand_total) }}円</strong>
             </span>
             {% endif %}
         </td>
     </tr>
-    {% if p.disc_thickness %}
+    {% if p.disc_thickness and p.project_type == 'milling_Zirconia' %}
     <tr><th>ジスク種別</th><td>{{ p.disc_thickness }}</td></tr>
     {% endif %}
     {% if p.block_material %}
@@ -334,13 +336,19 @@
         {% endif %}
     </div>
 
-    <div class="text-center mt-4 mb-3">
+    <div class="mt-4 mb-3 text-center">
+        {% if prev_id %}
+        <a class="back-btn" href="{{ url_for('main.prescription_view', prescription_id=prev_id) }}">← No.{{ prev_id }}</a>
+        {% endif %}
         {% if current_user.is_administrator and p.prescription_id.startswith('ReArch-') %}
-        <a class="back-btn" href="{{ url_for('main.clinic_view', user_id='rearch.design@outlook.com') }}">← 指示書一覧</a>
+        <a class="back-btn" href="{{ url_for('main.clinic_view', user_id='rearch.design@outlook.com') }}">指示書一覧</a>
         {% elif not current_user.is_administrator and current_user.account_type == 'lab' %}
-        <a class="back-btn" href="{{ url_for('main.clinic_view', user_id=current_user.user_id) }}">← 指示書一覧</a>
+        <a class="back-btn" href="{{ url_for('main.clinic_view', user_id=current_user.user_id) }}">指示書一覧</a>
         {% else %}
-        <a class="back-btn" href="{{ url_for('main.prescription_list') }}">← 指示書一覧</a>
+        <a class="back-btn" href="{{ url_for('main.prescription_list') }}">指示書一覧</a>
+        {% endif %}
+        {% if next_id %}
+        <a class="back-btn" href="{{ url_for('main.prescription_view', prescription_id=next_id) }}">No.{{ next_id }} →</a>
         {% endif %}
     </div>
 
