@@ -84,6 +84,11 @@
     <!-- 指示書一覧 -->
     <h5 class="mb-2 fw-bold border-bottom pb-1" style="display:flex; align-items:center; justify-content:space-between;">
         <span>指示書履歴　<small class="text-muted fw-normal">{{ prescriptions | length }} 件</small></span>
+        <div style="display:flex; gap:8px;">
+        {% if clinic.account_type == 'lab' %}
+        <a href="{{ url_for('main.clinic_billing', user_id=clinic.user_id) }}"
+           class="btn btn-sm btn-outline-dark" style="font-size:13px;">料金一覧</a>
+        {% endif %}
         {% if clinic.threedshape_clinic_name %}
         <form method="POST" action="{{ url_for('main.threedshape_import') }}" style="margin:0;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -94,6 +99,7 @@
             </button>
         </form>
         {% endif %}
+        </div>
     </h5>
 
     {% if prescriptions %}

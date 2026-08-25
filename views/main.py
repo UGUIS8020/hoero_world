@@ -76,17 +76,20 @@ s3 = boto3.client(
 PREFIX = 'meziro/'
 BUCKET_NAME = os.getenv("BUCKET_NAME")
 
-# 製作物ごとの単価（円）
+# 全製作物共通の基本料金（円）
+BASE_PRICE = 300
+# 製作物ごとの追加単価（基本料金に上乗せ、円）
 PRODUCT_PRICES = {
-    "milling_Zirconia": 1200,
+    # milling_Zirconia はジスク料金で計算するため 0
 }
 # インプラントホール1穴あたりの単価（円）
 IPH_PRICE = 500
-# ジスク種別の追加料金（円）
+# ジスク種別ごとのジルコニア材料料金（円）
 DISC_PRICES = {
-    "14mm":   0,
-    "18mm":   500,
-    "持ち込み": -900,
+    "持ち込み": 0,
+    "14mm":    900,
+    "18mm":    1400,
+    "22mm":    1700,
 }
 # ブロック材料ごとの単価（円）
 MATERIAL_PRICES = {
@@ -848,27 +851,60 @@ def prescription_view(prescription_id):
                 p["business_name"] = u.get("sender_name", "")
     except Exception:
         pass
-    unit_price = PRODUCT_PRICES.get(p.get("project_type"))
     quantity = int(p.get("quantity") or 1)
-    product_total = unit_price * quantity if unit_price else 0
+    unit_price = PRODUCT_PRICES.get(p.get("project_type"), 0)
+    product_total = unit_price * quantity
+    disc_thickness = p.get("disc_thickness") if p.get("project_type") == "milling_Zirconia" else None
+    disc_price = DISC_PRICES.get(disc_thickness) if disc_thickness else None
+    disc_total = disc_price * quantity if disc_price else 0
     iph = int(p.get("implant_holes") or 0)
     iph_total = iph * IPH_PRICE if iph else 0
-    disc_price = DISC_PRICES.get(p.get("disc_thickness"), 0)
-    disc_total = disc_price * quantity if disc_price else 0
     material_price = MATERIAL_PRICES.get(p.get("block_material"))
     block_qty = int(p.get("block_quantity") or 1)
     material_total = material_price * block_qty if material_price else 0
     material_price_2 = MATERIAL_PRICES.get(p.get("block_material_2"))
     block_qty_2 = int(p.get("block_quantity_2") or 1)
     material_total_2 = material_price_2 * block_qty_2 if material_price_2 else 0
-    grand_total = product_total + disc_total + iph_total + material_total + material_total_2 if (unit_price or material_price or material_price_2) else None
+    has_pricing = disc_thickness is not None or material_price is not None or material_price_2 is not None or iph > 0
+    base_total = BASE_PRICE * quantity if has_pricing else 0
+    grand_total = base_total + product_total + disc_total + iph_total + material_total + material_total_2 if has_pricing else None
+    # 前後ナビゲーション
+    def _adjacent_id(pid, delta):
+        if pid.startswith('ReArch-'):
+            try:
+                n = int(pid.replace('ReArch-', '')) + delta
+                return f"ReArch-{n:04d}" if n > 0 else None
+            except Exception:
+                return None
+        else:
+            try:
+                n = int(pid) + delta
+                return f"{n:05d}" if n > 0 else None
+            except Exception:
+                return None
+    def _exists(pid):
+        if not pid:
+            return False
+        try:
+            t = _get_prescription_table(pid)
+            return bool(t.get_item(Key={"prescription_id": pid}).get("Item"))
+        except Exception:
+            return False
+    prev_id = _adjacent_id(prescription_id, -1)
+    next_id = _adjacent_id(prescription_id, +1)
+    if not _exists(prev_id):
+        prev_id = None
+    if not _exists(next_id):
+        next_id = None
     return render_template('main/prescription_view.html', p=p, image_items=image_items, file_items=file_items, can_delete=can_delete, user_phone=user_phone,
+                           BASE_PRICE=BASE_PRICE, base_total=base_total,
                            unit_price=unit_price, product_total=product_total,
-                           disc_price=disc_price, disc_total=disc_total,
+                           disc_thickness=disc_thickness, disc_price=disc_price, disc_total=disc_total,
                            iph_total=iph_total, IPH_PRICE=IPH_PRICE,
                            material_price=material_price, material_total=material_total,
                            material_price_2=material_price_2, material_total_2=material_total_2,
-                           grand_total=grand_total)
+                           grand_total=grand_total,
+                           prev_id=prev_id, next_id=next_id)
 
 
 @bp.route('/prescription/edit/<prescription_id>', methods=['GET', 'POST'])
@@ -898,7 +934,7 @@ def prescription_edit(prescription_id):
         elif "implant_holes" in p and not new_implant:
             p.pop("implant_holes", None)
         new_disc = request.form.get("disc_thickness", "")
-        if new_disc:
+        if new_disc and p.get("project_type") == "milling_Zirconia":
             p["disc_thickness"] = new_disc
         else:
             p.pop("disc_thickness", None)
@@ -1152,6 +1188,72 @@ def delete_prescription_file(prescription_id):
 def clinic_dashboard():
     clinic_name = getattr(current_user, 'sender_name', '') or getattr(current_user, 'display_name', '') or '歯科医院メニュー'
     return render_template('main/clinic_dashboard.html', clinic_name=clinic_name)
+
+
+def _calc_price(p):
+    """指示書1件の料金を計算して dict で返す"""
+    quantity = int(p.get("quantity") or 1)
+    unit_price = PRODUCT_PRICES.get(p.get("project_type"), 0)
+    product_total = unit_price * quantity
+    disc_thickness = p.get("disc_thickness") if p.get("project_type") == "milling_Zirconia" else None
+    disc_price = DISC_PRICES.get(disc_thickness) if disc_thickness else None
+    disc_total = disc_price * quantity if disc_price else 0
+    iph = int(p.get("implant_holes") or 0)
+    iph_total = iph * IPH_PRICE if iph else 0
+    material_price = MATERIAL_PRICES.get(p.get("block_material"))
+    block_qty = int(p.get("block_quantity") or 1)
+    material_total = material_price * block_qty if material_price else 0
+    material_price_2 = MATERIAL_PRICES.get(p.get("block_material_2"))
+    block_qty_2 = int(p.get("block_quantity_2") or 1)
+    material_total_2 = material_price_2 * block_qty_2 if material_price_2 else 0
+    has_pricing = disc_thickness is not None or material_price is not None or material_price_2 is not None or iph > 0
+    base_total = BASE_PRICE * quantity if has_pricing else 0
+    grand_total = base_total + product_total + disc_total + iph_total + material_total + material_total_2 if has_pricing else None
+    # 表示用の計算式パーツを組み立て
+    parts = []
+    if has_pricing:
+        qty = quantity
+        parts.append(f"基本料金(1歯) {BASE_PRICE:,}円{'× ' + str(qty) + '個' if qty > 1 else ''}")
+        if disc_thickness is not None:
+            parts.append(f"ジルコニア材料 {disc_thickness} {disc_price:,}円{'× ' + str(qty) + '個' if qty > 1 else ''}")
+        if iph_total:
+            parts.append(f"IPH数{p.get('implant_holes')} × {IPH_PRICE:,}円 = {iph_total:,}円")
+        if material_price is not None:
+            bq = int(p.get("block_quantity") or 1)
+            parts.append(f"{p.get('block_material')} {bq}個 × {material_price:,}円 = {material_total:,}円")
+        if material_price_2 is not None:
+            bq2 = int(p.get("block_quantity_2") or 1)
+            parts.append(f"{p.get('block_material_2')} {bq2}個 × {material_price_2:,}円 = {material_total_2:,}円")
+    return {"base_total": base_total, "disc_total": disc_total, "iph_total": iph_total,
+            "material_total": material_total + material_total_2, "grand_total": grand_total,
+            "price_parts": parts}
+
+
+@bp.route('/clinic/billing/<path:user_id>', methods=['GET'])
+@login_required
+def clinic_billing(user_id):
+    if not current_user.is_administrator:
+        abort(403)
+    users_table = current_app.config["HOERO_USERS_TABLE"]
+    clinic = users_table.get_item(Key={"user_id": user_id}).get("Item")
+    if not clinic:
+        abort(404)
+    lab_table = current_app.config["LAB_PRESCRIPTIONS_TABLE"]
+    items, scan_kwargs = [], {}
+    while True:
+        resp = lab_table.scan(**scan_kwargs)
+        items.extend(resp.get("Items", []))
+        last = resp.get("LastEvaluatedKey")
+        if not last:
+            break
+        scan_kwargs["ExclusiveStartKey"] = last
+    rows = []
+    for p in items:
+        calc = _calc_price(p)
+        rows.append({**p, **calc})
+    rows.sort(key=lambda x: x.get("prescription_id", ""))
+    grand_sum = sum(r["grand_total"] for r in rows if r.get("grand_total") is not None)
+    return render_template('main/clinic_billing.html', clinic=clinic, rows=rows, grand_sum=grand_sum)
 
 
 @bp.route('/clinic/view/<path:user_id>', methods=['GET'])
@@ -1768,7 +1870,7 @@ email: shibuya8020@gmail.com
                 "project_type":    project_type,
                 "quantity":        quantity,
                 **({"implant_holes": implant_holes} if implant_holes else {}),
-                **({"disc_thickness": disc_thickness} if disc_thickness else {}),
+                **({"disc_thickness": disc_thickness} if disc_thickness and project_type == "milling_Zirconia" else {}),
                 **({"block_material": block_material, "block_quantity": block_quantity} if block_material else {}),
                 **({"block_material_2": block_material_2, "block_quantity_2": block_quantity_2} if block_material_2 else {}),
                 "crown_type":      crown_type,

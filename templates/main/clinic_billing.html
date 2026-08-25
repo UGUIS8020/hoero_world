@@ -1,0 +1,78 @@
+{% extends "common/base.html" %}
+{% block title %}料金一覧 - {{ clinic.sender_name or clinic.display_name }} | 渋谷歯科技工所{% endblock %}
+{% block content %}
+
+<style>
+    .page-header {
+        background-color: rgb(243, 244, 245);
+        text-align: center;
+        padding: 20px;
+        color: #7c1820;
+        margin-bottom: 20px;
+        margin-top: -2rem;
+    }
+    .status-badge {
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .status-受付中 { background-color: #fff3cd; color: #856404; }
+    .status-製作中 { background-color: #cce5ff; color: #004085; }
+    .status-完了   { background-color: #d4edda; color: #155724; }
+    .status-受注済 { background-color: #cce5ff; color: #004085; }
+    tfoot td { font-weight: bold; background-color: #f8f9fa; }
+    .no-price { color: #aaa; font-size: 0.85em; }
+</style>
+
+<div class="page-header">
+    <h2>料金一覧　<small style="font-size:0.6em; color:#555;">{{ clinic.sender_name or clinic.display_name }}</small></h2>
+</div>
+
+<div class="container-fluid px-4">
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th style="white-space:nowrap;">受付番号</th>
+                <th style="white-space:nowrap;">受信日</th>
+                <th style="width:120px;">患者名</th>
+                <th>製作物</th>
+                <th style="white-space:nowrap;">個数</th>
+                <th style="white-space:nowrap; text-align:right;">料金</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in rows %}
+            <tr style="cursor:pointer;" onclick="location.href='{{ url_for('main.prescription_view', prescription_id=p.prescription_id) }}'">
+                <td style="white-space:nowrap; color:#7c1820; font-weight:bold;">No.{{ p.prescription_id }}</td>
+                <td style="white-space:nowrap;">{{ p.created_at[:10] }}</td>
+                <td>{{ p.patient_name or '—' }}</td>
+                <td>{{ p.project_type }}</td>
+                <td style="text-align:center;">{{ p.quantity or 1 }}</td>
+                <td style="text-align:right; white-space:nowrap;">
+                    {% if p.grand_total is not none %}
+                    <div style="font-size:0.8em; color:#666; margin-bottom:2px;">
+                        {{ p.price_parts | join(' + ') }} =
+                    </div>
+                    <strong>{{ '{:,}'.format(p.grand_total) }}円</strong>
+                    {% else %}
+                    <span class="no-price">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="5" style="text-align:right;">合計</td>
+                <td style="text-align:right; white-space:nowrap;">{{ '{:,}'.format(grand_sum) }}円</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="text-center mt-3 mb-4">
+        <a href="{{ url_for('main.clinic_view', user_id=clinic.user_id) }}" class="btn btn-outline-secondary">← 指示書一覧へ</a>
+    </div>
+</div>
+
+{% endblock %}
