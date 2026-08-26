@@ -81,6 +81,7 @@ BASE_PRICE = 300
 # 製作物ごとの追加単価（基本料金に上乗せ、円）
 PRODUCT_PRICES = {
     # milling_Zirconia はジスク料金で計算するため 0
+    "milling_PMMA": 200,
 }
 # インプラントホール1穴あたりの単価（円）
 IPH_PRICE = 500
@@ -858,14 +859,15 @@ def prescription_view(prescription_id):
     disc_price = DISC_PRICES.get(disc_thickness) if disc_thickness else None
     disc_total = disc_price * quantity if disc_price else 0
     iph = int(p.get("implant_holes") or 0)
-    iph_total = iph * IPH_PRICE if iph else 0
+    iph_free = p.get("project_type") == "milling_PMMA"
+    iph_total = (iph * IPH_PRICE if iph else 0) if not iph_free else 0
     material_price = MATERIAL_PRICES.get(p.get("block_material"))
     block_qty = int(p.get("block_quantity") or 1)
     material_total = material_price * block_qty if material_price else 0
     material_price_2 = MATERIAL_PRICES.get(p.get("block_material_2"))
     block_qty_2 = int(p.get("block_quantity_2") or 1)
     material_total_2 = material_price_2 * block_qty_2 if material_price_2 else 0
-    has_pricing = disc_thickness is not None or material_price is not None or material_price_2 is not None or iph > 0
+    has_pricing = unit_price > 0 or disc_thickness is not None or material_price is not None or material_price_2 is not None or (iph > 0 and not iph_free)
     base_total = BASE_PRICE * quantity if has_pricing else 0
     grand_total = base_total + product_total + disc_total + iph_total + material_total + material_total_2 if has_pricing else None
     # 前後ナビゲーション
@@ -1198,15 +1200,17 @@ def _calc_price(p):
     disc_thickness = p.get("disc_thickness") if p.get("project_type") == "milling_Zirconia" else None
     disc_price = DISC_PRICES.get(disc_thickness) if disc_thickness else None
     disc_total = disc_price * quantity if disc_price else 0
+    project_type = p.get("project_type", "")
     iph = int(p.get("implant_holes") or 0)
-    iph_total = iph * IPH_PRICE if iph else 0
+    iph_free = project_type == "milling_PMMA"
+    iph_total = (iph * IPH_PRICE if iph else 0) if not iph_free else 0
     material_price = MATERIAL_PRICES.get(p.get("block_material"))
     block_qty = int(p.get("block_quantity") or 1)
     material_total = material_price * block_qty if material_price else 0
     material_price_2 = MATERIAL_PRICES.get(p.get("block_material_2"))
     block_qty_2 = int(p.get("block_quantity_2") or 1)
     material_total_2 = material_price_2 * block_qty_2 if material_price_2 else 0
-    has_pricing = disc_thickness is not None or material_price is not None or material_price_2 is not None or iph > 0
+    has_pricing = unit_price > 0 or disc_thickness is not None or material_price is not None or material_price_2 is not None or (iph > 0 and not iph_free)
     base_total = BASE_PRICE * quantity if has_pricing else 0
     grand_total = base_total + product_total + disc_total + iph_total + material_total + material_total_2 if has_pricing else None
     # 表示用の計算式パーツを組み立て
@@ -1214,6 +1218,8 @@ def _calc_price(p):
     if has_pricing:
         qty = quantity
         parts.append(f"基本料金(1歯) {BASE_PRICE:,}円{'× ' + str(qty) + '個' if qty > 1 else ''}")
+        if unit_price > 0:
+            parts.append(f"{project_type} {unit_price:,}円{'× ' + str(qty) + '個' if qty > 1 else ''}")
         if disc_thickness is not None:
             parts.append(f"ジルコニア材料 {disc_thickness} {disc_price:,}円{'× ' + str(qty) + '個' if qty > 1 else ''}")
         if iph_total:
