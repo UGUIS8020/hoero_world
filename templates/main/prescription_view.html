@@ -191,6 +191,7 @@
             {% if grand_total is not none %}
             <span style="font-size:0.85em; color:#555; margin-left:16px;">
                 基本料金(1歯) {{ '{:,}'.format(BASE_PRICE) }}円{% if (p.quantity or 1)|int > 1 %} × {{ p.quantity }}個{% endif %}
+                {% if unit_price > 0 %} + {{ p.project_type }} {{ '{:,}'.format(unit_price) }}円{% if (p.quantity or 1)|int > 1 %} × {{ p.quantity }}個{% endif %}{% endif %}
                 {% if disc_thickness is not none %}
                  + ジルコニア材料 {{ disc_thickness }} {{ '{:,}'.format(disc_price) }}円{% if (p.quantity or 1)|int > 1 %} × {{ p.quantity }}個{% endif %}
                 {% endif %}
