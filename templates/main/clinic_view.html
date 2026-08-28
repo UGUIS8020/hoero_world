@@ -24,6 +24,7 @@
         font-weight: bold;
     }
     .status-受付中 { background-color: #fff3cd; color: #856404; }
+    .status-受注済 { background-color: #e2d9f3; color: #6f42c1; }
     .status-製作中 { background-color: #cce5ff; color: #004085; }
     .status-完了   { background-color: #d4edda; color: #155724; }
     .status-badge.clickable { cursor: pointer; }
@@ -219,7 +220,7 @@
 
 {% block extra_js %}
 <script>
-var LAB_STATUS_CYCLE = ['受付中', '製作中', '完了'];
+var LAB_STATUS_CYCLE = ['受付中', '受注済', '製作中', '完了'];
 
 function cycleStatus(badge) {
     var id = badge.dataset.id;

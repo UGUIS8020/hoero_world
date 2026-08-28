@@ -120,22 +120,22 @@
 
     @media print {
         @page { size: A4 landscape; margin: 4mm; }
-        /* すべて非表示にしてから印刷用レイアウトだけ表示 */
-        body * { visibility: hidden; }
-        body, html { margin: 0 !important; padding: 0 !important; }
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: hidden !important;
+        }
+        /* 印刷対象以外をすべて非表示 */
+        body > * { display: none !important; }
         #print-two-up {
-            visibility: visible;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
             display: flex !important;
             flex-direction: row;
             gap: 6mm;
+            width: 100%;
+            margin: 0;
+            padding: 0;
         }
-        #print-two-up * { visibility: visible; }
         .prescription-copy {
             flex: 1;
             font-size: 15px;
