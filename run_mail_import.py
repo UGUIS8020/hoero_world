@@ -11,7 +11,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("/var/log/hoero_mail_import.log", encoding="utf-8"),
+        logging.FileHandler("/var/www/hoero_world/mail_import.log", encoding="utf-8"),
     ],
 )
 log = logging.getLogger("mail_import")
