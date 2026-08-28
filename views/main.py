@@ -1580,10 +1580,10 @@ def meziro_upload():
     has_folder = request.form.get('has_folder_structure', 'false').lower() == 'true'
     log.info("フォルダ構造フラグ: %s", has_folder)
 
-    # 受付番号の採番（歯科技工所は専用カウンター）
+    # ReArch Design専用フロー（テーブル・採番・S3フォルダが異なる）
     is_lab_order = (
         current_user.is_authenticated
-        and getattr(current_user, 'account_type', 'clinic') == 'lab'
+        and getattr(current_user, 'user_id', '') == 'rearch.design@outlook.com'
     )
     if is_lab_order:
         id_str = get_next_lab_sequence_number('lab_rearch', 'ReArch')
@@ -1784,7 +1784,11 @@ def meziro_upload():
             full_message += f"\n\n⚠️ システム警告：{warning_message}\n"
             log.warning("採番時警告: %s", warning_message)
 
-        if not is_lab_order:
+        skip_email = (
+            current_user.is_authenticated
+            and getattr(current_user, 'user_id', '') == 'rearch.design@outlook.com'
+        )
+        if not skip_email:
             # 管理者へ
             try:
                 msg = Message(
@@ -1839,7 +1843,7 @@ email: shibuya8020@gmail.com
             except Exception as e:
                 log.error("送信者への確認メール送信失敗: %s", e, exc_info=True)
         else:
-            log.info("ラボ注文のためメール通知スキップ: %s", id_str)
+            log.info("ReArch Designのためメール通知スキップ: %s", id_str)
 
         # 指示書をDynamoDBに保存
         try:
