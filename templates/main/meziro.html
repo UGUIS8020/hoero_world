@@ -1,9 +1,8 @@
 {% extends "common/base.html" %}
 {% block content %}
-<div class="container mt-4" style="max-width: 900px;">
+<div class="container-fluid mt-4 px-4">
     <h1>MEZIRO ファイル管理</h1>
 
-    {# ← 追加: AJAX用のCSRFトークンをmetaで渡す #}
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -13,11 +12,11 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
-    
+
     <div class="card mb-4">
         <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">            
-                <h2 class="h5 mb-0">アップロードされたファイル一覧</h2>
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">指示書一覧</h2>
                 <div>
                     <button type="button" id="selectAllBtn" class="btn btn-sm btn-outline-secondary">すべて選択</button>
                     <button type="button" id="deleteSelectedBtn" class="btn btn-sm btn-danger" disabled>選択削除</button>
@@ -25,70 +24,107 @@
             </div>
         </div>
         <div class="card-body">
-            {% if s3_files %}
+            {% if rows %}
                 <form id="deleteForm" method="POST" action="{{ url_for('main.meziro_delete') }}">
                     <div class="table-responsive">
-                        {# ← 変更: align-middle を追加してスイッチを縦中央に #}
                         <table class="table table-striped align-middle">
                             <thead>
                                 <tr>
-                                    <th width="50">選択</th>
-                                    <th>ファイル名</th>
-                                    <th>アップロード日時</th>
-                                    {# ← 追加: 作業完了列 #}
-                                    <th width="140">作業完了</th>
-                                    <th>操作</th>
+                                    <th style="white-space:nowrap; width:40px;">選択</th>
+                                    <th style="white-space:nowrap;">受付番号</th>
+                                    <th style="white-space:nowrap; width:220px;">事業者名</th>
+                                    <th style="white-space:nowrap;">患者名</th>
+                                    <th style="white-space:nowrap; width:140px;">製作物</th>
+                                    <th style="white-space:nowrap;">受信日時</th>
+                                    <th style="white-space:nowrap; width:120px;">作業完了</th>
+                                    <th style="white-space:nowrap; width:1%;">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for file in s3_files %}
-                                    <tr>
-                                        <td>
-                                            <div class="form-check">
-                                                <input class="form-check-input file-checkbox" type="checkbox" name="selected_files" value="{{ file.key }}" id="file-{{ loop.index }}">
-                                            </div>
-                                        </td>
-                                        <td>{{ file.filename }}</td>
-                                        <td>{{ file.last_modified }}</td>
+                                {% for row in rows %}
+                                <tr class="clickable-row" style="cursor:pointer;"
+                                    data-href="{{ url_for('main.prescription_view', prescription_id=row.prescription_id) }}">
+                                    <td onclick="event.stopPropagation();">
+                                        {% if row.files %}
+                                        <div class="form-check">
+                                            <input class="form-check-input file-checkbox" type="checkbox"
+                                                   name="selected_files"
+                                                   value="{{ row.files[0].key }}"
+                                                   id="file-{{ loop.index }}">
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                    <td style="white-space:nowrap; color:#7c1820; font-weight:bold;">
+                                        No.{{ row.prescription_id }}
+                                    </td>
+                                    <td style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ row.sender[:16] }}{% if row.sender|length > 16 %}…{% endif %}</td>
+                                    <td>{{ row.patient_name }}</td>
+                                    <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ row.project_type }}</td>
+                                    <td style="white-space:nowrap;">{{ row.created_at }}</td>
 
-                                        {# ← 追加: 完了トグル（file.completed はサーバ側で付与） #}
-                                        <td>
-                                            <div class="form-check form-switch mb-0">
-                                                <input
-                                                    class="form-check-input complete-toggle"
-                                                    type="checkbox"
-                                                    role="switch"
-                                                    id="complete-{{ loop.index }}"
-                                                    data-key="{{ file.key }}"
-                                                    {% if file.completed %}checked{% endif %}
-                                                >
-                                                <label class="form-check-label small" for="complete-{{ loop.index }}">
-                                                    {{ '完了' if file.completed else '未完了' }}
-                                                </label>
-                                            </div>
-                                        </td>
+                                    <td>
+                                        {% if row.files %}
+                                        {% set is_done = row.files[0].completed %}
+                                        <div class="form-check form-switch mb-0">
+                                            <input
+                                                class="form-check-input complete-toggle"
+                                                type="checkbox"
+                                                role="switch"
+                                                id="complete-{{ loop.index }}"
+                                                data-key="{{ row.files[0].key }}"
+                                                {% if is_done %}checked{% endif %}
+                                            >
+                                            <label class="form-check-label small" for="complete-{{ loop.index }}">
+                                                {{ '完了' if is_done else '未完了' }}
+                                            </label>
+                                        </div>
+                                        {% else %}
+                                        {% set is_done = row.meziro_completed %}
+                                        <div class="form-check form-switch mb-0">
+                                            <input
+                                                class="form-check-input complete-toggle"
+                                                type="checkbox"
+                                                role="switch"
+                                                id="complete-{{ loop.index }}"
+                                                data-pid="{{ row.prescription_id }}"
+                                                {% if is_done %}checked{% endif %}
+                                            >
+                                            <label class="form-check-label small" for="complete-{{ loop.index }}">
+                                                {{ '完了' if is_done else '未完了' }}
+                                            </label>
+                                        </div>
+                                        {% endif %}
+                                    </td>
 
-                                        <td>                                            
-                                            <a href="{{ file.url }}" class="btn btn-sm btn-success" download="{{ file.filename }}">ダウンロード</a>
-                                            <form method="POST" action="{{ url_for('main.meziro_delete', key=file.key) }}" class="d-inline">
-                                                <!-- CSRFトークンを追加 -->
+                                    <td style="white-space:nowrap; width:1%;">
+                                        {% if row.files %}
+                                            {% for f in row.files %}
+                                            <a href="{{ f.url }}" class="btn btn-sm btn-success" download="{{ f.filename }}">
+                                                ダウンロード{% if row.files|length > 1 %} ({{ loop.index }}){% endif %}
+                                            </a>
+                                            {% endfor %}
+                                            <form method="POST" action="{{ url_for('main.meziro_delete', key=row.files[0].key) }}" class="d-inline">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('このファイルを削除してもよろしいですか？');">削除</button>
+                                                <button type="submit" class="btn btn-sm btn-danger"
+                                                        onclick="return confirm('このファイルを削除してもよろしいですか？');">削除</button>
                                             </form>
-                                        </td>
-                                    </tr>
+                                        {% else %}
+                                        <span class="text-muted small">ファイルなし</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                 </form>
             {% else %}
-                <p class="text-center">ファイルがありません</p>
+                <p class="text-center">データがありません</p>
             {% endif %}
 
             {% if total_pages > 1 %}
             <div class="d-flex justify-content-between align-items-center mt-3 px-1">
-                <small class="text-muted">全 {{ total }} 件中 {{ (page-1)*30+1 }}〜{{ [page*30, total]|min }} 件表示</small>
+                <small class="text-muted">全 {{ total }} 件中 {{ (page-1)*50+1 }}〜{{ [page*50, total]|min }} 件表示</small>
                 <nav>
                     <ul class="pagination pagination-sm mb-0">
                         <li class="page-item {% if page == 1 %}disabled{% endif %}">
@@ -114,29 +150,25 @@
     </div>
 </div>
 
-{% if s3_files %}
+{% if rows %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectAllBtn = document.getElementById('selectAllBtn');
     const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
     const checkboxes = document.querySelectorAll('.file-checkbox');
     const deleteForm = document.getElementById('deleteForm');
-    
-    // チェックボックスの状態変更を監視
+
     function updateButtonState() {
-        const checkedCount = document.querySelectorAll('.file-checkbox:checked').length;
-        deleteSelectedBtn.disabled = checkedCount === 0;
+        deleteSelectedBtn.disabled = document.querySelectorAll('.file-checkbox:checked').length === 0;
     }
-    checkboxes.forEach(checkbox => checkbox.addEventListener('change', updateButtonState));
-    
-    // すべて選択/解除ボタン
+    checkboxes.forEach(cb => cb.addEventListener('change', updateButtonState));
+
     selectAllBtn.addEventListener('click', function() {
         const isAllSelected = document.querySelectorAll('.file-checkbox:checked').length === checkboxes.length;
-        checkboxes.forEach(checkbox => { checkbox.checked = !isAllSelected; });
+        checkboxes.forEach(cb => { cb.checked = !isAllSelected; });
         updateButtonState();
     });
-    
-    // 選択削除ボタン
+
     deleteSelectedBtn.addEventListener('click', function() {
         const checkedCount = document.querySelectorAll('.file-checkbox:checked').length;
         if (confirm(`選択した${checkedCount}件のファイルを削除してもよろしいですか？`)) {
@@ -144,32 +176,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ← 追加: 作業完了トグルの即時保存
+    // 行クリックで指示書へ遷移
+    document.querySelectorAll('.clickable-row').forEach(function(row) {
+        row.addEventListener('click', function(e) {
+            if (!e.target.closest('a, button, input, label')) {
+                window.location.href = row.dataset.href;
+            }
+        });
+    });
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     document.querySelectorAll('.complete-toggle').forEach(toggle => {
         toggle.addEventListener('change', async (e) => {
             const el = e.target;
-            const key = el.dataset.key;
+            const key = el.dataset.key || null;
+            const pid = el.dataset.pid || null;
             const completed = el.checked;
-
-            // ラベル即時反映
             const label = el.closest('.form-check').querySelector('.form-check-label');
             label.textContent = completed ? '完了' : '未完了';
-
             el.disabled = true;
             try {
+                const body = { completed };
+                if (key) body.key = key;
+                if (pid) body.pid = pid;
                 const res = await fetch('{{ url_for("main.meziro_mark_complete") }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({ key, completed })
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify(body)
                 });
                 const data = await res.json();
                 if (!res.ok || !data.success) throw new Error(data.message || '保存に失敗しました');
             } catch (err) {
-                // 失敗したら元に戻す
                 el.checked = !completed;
                 label.textContent = el.checked ? '完了' : '未完了';
                 alert(err.message);

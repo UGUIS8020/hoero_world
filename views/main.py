@@ -665,67 +665,78 @@ def meziro():
     if blocked:
         return blocked
 
-    PER_PAGE = 30
+    PER_PAGE = 50
     page = request.args.get('page', 1, type=int)
-    s3_files = []
+    rows = []
     total = 0
     try:
-        # 全オブジェクトのキーと更新日時だけ取得（タグ・URL は取得しない）
-        all_objs = []
-        kwargs = dict(Bucket=BUCKET_NAME, Prefix='meziro/', MaxKeys=1000)
+        # DynamoDB から全処方を取得（ReArch除く）
+        tbl = current_app.config["PRESCRIPTIONS_TABLE"]
+        all_items = []
+        scan_kwargs = {}
         while True:
-            resp = s3.list_objects_v2(**kwargs)
-            for obj in resp.get('Contents', []):
-                if not os.path.basename(obj['Key']):
+            resp = tbl.scan(**scan_kwargs)
+            for item in resp.get('Items', []):
+                if str(item.get('prescription_id', '')).startswith('ReArch-'):
                     continue
-                all_objs.append(obj)
-            if resp.get('IsTruncated'):
-                kwargs['ContinuationToken'] = resp['NextContinuationToken']
-            else:
+                all_items.append(item)
+            if 'LastEvaluatedKey' not in resp:
                 break
+            scan_kwargs['ExclusiveStartKey'] = resp['LastEvaluatedKey']
 
         # 新しい順にソート
-        all_objs.sort(key=lambda x: x['LastModified'], reverse=True)
-        total = len(all_objs)
+        all_items.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        total = len(all_items)
 
         # 現在ページ分だけ切り出し
         start = (page - 1) * PER_PAGE
-        page_objs = all_objs[start:start + PER_PAGE]
+        page_items = all_items[start:start + PER_PAGE]
 
-        # 現在ページ分のみタグ・presigned URL を取得
-        for obj in page_objs:
-            key = obj['Key']
-            filename = os.path.basename(key)
+        for item in page_items:
+            pid = item.get('prescription_id', '')
+            s3_keys = [k for k in (item.get('s3_keys') or []) if k]
 
-            completed = False
-            try:
-                tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
-                tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
-                completed = (tags.get('completed') == 'true')
-            except Exception as e:
-                current_app.logger.warning(f"[MEZIRO] get_object_tagging failed key={key}: {e}")
+            files = []
+            for key in s3_keys:
+                completed = False
+                try:
+                    tag_resp = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
+                    tags = {t['Key']: t['Value'] for t in tag_resp.get('TagSet', [])}
+                    completed = (tags.get('completed') == 'true')
+                except Exception as e:
+                    current_app.logger.warning("[MEZIRO] get_object_tagging failed key=%s: %s", key, e)
+                try:
+                    file_url = s3.generate_presigned_url(
+                        'get_object',
+                        Params={'Bucket': BUCKET_NAME, 'Key': key},
+                        ExpiresIn=604800
+                    )
+                except Exception:
+                    file_url = None
+                files.append({
+                    'key': key,
+                    'filename': os.path.basename(key),
+                    'url': file_url,
+                    'completed': completed,
+                })
 
-            file_url = s3.generate_presigned_url(
-                'get_object',
-                Params={'Bucket': BUCKET_NAME, 'Key': key},
-                ExpiresIn=604800
-            )
-
-            s3_files.append({
-                'key': key,
-                'filename': filename,
-                'last_modified': obj['LastModified'].astimezone(JST).strftime('%Y-%m-%d %H:%M'),
-                'url': file_url,
-                'completed': completed,
+            rows.append({
+                'prescription_id': pid,
+                'sender': item.get('business_name') or item.get('sender_name') or '',
+                'patient_name': item.get('patient_name') or '',
+                'project_type': item.get('project_type') or '',
+                'created_at': (item.get('created_at') or '')[:16],
+                'files': files,
+                'meziro_completed': bool(item.get('meziro_completed', False)),
             })
 
     except Exception as e:
-        flash(f"S3ファイル一覧取得中にエラー: {str(e)}", "error")
+        flash(f"データ取得中にエラー: {str(e)}", "error")
 
     total_pages = max(1, (total + PER_PAGE - 1) // PER_PAGE)
     page = max(1, min(page, total_pages))
 
-    return render_template('main/meziro.html', s3_files=s3_files,
+    return render_template('main/meziro.html', rows=rows,
                            page=page, total_pages=total_pages, total=total)
 
 @bp.route('/prescription/list', methods=['GET'])
@@ -2080,21 +2091,31 @@ def list_files_with_completed():
 def meziro_mark_complete():
     data = request.get_json(silent=True) or {}
     key = data.get('key')
+    pid = data.get('pid')
     completed = data.get('completed')
 
-    if key is None or completed is None:
+    if completed is None or (key is None and pid is None):
         return jsonify(success=False, message='パラメータ不足'), 400
 
     try:
-        # 既存タグ維持＋completed上書き
-        current = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
-        tagset = {t['Key']: t['Value'] for t in current.get('TagSet', [])}
-        tagset['completed'] = 'true' if completed else 'false'
-        new_tagset = [{'Key': k, 'Value': v} for k, v in tagset.items()]
-        s3.put_object_tagging(Bucket=BUCKET_NAME, Key=key, Tagging={'TagSet': new_tagset})
+        if key:
+            # S3タグで管理（ファイルあり）
+            current = s3.get_object_tagging(Bucket=BUCKET_NAME, Key=key)
+            tagset = {t['Key']: t['Value'] for t in current.get('TagSet', [])}
+            tagset['completed'] = 'true' if completed else 'false'
+            new_tagset = [{'Key': k, 'Value': v} for k, v in tagset.items()]
+            s3.put_object_tagging(Bucket=BUCKET_NAME, Key=key, Tagging={'TagSet': new_tagset})
+        else:
+            # DynamoDBで管理（ファイルなし）
+            tbl = current_app.config["PRESCRIPTIONS_TABLE"]
+            tbl.update_item(
+                Key={'prescription_id': pid},
+                UpdateExpression='SET meziro_completed = :v',
+                ExpressionAttributeValues={':v': completed}
+            )
         return jsonify(success=True)
     except Exception as e:
-        return jsonify(success=False, message=f'タグ更新失敗: {e}'), 500
+        return jsonify(success=False, message=f'更新失敗: {e}'), 500
 
 
 def to_youtube_embed(url: str | None) -> str:
