@@ -123,15 +123,18 @@
         html, body {
             margin: 0 !important;
             padding: 0 !important;
-            height: auto !important;
-            overflow: hidden !important;
         }
-        /* 印刷対象以外をすべて非表示 */
-        body > * { display: none !important; }
+        /* visibility方式: 親要素の影響を受けずに印刷対象だけ表示 */
+        body * { visibility: hidden !important; }
+        #print-two-up,
+        #print-two-up * { visibility: visible !important; }
         #print-two-up {
             display: flex !important;
             flex-direction: row;
             gap: 6mm;
+            position: fixed;
+            top: 8mm;
+            left: 0;
             width: 100%;
             margin: 0;
             padding: 0;
