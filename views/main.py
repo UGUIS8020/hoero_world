@@ -966,7 +966,10 @@ def prescription_edit(prescription_id):
         except Exception:
             pass
         if current_user.is_administrator:
-            p["status"] = request.form.get("status", p.get("status", "受付中"))
+            if str(prescription_id).startswith("ReArch-"):
+                p["status"] = "完了"
+            else:
+                p["status"] = request.form.get("status", p.get("status", "受付中"))
 
         ts = _dt.now(_tz.utc).strftime("%Y%m%d%H%M%S")
 
