@@ -265,6 +265,7 @@
                     <select name="disc_thickness" class="form-control" style="width:200px;">
                         <option value="14mm" {% if p.disc_thickness == '14mm' or not p.disc_thickness %}selected{% endif %}>14mm（+900円）</option>
                         <option value="18mm" {% if p.disc_thickness == '18mm' %}selected{% endif %}>18mm（+1,400円）</option>
+                        <option value="20mm" {% if p.disc_thickness == '20mm' %}selected{% endif %}>20mm（+1,550円）</option>
                         <option value="22mm" {% if p.disc_thickness == '22mm' %}selected{% endif %}>22mm（+1,700円）</option>
                         <option value="持ち込み" {% if p.disc_thickness == '持ち込み' %}selected{% endif %}>持ち込み（0円）</option>
                     </select>
