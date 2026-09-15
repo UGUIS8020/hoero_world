@@ -80,14 +80,14 @@ def parse_shining3d_email(msg):
     business_name = find_val("ソース")
     patient_raw   = find_val("患者")
 
-    # 患者フィールド: "2317 たかはしえつこ" → chart_number + patient_name
+    # 患者フィールド: "2317 たかはしえつこ" or "01941おばらたかひろ" → chart_number + patient_name
     chart_number = ""
     patient_name = ""
     if patient_raw:
-        parts = patient_raw.split(None, 1)
-        if len(parts) == 2 and parts[0].isdigit():
-            chart_number = parts[0]
-            patient_name = parts[1]
+        m = re.match(r'^(\d+)\s*(.+)$', patient_raw)
+        if m:
+            chart_number = m.group(1)
+            patient_name = m.group(2)
         else:
             patient_name = patient_raw
 
