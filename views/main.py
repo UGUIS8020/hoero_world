@@ -685,8 +685,14 @@ def meziro():
                 break
             scan_kwargs['ExclusiveStartKey'] = resp['LastEvaluatedKey']
 
-        # 新しい順にソート
-        all_items.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        # 受付番号（prescription_id）の新しい順にソート
+        def _sort_key(item):
+            pid = str(item.get('prescription_id', ''))
+            try:
+                return (0, int(pid))
+            except (TypeError, ValueError):
+                return (-1, item.get('created_at', ''))
+        all_items.sort(key=_sort_key, reverse=True)
         total = len(all_items)
 
         # 現在ページ分だけ切り出し
